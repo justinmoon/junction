@@ -1,0 +1,142 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ wallet.name }} ({{ wallet.m }}/{{ wallet.n }}){% endblock %}
+
+{% block content %}
+  <div class="container my-4">
+    <h1 class="text-center mb-4">{{ wallet.name }} ({{ wallet.m }}/{{ wallet.n }})</h2>
+    {% if wallet.ready() %}
+    {% if unconfirmed_balance %}
+      <div class="text-center mb-3">Unconfirmed balance: {{ btc_to_sat(unconfirmed_balance) }} satoshis</div>
+    {% endif %}
+    <div class="text-center mb-3">Confirmed balance: {{ btc_to_sat(confirmed_balance) }} satoshis</div>
+    <div class="text-center mb-3">
+      <a href="/address">
+        <button class="btn btn-primary">Generate Receving Address</button>
+      </a>
+    </div>
+    {% endif %}
+    <!-- Signers -->
+    {% if wallet.signers | length > 0 %}
+      <h3 class="text-center">Signers</h3>
+      <div class="d-flex justify-content-center">
+        <ol>
+          {% for signer in wallet.signers %}
+          <li>{{ signer['name'] }} ({{ signer['fingerprint'] }})</li>
+          {% endfor %}
+        </ol>
+      </div>
+    {% endif %}
+
+    {% if not wallet.ready() %}
+      <!-- Add Signers -->
+      <div style="margin: 0 auto; max-width: 400px;">
+        <h3 class="text-center">Add {{ wallet.n - wallet.signers | length }} More Signers</h3>
+        <div class="card">
+        <table class="table table-borderless">
+          <thead>
+            <tr>
+              <th scope="col">Device</th>
+              <th scope="col" class="text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for device in potential_signers %}
+            <tr>
+              <td>{{ device['type'] }}</td>
+              {% if device['needs_pin_sent'] or 'fingerprint' not in device %}
+              <td class="text-right">
+                <a href="/devices">
+                  <button type="submit" class="btn btn-primary">Unlock</button>
+                </a>
+              </td>
+              {% else %}
+              <form action="/add-signer/{{ device['fingerprint'] }}" method="post">
+                <td class="text-right">
+                  <button type="submit" class="btn btn-primary">Add signer</button>
+                </td>
+              </form>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    {% else %}
+      <!-- PSBT -->
+      {% if not wallet.psbt %}
+        <h3 class="text-center">Create PSBT</h3>
+        {% if confirmed_balance %}
+        <form action="/create-psbt" method="post">
+          <div class="form-row">
+            <div class="col">
+              <input name="recipient" type="text" class="form-control" placeholder="Recipient Address">
+            </div>
+            <div class="col">
+              <input name="satoshis" type="number" class="form-control" placeholder="Satoshis to Send">
+            </div>
+            <button type="submit" class="btn btn-primary">Create PSBT</button>
+          </div>
+        </form>
+        {% else %}
+        <div class="text-center">No confirmed UTXOs to spend</div>
+        {% endif %}
+      {% else %}
+      <h3 class="text-center">Sign PSBT</h3>
+      <div class="card">
+        <div class="card-body">
+          <table class="table table-borderless">
+            <h4>Outputs</h4>
+            <tbody>
+              <!-- FIXME: fee (can i estimate sat/vbyte?) -->
+              <!-- FIXME: display what is and isn't change -->
+              {% for vout in psbt["tx"]["vout"] %}
+              <tr>
+                <td>#{{ loop.index0 }}</td>
+                <td>{{ vout["scriptPubKey"]["addresses"][0] }}</td>
+                <td class="text-right">{{ btc_to_sat(vout["value"]) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <table class="table table-borderless">
+            <h4>Signers</h4>
+            <tbody>
+              {% for signer in wallet.signers %}
+                {% if signer['signed'] %}
+                  <tr>
+                    <td>{{ signer.name }} ({{ signer['fingerprint'] }})</td>
+                    <td class="text-right">Signed</button>
+                  <tr>
+                {% elif signer['device']['error'] == 'Not found' %}
+                  <tr>
+                    <td>{{ signer.name }} ({{ signer['fingerprint'] }})</td>
+                    <td class="text-right"><a href="/devices">
+                      <button class="btn btn-primary text-right">Unlock</button>
+                    </a></td>
+                  <tr>
+                {% else %}
+                <form action="/sign-psbt/{{ signer['fingerprint'] }}" method="post">
+                  <tr>
+                    <td>{{ signer.name }} ({{ signer['fingerprint'] }})</td>
+                    <td class="text-right"><button type="submit" class="btn btn-primary">Sign</button>
+                  <tr>
+                </form>
+                {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+          {% if wallet.signing_complete() %}
+          <form action="/broadcast" method="post">
+            <div class="d-flex">
+              <button type="submit" class="btn btn-primary ml-auto">Broadcast</button>
+            </div>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    {% endif %}
+  </div>
+{% endblock %}

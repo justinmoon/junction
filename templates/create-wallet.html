@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+
+{% block title %}Create Wallet{% endblock %}
+
+{% block content %}
+  <div class="container my-5">
+    <h2 class="text-center mb-4">Create Wallet</h2>
+    <form action='/create-wallet' method='post'>
+      <div class="form-group row">
+        <label for="name" class="col-sm-2 col-form-label">Name</label>
+        <div class="col-sm-10">
+          <input class="form-control" type="text" name="name">
+        </div>
+      </div>
+      <div class="form-group row">
+        <label for="m" class="col-sm-2 col-form-label">Signatures Required</label>
+        <div class="col-sm-10">
+          <input class="form-control" type="number" name="m">
+        </div>
+      </div>
+      <div class="form-group row">
+        <label for="n" class="col-sm-2 col-form-label">Total Signers</label>
+        <div class="col-sm-10">
+          <input class="form-control" type="number" name="n">
+        </div>
+      </div>
+      <div class="d-flex">
+        <button type="submit" class="btn btn-primary ml-auto">Create Wallet</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}
