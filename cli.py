@@ -1,11 +1,17 @@
+"""
+TODO
+- add a "decodepsbt" command
+"""
 import argparse
 import glob
 import logging
+from decimal import Decimal
 
 from junction import MultiSig
 from signer import InsecureSigner
 
 logger = logging.getLogger(__name__)
+
 
 def display_wallet(multisig):
     print(f"Name: {multisig.name} {multisig.m}/{multisig.n}")
@@ -45,15 +51,22 @@ def addsigner_handler(args):
         print(f"Add {signers_missing} more signers to start using it")
 
 
-def receive_handler(args):
+def address_handler(args):
     multisig = MultiSig.open(args.filename)
     print(multisig.address())
 
 
-def create_handler(args):
+def createwallet_handler(args):
     multisig = MultiSig.create(args.name, args.m, args.n)
     print(f"Your new {multisig.m}/{multisig.n} wallet has been saved to \"{multisig.filename()}\"")
 
+
+def createpsbt_handler(args):
+    multisig = MultiSig.open(args.filename)
+    multisig.create_psbt(args.recipient, args.amount)
+    print("You PSBT for wallet \"{multisig.name}\" has been created:")
+    print(multisig.decode_psbt())
+    
 
 def cli():
     # main parser
@@ -73,23 +86,27 @@ def cli():
     listwallets_parser = subparsers.add_parser('listwallets', help='Displays state of all wallet')
     listwallets_parser.set_defaults(func=listwallets_handler)
 
-    # "junction create n m"
-    create_parser = subparsers.add_parser('create', help='Create a multisig wallet')
-    create_parser.add_argument('m', type=int, help='Signatures required to sign transactions')
-    create_parser.add_argument('n', type=int, help='Total number of signers')
-    create_parser.set_defaults(func=create_handler)
-    create_parser.add_argument('--name', help='What to call this wallet', default="junction")
+    # "junction createwallet n m"
+    createwallet_parser = subparsers.add_parser('createwallet', help='Create a multisig wallet')
+    createwallet_parser.add_argument('m', type=int, help='Signatures required to sign transactions')
+    createwallet_parser.add_argument('n', type=int, help='Total number of signers')
+    createwallet_parser.add_argument('--name', help='What to call this wallet', default="junction")
+    createwallet_parser.set_defaults(func=createwallet_handler)
 
     # "junction addsigner"
     addsigner_parser = subparsers.add_parser('addsigner', help='Add signers to your multisig wallet')
     addsigner_parser.add_argument('name', help='What to call this signer')
     addsigner_parser.set_defaults(func=addsigner_handler)
 
-    # "junction receive"
-    receive_parser = subparsers.add_parser('receive', help='Show next receiving address')
-    receive_parser.set_defaults(func=receive_handler)
+    # "junction address"
+    address_parser = subparsers.add_parser('address', help='Show next receiving address')
+    address_parser.set_defaults(func=address_handler)
 
-    # "junction newpsbt"
+    # "junction createpsbt"
+    createpsbt_parser = subparsers.add_parser('createpsbt', help='Create a Partially Signed Bitcoin Transaction (PSBT)')
+    createpsbt_parser.add_argument('recipient', help='Bitcoin address to send funds')
+    createpsbt_parser.add_argument('amount', type=Decimal, help='How many BTC to send')
+    createpsbt_parser.set_defaults(func=createpsbt_handler)
 
     # "junction signpsbt"
 

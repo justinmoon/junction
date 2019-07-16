@@ -8,11 +8,10 @@ from bitcoinlib.keys import HDKey
 from bitcoinlib.services.authproxy import AuthServiceProxy, JSONRPCException
 
 from signer import InsecureSigner
+from utils import get_desc_part
 
 logger = logging.getLogger(__name__)
-
 settings = toml.load("settings.toml")
-
 bitcoin_uri = "http://{username}:{password}@{host}:{port}"
 bitcoin_rpc = AuthServiceProxy(bitcoin_uri.format(**settings["rpc"]))
 
@@ -47,7 +46,7 @@ class MultiSig:
     @classmethod
     def create(cls, name, m, n):
         # sanity check
-        if m >= n:
+        if m > n:
             raise ValueError(f"\"m\" ({m}) must be no larger than \"n\" ({n})")
 
         # MultiSig instance
@@ -70,9 +69,6 @@ class MultiSig:
                     logger.info(f"Created watch-only Bitcoin Core wallet \"{name}\"")
                 except JSONRPCException as e:
                     raise RuntimeError("Couldn't establish watch-only Bitcoin Core wallet")
-
-        # Import next chunk of addresses into ^^ Bitcoin Core watch-only wallet
-        self.watch_only_export()
 
         # Save a copy of wallet to disk
         multisig.save()
@@ -116,25 +112,33 @@ class MultiSig:
             raise ValueError(f'Name "{signer.name}" already taken')
         self.signers.append(signer)
         logger.info(f"Registered signer \"{signer.name}\"")
+
+        # Import next chunk of addresses into Bitcoin Core watch-only wallet if we're done adding signers
+        if self.ready():
+            self.watch_only_export()
+
         self.save()
 
     def remove_signer(signer_name):
         raise NotImplementedError()
 
-    def descriptor(self):
+    def descriptor(self, internal):
         '''Descriptor for shared multisig addresses'''
-        # TODO: this could work nicely as a decorator
-        if not self.ready():
-            raise ValueError(f'n signers required, {len(self.signers)} registered')
+        # TODO: consider using HWI's Descriptor class
+        # how can i do this?
         xpubs = ",".join([signer.xpub() + "/*" for signer in self.signers])
         descriptor = f"wsh(multi({self.n},{xpubs}))"
-        # appends checksum to descriptor
-        return self.wallet_rpc.getdescriptorinfo(descriptor)['descriptor']
+        # # appends checksum to descriptor
+        r = self.wallet_rpc.getdescriptorinfo(descriptor)
+        return r['descriptor']
 
     def address(self):
         # generator to yield new addresses?
+        # TODO: this check could work nicely as a decorator
+        if not self.ready():
+            raise ValueError(f'n signers required, {len(self.signers)} registered')
         address = self.wallet_rpc.deriveaddresses(
-            self.descriptor(), 
+            self.descriptor(True), 
             [self.address_index, self.address_index + 1])[0]
         self.address_index += 1
         self.save()
@@ -142,15 +146,30 @@ class MultiSig:
 
     def watch_only_export(self):
         logger.info("Starting watch-only export")
-        self.wallet_rpc.importmulti([{
-            "desc": self.descriptor(),
-            "timestamp": "now",
-            "range": [0, settings["wallet"]["address_chunk"]],
-            "label": self.name,
-            "watchonly": True,
-            "keypool": True,
-        }])
+        for internal in [True, False]:
+            # TODO: add comments for ambiguous values
+            self.wallet_rpc.importmulti([{
+                "desc": self.descriptor(receiving),
+                "timestamp": "now",
+                "range": [self.address_index, settings["wallet"]["address_chunk"]],
+                "watchonly": True,
+                "keypool": True,
+                "internal": internal,
+            }])
         logger.info("Finished watch-only export")
+
+    def create_psbt(self, recipient, amount):
+        # TODO: raise error if there's already a PSBT
+        # cli.py can have user confirm and run with a force=True option or something
+        raw_psbt = self.wallet_rpc.walletcreatefundedpsbt(
+            [],
+            [{recipient: amount}],
+            0, 
+            {"includeWatching": True},
+            True,
+        )['psbt']
+        self.psbt = hwilib.serizlizations.PSBT()
+        psbt.deserialize(raw_psbt)
 
     def combine_psbt(self, psbt):
         raise NotImplementedError()
