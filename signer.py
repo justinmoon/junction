@@ -1,7 +1,6 @@
 from bitcoinlib.keys import HDKey
 
 
-
 class Signer:
 
     def __init__(self, name):
@@ -24,17 +23,27 @@ class Signer:
 class HardwareSigner(Signer):
 
     def __init__(self):
-        # fingerprint
+        # output of `hwi enumerate`
+        self.device = None
+
+    def connect(self):
         pass
+
 
 
 class InsecureSigner(Signer):
 
-    def __init__(self, name, key=None):
+    type = "insecure"
+
+    def __init__(self, name, key):
         self.name = name
-        if not key:
-            key = HDKey(network="testnet")
         self.key = key
+
+    @classmethod
+    def create(cls, name):
+        '''Handle conversions from wifs and things in here'''
+        key = HDKey(network="testnet")
+        return cls(name, key)
 
     @classmethod
     def from_dict(cls, d):
