@@ -1,24 +1,28 @@
 import json
 import logging
 import os.path
-
 import hwilib
 import toml
+
 from bitcoinlib.keys import HDKey
 from bitcoinlib.services.authproxy import AuthServiceProxy, JSONRPCException
+from pprint import pprint
 
-from signer import HardwareSigner
-from utils import get_desc_part
 
 logger = logging.getLogger(__name__)
 settings = toml.load("settings.toml")
+
 bitcoin_uri = "http://{username}:{password}@{host}:{port}"
 bitcoin_rpc = AuthServiceProxy(bitcoin_uri.format(**settings["rpc"]))
 
 
+class JunctionError(Exception):
+    pass
+
+
 class MultiSig:
 
-    wallet_uri = "http://{username}:{password}@{host}:{port}/wallet/{name}"
+    wallet_template = "http://{username}:{password}@{host}:{port}/wallet/{name}"
 
     def __init__(self, name, m, n, signers, psbt, address_index):
         # Name of the wallet
@@ -34,20 +38,20 @@ class MultiSig:
         # Depth in HD derivation
         self.address_index = address_index
         # RPC connection to corresponding watch-only wallet in Bitcoin Core
-        wallet_uri = self.wallet_uri.format(**settings["rpc"], name=self.watchonly_name())
+        wallet_uri = self.wallet_template.format(**settings["rpc"], name=self.watchonly_name())
         self.wallet_rpc = AuthServiceProxy(wallet_uri)
 
     def ready(self):
         return len(self.signers) == self.n
 
     def filename(self):
-        return f"{self.name}.json"
+        return f"{self.name}.wallet"
 
     @classmethod
     def create(cls, name, m, n):
         # sanity check
         if m > n:
-            raise ValueError(f"\"m\" ({m}) must be no larger than \"n\" ({n})")
+            raise JunctionError(f"\"m\" ({m}) must be no larger than \"n\" ({n})")
 
         # MultiSig instance
         multisig = cls(name, m, n, [], None, 0)
@@ -55,7 +59,7 @@ class MultiSig:
         # Never overwrite existing wallet files
         filename = multisig.filename()
         if os.path.exists(filename):
-            raise RuntimeError(f"{filename} already exists")
+            raise JunctionError(f"{filename} already exists")
 
         # create a watch-only Bitcoin Core wallet
         multisig.create_watchonly()
@@ -87,7 +91,6 @@ class MultiSig:
 
     @classmethod
     def from_dict(cls, d):
-        d["signers"] = [HardwareSigner.from_dict(s) for s in d["signers"]]
         if d["psbt"]:
             psbt = hwilib.serializations.PSBT()
             psbt.deserialize(d["psbt"])
@@ -99,19 +102,19 @@ class MultiSig:
             "name": self.name,
             "m": self.m,
             "n": self.n,
-            "signers": [signer.to_dict() for signer in self.signers],
+            "signers": self.signers,
             "psbt": self.psbt.serialize() if self.psbt else self.psbt,
             "address_index": self.address_index,
         }
 
-    def add_signer(self, signer):
+    def add_signer(self, name, fingerprint, xpub):
         if self.ready():
-            raise ValueError(f'Already have {len(self.signers)} of {self.n} required signers')
-        signer_names = [signer.name for signer in self.signers]
-        if signer.name in signer_names:
-            raise ValueError(f'Name "{signer.name}" already taken')
-        self.signers.append(signer)
-        logger.info(f"Registered signer \"{signer.name}\"")
+            raise JunctionError(f'Already have {len(self.signers)} of {self.n} required signers')
+        signer_names = [signer["name"] for signer in self.signers]
+        if name in signer_names:
+            raise JunctionError(f'Name "{signer.name}" already taken')
+        self.signers.append({"name": name, "fingerprint": fingerprint, "xpub": xpub})
+        logger.info(f"Registered signer \"{name}\"")
 
         # Import next chunk of addresses into Bitcoin Core watch-only wallet if we're done adding signers
         if self.ready():
@@ -122,23 +125,21 @@ class MultiSig:
     def remove_signer(signer_name):
         raise NotImplementedError()
 
-    def descriptor(self, internal):
+    def descriptor(self):
         '''Descriptor for shared multisig addresses'''
         # TODO: consider using HWI's Descriptor class
-        # how can i do this?
-        xpubs = ",".join([signer.xpub + "/*" for signer in self.signers])
+        xpubs = ",".join([signer['xpub'] + "/*" for signer in self.signers])
         descriptor = f"wsh(multi({self.n},{xpubs}))"
-        # # appends checksum to descriptor
+        # appends checksum to descriptor
         r = self.wallet_rpc.getdescriptorinfo(descriptor)
         return r['descriptor']
 
     def address(self):
-        # generator to yield new addresses?
         # TODO: this check could work nicely as a decorator
         if not self.ready():
-            raise ValueError(f'{self.n} signers required, {len(self.signers)} registered')
+            raise JunctionError(f'{self.n} signers required, {len(self.signers)} registered')
         address = self.wallet_rpc.deriveaddresses(
-            self.descriptor(False), 
+            self.descriptor(), 
             [self.address_index, self.address_index + 1])[0]
         self.address_index += 1
         self.save()
@@ -158,24 +159,21 @@ class MultiSig:
                     bitcoin_rpc.createwallet(watch_only_name, True)
                     logger.info(f"Created watch-only Bitcoin Core wallet \"{watch_only_name}\"")
                 except JSONRPCException as e:
-                    raise RuntimeError("Couldn't establish watch-only Bitcoin Core wallet")
+                    raise JunctionError("Couldn't establish watch-only Bitcoin Core wallet")
 
     def watchonly_name(self):
         return f'junction_{self.name}'
 
     def export_watchonly(self):
-        # perhaps i need a "witnessscript" parameter for P2WSH? https://bitcoin.stackexchange.com/questions/89114/import-multisig-change-addresses-into-bitcoin-core-using-importmulti-descrip
         logger.info("Starting watch-only export")
-        for internal in [True, False]:
-            # TODO: add comments for ambiguous values
-            self.wallet_rpc.importmulti([{
-                "desc": self.descriptor(internal),
-                "timestamp": "now",
-                "range": [self.address_index, settings["wallet"]["address_chunk"]],
-                "watchonly": True,
-                "keypool": True,
-                "internal": internal,
-            }])
+        self.wallet_rpc.importmulti([{
+            "desc": self.descriptor(),
+            "timestamp": "now",
+            "range": [self.address_index, settings["wallet"]["address_chunk"]],
+            "watchonly": True,
+            "keypool": True,
+            "internal": False,
+        }])
         logger.info("Finished watch-only export")
 
     def create_psbt(self, recipient, amount):
@@ -203,15 +201,11 @@ class MultiSig:
     def combine_psbt(self, psbt):
         raise NotImplementedError()
 
-    def sign_psbt(self, signer_index):
+    def sign_psbt(self, password):
         raise NotImplementedError()
 
-    def complete_psbt(self):
-        # combine
-        # finalize
-        # broadcast
-        raise NotImplementedError()
-
-    def candidates(self):
-        # FIXME: this probably belongs in cli.py
-        return hwilib.commands.enumerate()
+    def finalize_psbt(self):
+        psbt_hex = self.psbt.serialize()
+        tx_hex = self.wallet_rpc.finalizepsbt(psbt_hex)["hex"]
+        txid = self.wallet_rpc.sendrawtransaction(tx_hex)
+        return txid

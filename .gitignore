@@ -62,4 +62,4 @@ typings/
 .next
 
 # wallets
-*.json
+*.wallet

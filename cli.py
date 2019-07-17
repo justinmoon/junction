@@ -1,18 +1,13 @@
-"""
-TODO
-- add a "decodepsbt" command
-"""
 import argparse
 import glob
 import logging
+
 from decimal import Decimal
 from pprint import pprint
-
 from hwilib import commands
 from hwilib.devices import coldcard, digitalbitbox, ledger
 
-from junction import MultiSig
-from signer import HardwareSigner
+from junction import MultiSig, JunctionError
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +17,36 @@ def display_wallet(multisig):
     if len(multisig.signers) > 0:
         print("Signers:")
         for signer in multisig.signers:
-            print(f"- \"{signer.name}\" ({signer.type})")
+            print(f"- \"{signer['name']}\"")
     if not multisig.ready():
         signers_missing = multisig.n - len(multisig.signers)
         print(f"You must register {signers_missing} signers to start using your wallet")
+
+
+def get_client_and_device(args, multisig):
+    devices = commands.enumerate(args.password)
+
+    if not devices:
+        raise JunctionError('No devices available. Enter your pin if device already plugged in')
+
+    if len(devices) > 1:
+        raise JunctionError('You can only plug in one device at a time')
+
+    # Define an HWI "client" based on depending on which device is plugged in
+    device = devices[0]
+    if device['type'] == 'ledger':
+        client = ledger.LedgerClient(device['path'])
+    elif device['type'] == 'digitalbitbox':
+        if not args.password:
+            raise JunctionError('Please supply your BitBox password with the --password flag')
+        client = digitalbitbox.DigitalbitboxClient(device['path'], args.password)
+    else:
+        raise JunctionError(f'Devices of type "{device["type"]}" not yet supported')
+
+    # Set device client to use testnet
+    client.is_testnet = True
+
+    return client, device
 
 
 def describewallet_handler(args):
@@ -42,47 +63,18 @@ def listwallets_handler(args):
 
 def addsigner_handler(args):
     multisig = MultiSig.open(args.filename)
-    devices = commands.enumerate(args.password)
-
-    if not devices:
-        print('No devices available. Enter your pin if device already plugged in')
-        return
-
-    if len(devices) > 1:
-        print('You can only plug in one device at a time')
-
-    # Check this device hasn't been used yet
-    device = devices[0]
-    fingerprints = [signer.fingerprint for signer in multisig.signers]
-    if device['fingerprint'] in fingerprints:
-        print('This device is already registered')
-        return
+    client, device = get_client_and_device(args, multisig)
 
     # Check this name hasn't been used yet
-    names = [signer.name for signer in multisig.signers]
+    names = [signer["name"] for signer in multisig.signers]
     if args.name in names:
         print('This name has already been used')
         return
 
-    # Define an HWI "client" based on depending on which device is plugged in
-    if device['type'] == 'ledger':
-        client = ledger.LedgerClient(device['path'])
-    elif device['type'] == 'digitalbitbox':
-        if not args.password:
-            print('Please supply your BitBox password with the --password flag')
-            return
-        client = digitalbitbox.DigitalbitboxClient(device['path'], args.password)
-    else:
-        print(f'Devices of type "{device["type"]}" not yet supported')
-
-    # Set device client to use testnet
-    client.is_testnet = True
-
     # Create and add a "signer" to the wallet
     xpub = commands.getmasterxpub(client)['xpub']
-    signer = HardwareSigner(args.name, device['path'], device['fingerprint'], xpub)
-    multisig.add_signer(signer)
-    print(f"Signer \"{signer.name}\" has been added to your \"{multisig.name}\" wallet")
+    multisig.add_signer(args.name, device['fingerprint'], xpub)
+    print(f"Signer \"{args.name}\" has been added to your \"{multisig.name}\" wallet")
 
     # Print messages depending on whether the setup is complete or not
     if multisig.ready():
@@ -106,11 +98,20 @@ def createwallet_handler(args):
 def createpsbt_handler(args):
     multisig = MultiSig.open(args.filename)
     multisig.create_psbt(args.recipient, args.amount)
-    print("You PSBT for wallet \"{multisig.name}\" has been created:")
+    print(f"Your PSBT for wallet \"{multisig.name}\" has been created:")
 
 def decodepsbt_handler(args):
     multisig = MultiSig.open(args.filename)
     pprint(multisig.decode_psbt())
+
+def signpsbt_handler(args):
+    multisig = MultiSig.open(args.filename)
+    client, device = get_client_and_device(args, multisig)
+    psbt = multisig.psbt
+    signed = client.sign_tx(psbt)['psbt']
+    print(signed == psbt.serialize())
+    print(len(signed), len(psbt.serialize()))
+    print(signed)
     
 
 def cli():
@@ -159,17 +160,24 @@ def cli():
     decodepsbt_parser.set_defaults(func=decodepsbt_handler)
 
     # "junction signpsbt"
+    signpsbt_parser = subparsers.add_parser('signpsbt', help='Show more information about your PSBT')
+    # FIXME: this should probably live on base parser
+    signpsbt_parser.add_argument('--password', default='', help='Device password (required for BitBox)')
+    signpsbt_parser.set_defaults(func=signpsbt_handler)
 
     # parse args
     args = parser.parse_args()
-    args.filename = args.wallet + '.json'  # HACK
+    args.filename = f'{args.wallet}.wallet'  # HACK
 
     # housekeeping
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.WARNING)
 
     # exercise callback
     # TODO: perhaps I could instantiate MultiSig() instance here and pass to args.func?
-    return args.func(args)
+    try:
+        args.func(args)
+    except JunctionError as e:
+        print(e)
 
 if __name__ == '__main__':
     cli()
