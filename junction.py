@@ -7,7 +7,7 @@ import toml
 from bitcoinlib.keys import HDKey
 from bitcoinlib.services.authproxy import AuthServiceProxy, JSONRPCException
 
-from signer import InsecureSigner
+from signer import HardwareSigner
 from utils import get_desc_part
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class MultiSig:
         # Depth in HD derivation
         self.address_index = address_index
         # RPC connection to corresponding watch-only wallet in Bitcoin Core
-        wallet_uri = self.wallet_uri.format(**settings["rpc"], name=name)
+        wallet_uri = self.wallet_uri.format(**settings["rpc"], name=self.watchonly_name())
         self.wallet_rpc = AuthServiceProxy(wallet_uri)
 
     def ready(self):
@@ -57,18 +57,8 @@ class MultiSig:
         if os.path.exists(filename):
             raise RuntimeError(f"{filename} already exists")
 
-        # Create watch-only Bitcoin Core wallet (FIXME super ugly)
-        bitcoin_wallets = bitcoin_rpc.listwallets()
-        if name not in bitcoin_wallets:
-            try:
-                bitcoin_rpc.loadwallet(name)
-                logger.info(f"Loaded watch-only Bitcoin Core wallet \"{name}\"")
-            except JSONRPCException as e:
-                try:
-                    bitcoin_rpc.createwallet(name, True)
-                    logger.info(f"Created watch-only Bitcoin Core wallet \"{name}\"")
-                except JSONRPCException as e:
-                    raise RuntimeError("Couldn't establish watch-only Bitcoin Core wallet")
+        # create a watch-only Bitcoin Core wallet
+        multisig.create_watchonly()
 
         # Save a copy of wallet to disk
         multisig.save()
@@ -97,7 +87,7 @@ class MultiSig:
 
     @classmethod
     def from_dict(cls, d):
-        d["signers"] = [InsecureSigner.from_dict(s) for s in d["signers"]]
+        d["signers"] = [HardwareSigner.from_dict(s) for s in d["signers"]]
         if d["psbt"]:
             psbt = hwilib.serializations.PSBT()
             psbt.deserialize(d["psbt"])
@@ -125,7 +115,7 @@ class MultiSig:
 
         # Import next chunk of addresses into Bitcoin Core watch-only wallet if we're done adding signers
         if self.ready():
-            self.watch_only_export()
+            self.export_watchonly()
 
         self.save()
 
@@ -136,7 +126,7 @@ class MultiSig:
         '''Descriptor for shared multisig addresses'''
         # TODO: consider using HWI's Descriptor class
         # how can i do this?
-        xpubs = ",".join([signer.xpub() + "/*" for signer in self.signers])
+        xpubs = ",".join([signer.xpub + "/*" for signer in self.signers])
         descriptor = f"wsh(multi({self.n},{xpubs}))"
         # # appends checksum to descriptor
         r = self.wallet_rpc.getdescriptorinfo(descriptor)
@@ -154,7 +144,26 @@ class MultiSig:
         self.save()
         return address
 
-    def watch_only_export(self):
+    def create_watchonly(self):
+        # Create watch-only Bitcoin Core wallet (FIXME super ugly)
+        # Prefix the wallet name with "junction_" to make it clear this is a junction wallet
+        watch_only_name = self.watchonly_name()
+        bitcoin_wallets = bitcoin_rpc.listwallets()
+        if watch_only_name not in bitcoin_wallets:
+            try:
+                bitcoin_rpc.loadwallet(watch_only_name)
+                logger.info(f"Loaded watch-only Bitcoin Core wallet \"{watch_only_name}\"")
+            except JSONRPCException as e:
+                try:
+                    bitcoin_rpc.createwallet(watch_only_name, True)
+                    logger.info(f"Created watch-only Bitcoin Core wallet \"{watch_only_name}\"")
+                except JSONRPCException as e:
+                    raise RuntimeError("Couldn't establish watch-only Bitcoin Core wallet")
+
+    def watchonly_name(self):
+        return f'junction_{self.name}'
+
+    def export_watchonly(self):
         # perhaps i need a "witnessscript" parameter for P2WSH? https://bitcoin.stackexchange.com/questions/89114/import-multisig-change-addresses-into-bitcoin-core-using-importmulti-descrip
         logger.info("Starting watch-only export")
         for internal in [True, False]:

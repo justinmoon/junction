@@ -22,18 +22,29 @@ class Signer:
 
 class HardwareSigner(Signer):
 
-    def __init__(self):
+    def __init__(self, name, path, fingerprint, xpub):
         # output of `hwi enumerate`
-        self.device = None
+        self.name = name
+        # next two from HWI's "enumerate" command
+        self.path = path
+        self.fingerprint = fingerprint
+        # from HWI's "getmasterxpub" command
+        self.xpub = xpub
 
-    def connect(self):
-        pass
+    @classmethod
+    def from_dict(cls, d):
+        return cls(**d)
 
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'path': self.path,
+            'fingerprint': self.fingerprint,
+            'xpub': self.xpub,
+        }
 
 
 class InsecureSigner(Signer):
-
-    type = "insecure"
 
     def __init__(self, name, key):
         self.name = name
