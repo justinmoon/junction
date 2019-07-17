@@ -69,6 +69,8 @@ python cli.py broadcast
 
 ## Notes
 
+I suspect the problem with signing multisig transaction is that I'm using non-standard key derivation paths. [This function](https://github.com/bitcoin-core/HWI/blob/master/hwilib/commands.py#L85) demonstrates how it should be done.
+
 ### ColdCard
 
 - Threw a "fraudulent change output" error when bitcoind isn't run
