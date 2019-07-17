@@ -105,14 +105,20 @@ def decodepsbt_handler(args):
     pprint(multisig.decode_psbt())
 
 def signpsbt_handler(args):
+    # FIXME: This doesn't work: the psbt doesn't change at all
+    # I don't think the hardware wallet recognizes its keys b/c I'm using weird
+    # key derivation paths ...
     multisig = MultiSig.open(args.filename)
     client, device = get_client_and_device(args, multisig)
     psbt = multisig.psbt
     signed = client.sign_tx(psbt)['psbt']
-    print(signed == psbt.serialize())
-    print(len(signed), len(psbt.serialize()))
-    print(signed)
+    multisig.psbt = psbt
+    multisig.save()
+    print('Was PSBT updated?', signed != psbt.serialize())
     
+def broadcast_handler(args):
+    multisig = MultiSig.open(args.filename)
+    multisig.broadcast()
 
 def cli():
     # main parser
@@ -160,10 +166,14 @@ def cli():
     decodepsbt_parser.set_defaults(func=decodepsbt_handler)
 
     # "junction signpsbt"
-    signpsbt_parser = subparsers.add_parser('signpsbt', help='Show more information about your PSBT')
+    signpsbt_parser = subparsers.add_parser('signpsbt', help='Sign your PSBT')
     # FIXME: this should probably live on base parser
     signpsbt_parser.add_argument('--password', default='', help='Device password (required for BitBox)')
     signpsbt_parser.set_defaults(func=signpsbt_handler)
+
+    # "junction broadcast"
+    broadcast_parser = subparsers.add_parser('broadcast', help='Broadcast your signed PSBT')
+    broadcast_parser.set_defaults(func=broadcast_handler)
 
     # parse args
     args = parser.parse_args()

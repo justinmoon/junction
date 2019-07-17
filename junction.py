@@ -4,7 +4,6 @@ import os.path
 import hwilib
 import toml
 
-from bitcoinlib.keys import HDKey
 from bitcoinlib.services.authproxy import AuthServiceProxy, JSONRPCException
 from pprint import pprint
 
@@ -199,14 +198,9 @@ class MultiSig:
     def decode_psbt(self):
         return self.wallet_rpc.decodepsbt(self.psbt.serialize())
 
-    def combine_psbt(self, psbt):
+    def broadcast(self):
         raise NotImplementedError()
-
-    def sign_psbt(self, password):
-        raise NotImplementedError()
-
-    def finalize_psbt(self):
-        psbt_hex = self.psbt.serialize()
-        tx_hex = self.wallet_rpc.finalizepsbt(psbt_hex)["hex"]
-        txid = self.wallet_rpc.sendrawtransaction(tx_hex)
-        return txid
+        # psbt_hex = self.psbt.serialize()
+        # tx_hex = self.wallet_rpc.finalizepsbt(psbt_hex)["hex"]
+        # txid = self.wallet_rpc.sendrawtransaction(tx_hex)
+        # return txid
