@@ -85,13 +85,23 @@ class MultiSig:
 
     def save(self):
         filename = self.filename()
+        # if this line broke inside json.dump, the json file would be emptyed :eek:
+        data = self.to_dict()  
         with open(filename, "w") as f:
-            json.dump(self.to_dict(), f, indent=4)
+            json.dump(data, f, indent=4)
             logger.info(f"Saved wallet to {filename}")
+        # save a backup just in case
+        with open(filename + '.bak', "w") as f:
+            json.dump(data, f, indent=4)
+            logger.info(f"Saved wallet to {filename}.bak")
 
     @classmethod
     def from_dict(cls, d):
         d["signers"] = [InsecureSigner.from_dict(s) for s in d["signers"]]
+        if d["psbt"]:
+            psbt = hwilib.serializations.PSBT()
+            psbt.deserialize(d["psbt"])
+            d["psbt"] = psbt
         return cls(**d)
         
     def to_dict(self):
@@ -100,7 +110,7 @@ class MultiSig:
             "m": self.m,
             "n": self.n,
             "signers": [signer.to_dict() for signer in self.signers],
-            "psbt": self.psbt,
+            "psbt": self.psbt.serialize() if self.psbt else self.psbt,
             "address_index": self.address_index,
         }
 
@@ -176,6 +186,7 @@ class MultiSig:
         )['psbt']
         self.psbt = hwilib.serializations.PSBT()
         self.psbt.deserialize(raw_psbt)
+        self.save()
 
     def decode_psbt(self):
         return self.wallet_rpc.decodepsbt(self.psbt.serialize())
@@ -183,7 +194,7 @@ class MultiSig:
     def combine_psbt(self, psbt):
         raise NotImplementedError()
 
-    def sign_psbt(self, signer_name, psbt):
+    def sign_psbt(self, signer_index):
         raise NotImplementedError()
 
     def complete_psbt(self):
