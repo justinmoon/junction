@@ -162,7 +162,8 @@ class MultiSig:
                     raise JunctionError("Couldn't establish watch-only Bitcoin Core wallet")
 
     def watchonly_name(self):
-        return f'junction_{self.name}'
+        # maybe add a "junction_" prefix or something?
+        return self.name
 
     def export_watchonly(self):
         logger.info("Starting watch-only export")
