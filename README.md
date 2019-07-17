@@ -66,3 +66,13 @@ python cli.py signpsbt --password <bitbox-password>
 # Broadcast to network
 python cli.py broadcast
 ```
+
+## Notes
+
+### ColdCard
+
+- Threw a "fraudulent change output" error when bitcoind isn't run
+  with `-addresstype=bech32 -changetype=bech32` flags
+- When attempting a to sign a non-multisig output, ColdCard threw an error having to do with paths. I bet our descriptor xpubs need a fingerprints and path prefixes like in the last step [here](https://gist.github.com/achow101/a9cf757d45df56753fae9d65db4d6e1d).
+- [This guide](https://github.com/bitcoin-core/HWI/blob/master/docs/bitcoin-core-usage.md) is very helpful.
+
