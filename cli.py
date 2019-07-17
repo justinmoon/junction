@@ -6,6 +6,7 @@ import argparse
 import glob
 import logging
 from decimal import Decimal
+from pprint import pprint
 
 from junction import MultiSig
 from signer import InsecureSigner
@@ -65,7 +66,7 @@ def createpsbt_handler(args):
     multisig = MultiSig.open(args.filename)
     multisig.create_psbt(args.recipient, args.amount)
     print("You PSBT for wallet \"{multisig.name}\" has been created:")
-    print(multisig.decode_psbt())
+    pprint(multisig.decode_psbt())
     
 
 def cli():

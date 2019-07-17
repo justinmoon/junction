@@ -136,20 +136,21 @@ class MultiSig:
         # generator to yield new addresses?
         # TODO: this check could work nicely as a decorator
         if not self.ready():
-            raise ValueError(f'n signers required, {len(self.signers)} registered')
+            raise ValueError(f'{self.n} signers required, {len(self.signers)} registered')
         address = self.wallet_rpc.deriveaddresses(
-            self.descriptor(True), 
+            self.descriptor(False), 
             [self.address_index, self.address_index + 1])[0]
         self.address_index += 1
         self.save()
         return address
 
     def watch_only_export(self):
+        # perhaps i need a "witnessscript" parameter for P2WSH? https://bitcoin.stackexchange.com/questions/89114/import-multisig-change-addresses-into-bitcoin-core-using-importmulti-descrip
         logger.info("Starting watch-only export")
         for internal in [True, False]:
             # TODO: add comments for ambiguous values
             self.wallet_rpc.importmulti([{
-                "desc": self.descriptor(receiving),
+                "desc": self.descriptor(internal),
                 "timestamp": "now",
                 "range": [self.address_index, settings["wallet"]["address_chunk"]],
                 "watchonly": True,
@@ -161,15 +162,23 @@ class MultiSig:
     def create_psbt(self, recipient, amount):
         # TODO: raise error if there's already a PSBT
         # cli.py can have user confirm and run with a force=True option or something
+        # FIXME bitcoin core can't generate change addrs
+        change_address = self.address()
         raw_psbt = self.wallet_rpc.walletcreatefundedpsbt(
             [],
             [{recipient: amount}],
             0, 
-            {"includeWatching": True},
+            {
+                "includeWatching": True,
+                "changeAddress": change_address,
+            },
             True,
         )['psbt']
-        self.psbt = hwilib.serizlizations.PSBT()
-        psbt.deserialize(raw_psbt)
+        self.psbt = hwilib.serializations.PSBT()
+        self.psbt.deserialize(raw_psbt)
+
+    def decode_psbt(self):
+        return self.wallet_rpc.decodepsbt(self.psbt.serialize())
 
     def combine_psbt(self, psbt):
         raise NotImplementedError()
