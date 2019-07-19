@@ -1,10 +1,12 @@
 import argparse
 import glob
 import logging
+import contextlib
+import io
 
 from decimal import Decimal
 from pprint import pprint
-from hwilib import commands
+from hwilib import commands, serializations
 from hwilib.devices import coldcard, digitalbitbox, ledger, trezor
 
 from junction import MultiSig, JunctionError
@@ -21,25 +23,27 @@ def display_wallet(multisig):
     if not multisig.ready():
         signers_missing = multisig.n - len(multisig.signers)
         print(f"You must register {signers_missing} signers to start using your wallet")
-    print(multisig.descriptor())
+    multisig.export_watchonly()
 
 
 def get_client_and_device(args, multisig):
-    devices = commands.enumerate(args.password)
 
+    # Make sure one and only one device is plugged in
+    devices = commands.enumerate(args.password)
     if not devices:
         raise JunctionError('No devices available. Enter your pin if device already plugged in')
-
     if len(devices) > 1:
         raise JunctionError('You can only plug in one device at a time')
+    device = devices[0]
+
+    # Can't instantiate bitbox client w/o pasphrase, so this needs to be before next block
+    if device.get("needs_passphrase_sent") and not args.password:
+        raise JunctionError('Please supply your device password with the --password flag')
 
     # Define an HWI "client" based on depending on which device is plugged in
-    device = devices[0]
     if device['type'] == 'ledger':
         client = ledger.LedgerClient(device['path'])
     elif device['type'] == 'digitalbitbox':
-        if not args.password:
-            raise JunctionError('Please supply your BitBox password with the --password flag')
         client = digitalbitbox.DigitalbitboxClient(device['path'], args.password)
     elif device['type'] == 'coldcard':
         client = coldcard.ColdcardClient(device['path'])
@@ -47,9 +51,28 @@ def get_client_and_device(args, multisig):
         client = trezor.TrezorClient(device['path'])
     else:
         raise JunctionError(f'Devices of type "{device["type"]}" not yet supported')
-
-    # Set device client to use testnet
     client.is_testnet = True
+
+    # this requires a client, so it needs to come after previous block
+    if device.get('needs_pin_sent'):
+        # this prints to stderr ... suppress it
+        with contextlib.redirect_stderr(io.StringIO()):
+            client.prompt_pin()
+
+        pin = input("Use the numeric keypad to enter your pin. The layout is:\n\t7 8 9\n\t4 5 6\n\t1 2 3\nPin: ")
+        if not client.send_pin(pin)["success"]:
+            raise JunctionError('Pin is wrong')
+
+        # FIXME: device dict has not "fingerprint" key and we calling commands.enumerate() again throws error
+        # This hack retrievs and sets it manually
+        import time
+        time.sleep(1)
+        device['fingerprint'] = commands.get_xpub_fingerprint_as_id(commands.getxpub(client, 'm/0h')['xpub'])
+
+    # FIXME: Commenting out for now because device variable is outdated in "needs_pin_sent" case and I can't manage to refresh it ...
+    # Get updated "device" (prior value may lack "fingerprint" if device was locked)
+    # if device.get("error"):
+        # raise JunctionError(f"Unexpected error: {device['error']}")
 
     return client, device
 
@@ -78,12 +101,9 @@ def addsigner_handler(args):
 
     # Create and add a "signer" to the wallet
     master_xpub = client.get_pubkey_at_path('m/0h')['xpub']
-    print("MASTER", master_xpub)
-    deriv_path = "m/44h/1h/0h/0/*"
-    base_path = "m/44h/1h/0h"
-    base_key = client.get_pubkey_at_path(base_path)['xpub']
-    print("BASE", base_key)
-    multisig.add_signer(args.name, device['fingerprint'], master_xpub, base_key)
+    origin_path = "m/44h/1h/0h"
+    base_key = client.get_pubkey_at_path(origin_path)['xpub']
+    multisig.add_signer(args.name, device['fingerprint'], base_key, origin_path)
     print(f"Signer \"{args.name}\" has been added to your \"{multisig.name}\" wallet")
 
     # Print messages depending on whether the setup is complete or not
@@ -123,21 +143,14 @@ def decodepsbt_handler(args):
     pprint(multisig.decode_psbt())
 
 def signpsbt_handler(args):
-    # FIXME: This doesn't work: the psbt doesn't change at all
-    # I don't think the hardware wallet recognizes its keys b/c I'm using weird
-    # key derivation paths ...
     multisig = MultiSig.open(args.filename)
     client, device = get_client_and_device(args, multisig)
     psbt = multisig.psbt
-    before = psbt.serialize()
-    r = client.sign_tx(psbt)
-    print(r)
-    after = r['psbt']
-    multisig.psbt = psbt
+    raw_signed_psbt = client.sign_tx(multisig.psbt)['psbt']
+    new_psbt = serializations.PSBT()
+    new_psbt.deserialize(raw_signed_psbt)
+    multisig.psbt = new_psbt
     multisig.save()
-    print('Was PSBT updated?', before != after)
-    print('Was PSBT updated?', before != psbt.serialize())
-    print('return hex and psbt equal?', after == psbt.serialize())
     
 def broadcast_handler(args):
     multisig = MultiSig.open(args.filename)
@@ -207,7 +220,9 @@ def cli():
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.WARNING)
 
     # exercise callback
-    # TODO: perhaps I could instantiate MultiSig() instance here and pass to args.func?
+    # TODO: pass in multisig and client
+    # these functions are very CLI-specific with the `args` variables
+    # how to generalize them so they'd work with flask as well?
     try:
         args.func(args)
     except JunctionError as e:

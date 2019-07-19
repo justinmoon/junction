@@ -29,52 +29,90 @@ pip install -r requirements.txt
 # Run bitcoin-qt in testnet mode
 bitcoin-qt -testnet
 ```
+## Create a 3/3 Wallet using Trezor, Ledger & BitBox
 
-## Usage
+Demostration that these 3 devices work. Other numbers for m and n should work. ColdCard complains about "output missing redeem script". Hopefully I can sort this out soon ...
 
-To create a 2/2 wallet:
+### Wallet Creation
 
 ```
-# Create a wallet
-python cli.py createwallet 2 2
+# Create 3/3 wallet
+$ python cli.py createwallet 3 3
+Your new 3/3 wallet has been saved to "junction.wallet"
 
-# Plug in Ledger, enter pin, navigate to testnet app
+# Plug in Ledger, enter PIN, navigate to testnet app
 # Add Ledger "signer" to wallet
-python cli.py addsigner <name-for-this-device>
+$ python cli.py addsigner <ledger-nickname>
+Signer "<ledger-nickname>" has been added to your "junction" wallet
+Add 2 more signers to start using it
 
 # Unplug Ledger and plug in BitBox
 # Add BitBox "signer" to wallet
-python cli.py addsigner <name-for-this-device> --password <bitbox-password>
+$ python cli.py addsigner <bitbox-nickname> --password <bitbox-password>
+Signer "<bitbox-nickname>" has been added to your "junction" wallet
+Add 1 more signers to start using it
+
+# Unplug BitBox and plug in Trezor
+# Add Trezor "signer" to wallet
+# Pin shown is what you'd enter in case pictured below:
+$ python cli.py addsigner <trezor-nickname>
+Use the numeric keypad to enter your pin. The layout is:
+	7 8 9
+	4 5 6
+	1 2 3
+Pin: 362751984
+Signer "<trezor-nickname>" has been added to your "junction" wallet
+Wallet "junction" is ready to use. Your first receiving address:
+<receiving-address>
 ```
 
-The last step should display an address. Send some TBTC to this address and it should show up bitcoin-qt. The `createwallet` step above created a watch-only wallet in Bitcoin Core and exported addresses to it. Load this wallet in the UI by clicking `File > Open Wallet > junction`. Your coins should show up in the receiving tab.
+Send some TBTC to `<receiving-address>` If you have bitcoin-qt open you should see a notification that it was received. Here's a [testnet faucet](https://testnet-faucet.mempool.co/) if you don't have any TBTC on hand.
+
+The `createwallet` step above created a watch-only wallet in Bitcoin Core and exported addresses to it. Load this wallet in the UI by clicking `File > Open Wallet > junction`. Your coins should show up in the receiving tab.
 
 Some metadata about your wallet is stored in plain text JSON in `junction.wallet`.
 
-I'm working to add PSBT signing. This is the intended workflow:
+### Spending
 
 ```
-# Initialize a PSBT using Bitcoin Core's coin selection
-python cli.py createpsbt <recipient-address> <amount-in-tbtc>
+# Once your transaction has confirmed, create a PSBT:
+$ python cli.py createpsbt <recipient> <amount-in-btc>
+Your PSBT for wallet "junction" has been created
 
-# Plug in Ledger, confirm transaction on device, update PSBT w/ Ledger signature
-python cli.py signpsbt
+# Plug in Trezor
+# Pin entry same as last time (no pin required if you left it in)
+$ python cli.py signpsbt
+Use the numeric keypad to enter your pin. The layout is:
+	7 8 9
+	4 5 6
+	1 2 3
+Pin: 362751984
+Please confirm action on your Trezor device
 
-# Plug in BitBox, confirm transaction on device, update PSBT w/ BitBox signature
-python cli.py signpsbt --password <bitbox-password>
+# Unplug Trezor, plug in BitBox. BitBox needs a passphrase:
+$ python cli.py signpsbt --password <bitbox-password>
+Touch the device for 3 seconds to sign. Touch briefly to cancel
 
-# Broadcast to network
-python cli.py broadcast
+# Unplug BitBox, plug in Ledger, enter PIN, navigate to testnet app:
+$ python cli.py signpsbt
+
+# Broadcast transaction
+$ python cli.py broadcast
 ```
 
-## Notes
+You should see an outgoing transaction in the "Transacions" tab in your "junction" watch-only Bitcoin Core wallet
 
-I suspect the problem with signing multisig transaction is that I'm using non-standard key derivation paths. [This function](https://github.com/bitcoin-core/HWI/blob/master/hwilib/commands.py#L85) demonstrates how it should be done.
+![image](https://wiki.trezor.io/images/User-manual_trezor-pin.jpg)
 
-### ColdCard
 
-- Threw a "fraudulent change output" error when bitcoind isn't run
-  with `-addresstype=bech32 -changetype=bech32` flags
-- When attempting a to sign a non-multisig output, ColdCard threw an error having to do with paths. I bet our descriptor xpubs need a fingerprints and path prefixes like in the last step [here](https://gist.github.com/achow101/a9cf757d45df56753fae9d65db4d6e1d).
-- [This guide](https://github.com/bitcoin-core/HWI/blob/master/docs/bitcoin-core-usage.md) is very helpful.
+## TODO:
 
+- Make a simple UI
+- Allow multiple devices plugged in at once
+- Unittests
+- Option to use regtest. These 20 minute testnet blocktime almost killed me today!
+- Export change addresses to Bitcoin Core
+
+## Useful Resources:
+
+- [This HWI + Bitcoin Core guide](https://github.com/bitcoin-core/HWI/blob/master/docs/bitcoin-core-usage.md) is very helpful.
