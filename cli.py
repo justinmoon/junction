@@ -5,7 +5,7 @@ import logging
 from decimal import Decimal
 from pprint import pprint
 from hwilib import commands
-from hwilib.devices import coldcard, digitalbitbox, ledger
+from hwilib.devices import coldcard, digitalbitbox, ledger, trezor
 
 from junction import MultiSig, JunctionError
 
@@ -40,6 +40,10 @@ def get_client_and_device(args, multisig):
         if not args.password:
             raise JunctionError('Please supply your BitBox password with the --password flag')
         client = digitalbitbox.DigitalbitboxClient(device['path'], args.password)
+    elif device['type'] == 'coldcard':
+        client = coldcard.ColdcardClient(device['path'])
+    elif device['type'] == 'trezor':
+        client = trezor.TrezorClient(device['path'])
     else:
         raise JunctionError(f'Devices of type "{device["type"]}" not yet supported')
 
@@ -72,8 +76,13 @@ def addsigner_handler(args):
         return
 
     # Create and add a "signer" to the wallet
-    xpub = commands.getmasterxpub(client)['xpub']
-    multisig.add_signer(args.name, device['fingerprint'], xpub)
+    master_xpub = client.get_pubkey_at_path('m/0h')['xpub']
+    print("MASTER", master_xpub)
+    deriv_path = "m/44'/1'/0'/0/*"
+    base_path = "m/44'/1'/0'"
+    base_key = client.get_pubkey_at_path(base_path)['xpub']
+    print("BASE", master_xpub)
+    multisig.add_signer(args.name, device['fingerprint'], master_xpub, base_key)
     print(f"Signer \"{args.name}\" has been added to your \"{multisig.name}\" wallet")
 
     # Print messages depending on whether the setup is complete or not
@@ -97,8 +106,16 @@ def createwallet_handler(args):
 
 def createpsbt_handler(args):
     multisig = MultiSig.open(args.filename)
+    if multisig.psbt:
+        user_input = input("You already have a PSBT. Would you like to erase it and start a new one? (y/n)")
+        if user_input == 'y':
+            multisig.remove_psbt()
+        else:
+            print("Cancelled")
+            return
     multisig.create_psbt(args.recipient, args.amount)
-    print(f"Your PSBT for wallet \"{multisig.name}\" has been created:")
+    print(f"Your PSBT for wallet \"{multisig.name}\" has been created")
+    print("View it with \"python cli.py decodepsbt\"")
 
 def decodepsbt_handler(args):
     multisig = MultiSig.open(args.filename)
@@ -111,14 +128,20 @@ def signpsbt_handler(args):
     multisig = MultiSig.open(args.filename)
     client, device = get_client_and_device(args, multisig)
     psbt = multisig.psbt
-    signed = client.sign_tx(psbt)['psbt']
+    before = psbt.serialize()
+    r = client.sign_tx(psbt)
+    print(r)
+    after = r['psbt']
     multisig.psbt = psbt
     multisig.save()
-    print('Was PSBT updated?', signed != psbt.serialize())
+    print('Was PSBT updated?', before != after)
+    print('Was PSBT updated?', before != psbt.serialize())
+    print('return hex and psbt equal?', after == psbt.serialize())
     
 def broadcast_handler(args):
     multisig = MultiSig.open(args.filename)
-    multisig.broadcast()
+    txid = multisig.broadcast()
+    print("Transaction ID:", txid)
 
 def cli():
     # main parser

@@ -106,13 +106,13 @@ class MultiSig:
             "address_index": self.address_index,
         }
 
-    def add_signer(self, name, fingerprint, xpub):
+    def add_signer(self, name, fingerprint, master_xpub, base_xpub):
         if self.ready():
             raise JunctionError(f'Already have {len(self.signers)} of {self.n} required signers')
         signer_names = [signer["name"] for signer in self.signers]
         if name in signer_names:
             raise JunctionError(f'Name "{signer.name}" already taken')
-        self.signers.append({"name": name, "fingerprint": fingerprint, "xpub": xpub})
+        self.signers.append({"name": name, "fingerprint": fingerprint, "xpub": master_xpub, "base_xpub": base_xpub})
         logger.info(f"Registered signer \"{name}\"")
 
         # Import next chunk of addresses into Bitcoin Core watch-only wallet if we're done adding signers
@@ -127,8 +127,15 @@ class MultiSig:
     def descriptor(self):
         '''Descriptor for shared multisig addresses'''
         # TODO: consider using HWI's Descriptor class
-        xpubs = ",".join([signer['xpub'] + "/*" for signer in self.signers])
-        descriptor = f"wsh(multi({self.n},{xpubs}))"
+        from utils import get_desc_part
+        xpubs = [signer['xpub'] for signer in self.signers]
+        parts = [get_desc_part(xpub, 0, False, False, False, True) for xpub in xpubs]
+        # parts = ['['+signer["fingerprint"]+"/44h/1h/0h]"+signer['base_xpub']+'/0/*' for xpub in xpubs]
+        print('parts', parts)
+        inner = ",".join([part for part in parts])
+        print('inner', inner)
+        descriptor = f"wsh(multi({self.m},{inner}))"
+        print(descriptor)
         # appends checksum to descriptor
         r = self.wallet_rpc.getdescriptorinfo(descriptor)
         return r['descriptor']
@@ -177,7 +184,9 @@ class MultiSig:
         logger.info("Finished watch-only export")
 
     def create_psbt(self, recipient, amount):
-        # TODO: raise error if there's already a PSBT
+        if self.psbt:
+            raise JunctionError('PSBT already present')
+
         # cli.py can have user confirm and run with a force=True option or something
         # FIXME bitcoin core can't generate change addrs
         change_address = self.address()
@@ -195,12 +204,15 @@ class MultiSig:
         self.psbt.deserialize(raw_psbt)
         self.save()
 
+    def remove_psbt(self):
+        self.psbt = None
+
     def decode_psbt(self):
         return self.wallet_rpc.decodepsbt(self.psbt.serialize())
 
     def broadcast(self):
-        raise NotImplementedError()
-        # psbt_hex = self.psbt.serialize()
-        # tx_hex = self.wallet_rpc.finalizepsbt(psbt_hex)["hex"]
-        # txid = self.wallet_rpc.sendrawtransaction(tx_hex)
-        # return txid
+        psbt_hex = self.psbt.serialize()
+        print(self.wallet_rpc.finalizepsbt(psbt_hex))
+        tx_hex = self.wallet_rpc.finalizepsbt(psbt_hex)["hex"]
+        txid = self.wallet_rpc.sendrawtransaction(tx_hex)
+        return txid
