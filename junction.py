@@ -107,9 +107,15 @@ class MultiSig:
         # FIXME: deriv_path not used ...
         if self.ready():
             raise JunctionError(f'Already have {len(self.signers)} of {self.n} required signers')
-        signer_names = [signer["name"] for signer in self.signers]
-        if name in signer_names:
-            raise JunctionError(f'Name "{signer.name}" already taken')
+
+        # Check if name used before
+        if name in [signer["name"] for signer in self.signers]:
+            raise JunctionError(f'Name "{name}" already taken')
+
+        # check if fingerprint used before
+        if fingerprint in [signer["fingerprint"] for signer in self.signers]:
+            raise JunctionError(f'Fingerprint "{fingerprint}" already used')
+
         self.signers.append({"name": name, "fingerprint": fingerprint, "xpub": xpub})
         logger.info(f"Registered signer \"{name}\"")
 
@@ -130,6 +136,7 @@ class MultiSig:
         xpubs = [f'[{signer["fingerprint"]}{origin_path}]{signer["xpub"]}{path_suffix}' for signer in self.signers]
         xpubs = ",".join(xpubs)
         descriptor = f"wsh(multi({self.m},{xpubs}))"
+        logger.info(f"Exporting descriptor: {descriptor}")
         # validates and appends checksum
         r = self.wallet_rpc.getdescriptorinfo(descriptor)
         return r['descriptor']

@@ -93,12 +93,6 @@ def addsigner_handler(args):
     multisig = MultiSig.open(args.filename)
     client, device = get_client_and_device(args, multisig)
 
-    # Check this name hasn't been used yet
-    names = [signer["name"] for signer in multisig.signers]
-    if args.name in names:
-        print('This name has already been used')
-        return
-
     # Create and add a "signer" to the wallet
     master_xpub = client.get_pubkey_at_path('m/0h')['xpub']
     origin_path = "m/44h/1h/0h"
