@@ -21,6 +21,7 @@ def display_wallet(multisig):
     if not multisig.ready():
         signers_missing = multisig.n - len(multisig.signers)
         print(f"You must register {signers_missing} signers to start using your wallet")
+    print(multisig.descriptor())
 
 
 def get_client_and_device(args, multisig):
@@ -78,10 +79,10 @@ def addsigner_handler(args):
     # Create and add a "signer" to the wallet
     master_xpub = client.get_pubkey_at_path('m/0h')['xpub']
     print("MASTER", master_xpub)
-    deriv_path = "m/44'/1'/0'/0/*"
-    base_path = "m/44'/1'/0'"
+    deriv_path = "m/44h/1h/0h/0/*"
+    base_path = "m/44h/1h/0h"
     base_key = client.get_pubkey_at_path(base_path)['xpub']
-    print("BASE", master_xpub)
+    print("BASE", base_key)
     multisig.add_signer(args.name, device['fingerprint'], master_xpub, base_key)
     print(f"Signer \"{args.name}\" has been added to your \"{multisig.name}\" wallet")
 

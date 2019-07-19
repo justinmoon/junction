@@ -128,9 +128,9 @@ class MultiSig:
         '''Descriptor for shared multisig addresses'''
         # TODO: consider using HWI's Descriptor class
         from utils import get_desc_part
-        xpubs = [signer['xpub'] for signer in self.signers]
-        parts = [get_desc_part(xpub, 0, False, False, False, True) for xpub in xpubs]
-        # parts = ['['+signer["fingerprint"]+"/44h/1h/0h]"+signer['base_xpub']+'/0/*' for xpub in xpubs]
+        # xpubs = [signer['xpub'] for signer in self.signers]
+        # parts = [get_desc_part(xpub, 0, False, False, False, True) for xpub in xpubs]
+        parts = ['['+signer["fingerprint"]+"/44h/1h/0h]"+signer['base_xpub']+'/0/*' for signer in self.signers]
         print('parts', parts)
         inner = ",".join([part for part in parts])
         print('inner', inner)
