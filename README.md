@@ -31,7 +31,7 @@ bitcoin-qt -testnet
 ```
 ## Create a 3/3 Wallet using Trezor, Ledger & BitBox
 
-Demostration that these 3 devices work. Other numbers for m and n should work. ColdCard complains about "output missing redeem script". Hopefully I can sort this out soon ...
+Demostration that these 3 devices work. Other numbers for m and n should work. Still working to add ColdCard soon (currently getting a `hwilib.errors.BadArgumentError: Remote Error: Invalid PSBT: Missing redeem script for output #i` error if any kind can reproduce or help debug).
 
 ### Wallet Creation
 
