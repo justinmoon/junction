@@ -116,3 +116,31 @@ You should see an outgoing transaction in the "Transacions" tab in your "junctio
 ## Useful Resources:
 
 - [This HWI + Bitcoin Core guide](https://github.com/bitcoin-core/HWI/blob/master/docs/bitcoin-core-usage.md) is very helpful.
+
+## Regtest
+
+Add this to you `bitcoin.conf`:
+
+```
+[regtest]
+rpcbind=127.0.0.1
+rpcallowip=0.0.0.0/0
+rpcport=18444
+rpcuser=bitcoin
+rpcpassword=python
+```
+
+Change the `port` variable in `settings.toml` to 18444 (regtest port)
+
+Run bitcoin-qt in regtest mode:
+
+```
+bitcoin-qt -regtest
+```
+
+Generate some blocks to yourself
+
+```
+addr=$(bitcoin-cli -regtest getnewaddress)
+bitcoin-cli -regtest generatetoaddress 150 $addr
+```
