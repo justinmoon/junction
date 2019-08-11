@@ -208,7 +208,7 @@ def cli():
 
     # parse args
     args = parser.parse_args()
-    args.filename = f'{args.wallet}.wallet'  # HACK
+    args.filename = f'{args.wallet}.json'  # HACK
 
     # housekeeping
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.WARNING)

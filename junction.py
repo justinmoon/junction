@@ -4,7 +4,7 @@ import os.path
 import hwilib
 import toml
 
-from bitcoinlib.services.authproxy import AuthServiceProxy, JSONRPCException
+from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 from pprint import pprint
 from hwilib.serializations import PSBT
 

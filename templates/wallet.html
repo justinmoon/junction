@@ -1,0 +1,72 @@
+{% extends "layout.html" %}
+
+{% block title %}"{{ wallet.name }}" Wallet{% endblock %}
+
+{% block content %}
+  <div class="container my-5">
+    <h2 class="text-center mb-4">"{{ wallet.name }}" Wallet</h2>
+    <!-- Wallet -->
+    <div class="card" style="width: 18rem;">
+      <div class="card-body">
+        <h4 class="card-title text-center">{{ wallet.name }} {{ wallet.m }}/{{ wallet.n }}</h4>
+        <p class="card-text"></p>
+        {% if wallet.signers | length == wallet.n %}
+          <div>Signers:</div>
+        {% else %}
+          <div>Signers ({{ wallet.signers | length }}/{{ wallet.n }}):</div>
+        {% endif %}
+        <ul>
+          {% for signer in wallet.signers %}
+          <li>{{ signer["name"] }} ({{ signer["fingerprint"] }})</li>
+          {% endfor %}
+        </ul>
+        {% if wallet.signers | length != wallet.n %}
+          <a href="#" class="card-link">Add Signer</a>
+        {% else %}
+          {% if not wallet.psbt %}
+            <a href="#" class="card-link">Create PSBT</a>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    <!-- PSBT -->
+    <div class="card">
+      <div class="card-body">
+        <table class="table table-borderless">
+          <h4>Outputs</h4>
+          <tbody>
+            <!-- FIXME: fee (can i estimate sat/vbyte?) -->
+            <!-- FIXME: display what is and isn't change -->
+            {% for vout in psbt["tx"]["vout"] %}
+            <tr>
+              <td>#{{ loop.index0 }}</td>
+              <td>{{ vout["scriptPubKey"]["addresses"][0] }}</td>
+              <td>{{ vout["value"] }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <table class="table table-borderless">
+          <h4>Signers</h4>
+          <tbody>
+            <!-- FIXME: determine whether each has signed -->
+            <tr>
+              <td>{{ wallet.signers[0].name }}</td>
+              <td><input type="email" class="form-control" placeholder="pin"></td>
+
+              <td><button type="button" class="btn btn-primary">Sign</button>
+            <tr>
+            </tr>
+              <td>{{ wallet.signers[1].name }}</td>
+              <td>Signed</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="d-flex">
+          <button type="button" class="btn btn-primary ml-auto">Broadcast</button>
+        </div>
+      </div>
+    </div>
+    <pre>{{ psbt_str }}</pre>
+  </div>
+{% endblock %}
