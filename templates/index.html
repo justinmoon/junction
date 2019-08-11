@@ -3,5 +3,35 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-  <div>{{ devices }}</div>
+  <div id="devices">{{ devices }}</div>
+{% endblock %}
+
+
+{% block script %}
+  <script>
+
+    function refreshDevices() {
+      var xhr = new XMLHttpRequest();
+      xhr.onload = function () {
+        if (xhr.status == 200) {
+          var devices = JSON.parse(this.responseText);
+          console.log('devices:', devices);
+          injectDevices(this.responseText);
+        } else {
+          console.log('/devices request failed');
+        }
+        setTimeout(refreshDevices, 1000);
+      };
+      xhr.open('GET', 'http://localhost:5000/devices');
+      xhr.send();
+    }
+
+    function injectDevices(devices) {
+      var elem = document.querySelector('#devices');
+      elem.innerHTML = devices;
+    }
+
+    refreshDevices();
+
+  </script>
 {% endblock %}
