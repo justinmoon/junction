@@ -1,19 +1,23 @@
-import json
 import logging
 import os.path
 import hwilib
-import toml
 
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 from pprint import pprint
 from hwilib.serializations import PSBT
 
+from utils import write_json_file, read_json_file
 
 logger = logging.getLogger(__name__)
-settings = toml.load("settings.toml")
+
+# FIXME
+if os.path.isfile('settings.json'):
+    settings = read_json_file("settings.json")
+else:
+    settings = read_json_file('settings.json.ex')
 
 bitcoin_uri = "http://{username}:{password}@{host}:{port}"
-bitcoin_rpc = AuthServiceProxy(bitcoin_uri.format(**settings["rpc"]))
+bitcoin_rpc = AuthServiceProxy(bitcoin_uri.format(**settings["rpc"]), timeout=60*60)
 
 
 class JunctionError(Exception):
@@ -39,7 +43,7 @@ class MultiSig:
         self.address_index = address_index
         # RPC connection to corresponding watch-only wallet in Bitcoin Core
         wallet_uri = self.wallet_template.format(**settings["rpc"], name=self.watchonly_name())
-        self.wallet_rpc = AuthServiceProxy(wallet_uri)
+        self.wallet_rpc = AuthServiceProxy(wallet_uri, timeout=60*60)
 
     def ready(self):
         return len(self.signers) == self.n
@@ -72,18 +76,17 @@ class MultiSig:
 
     @classmethod
     def open(cls, filename):
-        with open(filename) as f:
-            multisig = cls.from_dict(json.load(f))
-            logger.info(f"Opened wallet from {filename}")
-            return multisig
+        multisig_dict = read_json_file(filename)
+        multisig = cls.from_dict(multisig_dict)
+        logger.info(f"Opened wallet from {filename}")
+        return multisig
 
     def save(self):
         filename = self.filename()
         # if this line broke inside json.dump, the json file would be emptyed :eek:
         data = self.to_dict()  
-        with open(filename, "w") as f:
-            json.dump(data, f, indent=4)
-            logger.info(f"Saved wallet to {filename}")
+        write_json_file(data, filename)
+        logger.info(f"Saved wallet to {filename}")
 
     @classmethod
     def from_dict(cls, d):

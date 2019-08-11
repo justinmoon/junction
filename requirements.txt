@@ -1,4 +1,3 @@
-toml
 hwi
 flask
 python-bitcoinrpc
