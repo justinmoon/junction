@@ -29,7 +29,7 @@ pip install -r requirements.txt
 # Run bitcoin-qt in testnet mode
 bitcoin-qt -testnet
 ```
-## Create a 3/3 Wallet using Trezor, Ledger & BitBox
+## Create a 2/3 Wallet using Trezor, Ledger & BitBox
 
 Demostration that these 3 devices work. Other numbers for m and n should work. I don't have a KeepKey to test with and still working to add ColdCard soon (currently getting a `hwilib.errors.BadArgumentError: Remote Error: Invalid PSBT: Missing redeem script for output #i` error if any kind can reproduce or help debug).
 
@@ -37,7 +37,7 @@ Demostration that these 3 devices work. Other numbers for m and n should work. I
 
 ```
 # Create 3/3 wallet
-$ python cli.py createwallet 3 3
+$ python cli.py createwallet 2 3
 Your new 3/3 wallet has been saved to "junction.wallet"
 
 # Plug in Ledger, enter PIN, navigate to testnet app
