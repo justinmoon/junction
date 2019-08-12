@@ -1,4 +1,5 @@
 import json
+from os import listdir
 
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 
@@ -20,4 +21,11 @@ def test_rpc(rpc_settings):
     except:
         return False
 
+def wallets_exist():
+    return bool(listdir('wallets'))
 
+def get_first_wallet_name():
+    file_name = listdir('wallets')[0]
+    wallet_name = file_name.split('.')[0]
+    return wallet_name
+    

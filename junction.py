@@ -2,7 +2,7 @@ import logging
 import os.path
 import hwilib
 
-from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
+from rpc import RPC, JSONRPCException
 from pprint import pprint
 from hwilib.serializations import PSBT
 
@@ -17,7 +17,7 @@ else:
     settings = read_json_file('settings.json.ex')
 
 bitcoin_uri = "http://{username}:{password}@{host}:{port}"
-bitcoin_rpc = AuthServiceProxy(bitcoin_uri.format(**settings["rpc"]), timeout=60*60)
+bitcoin_rpc = RPC(bitcoin_uri.format(**settings["rpc"]))
 
 
 class JunctionError(Exception):
@@ -43,13 +43,13 @@ class MultiSig:
         self.address_index = address_index
         # RPC connection to corresponding watch-only wallet in Bitcoin Core
         wallet_uri = self.wallet_template.format(**settings["rpc"], name=self.watchonly_name())
-        self.wallet_rpc = AuthServiceProxy(wallet_uri, timeout=60*60)
+        self.wallet_rpc = RPC(wallet_uri)
 
     def ready(self):
         return len(self.signers) == self.n
 
     def filename(self):
-        return f"{self.name}.wallet"
+        return f"wallets/{self.name}.json"
 
     @classmethod
     def create(cls, name, m, n):
@@ -63,7 +63,7 @@ class MultiSig:
         # Never overwrite existing wallet files
         filename = multisig.filename()
         if os.path.exists(filename):
-            raise JunctionError(f"{filename} already exists")
+            raise JunctionError(f'"{filename}" already exists')
 
         # create a watch-only Bitcoin Core wallet
         multisig.create_watchonly()
@@ -75,10 +75,11 @@ class MultiSig:
         return multisig
 
     @classmethod
-    def open(cls, filename):
-        multisig_dict = read_json_file(filename)
+    def open(cls, wallet_name):
+        file_name = f'wallets/{wallet_name}.json'
+        multisig_dict = read_json_file(file_name)
         multisig = cls.from_dict(multisig_dict)
-        logger.info(f"Opened wallet from {filename}")
+        logger.info(f"Opened wallet from {file_name}")
         return multisig
 
     def save(self):

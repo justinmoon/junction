@@ -6,7 +6,7 @@
   <div class="container my-5">
     <h2 class="text-center mb-4">"{{ wallet.name }}" Wallet</h2>
     <!-- Wallet -->
-    <div class="card" style="width: 18rem;">
+    <div class="card" style="width: 30rem;">
       <div class="card-body">
         <h4 class="card-title text-center">{{ wallet.name }} {{ wallet.m }}/{{ wallet.n }}</h4>
         <p class="card-text"></p>
@@ -29,44 +29,53 @@
         {% endif %}
       </div>
     </div>
-    <!-- PSBT -->
-    <div class="card">
-      <div class="card-body">
-        <table class="table table-borderless">
-          <h4>Outputs</h4>
-          <tbody>
-            <!-- FIXME: fee (can i estimate sat/vbyte?) -->
-            <!-- FIXME: display what is and isn't change -->
-            {% for vout in psbt["tx"]["vout"] %}
-            <tr>
-              <td>#{{ loop.index0 }}</td>
-              <td>{{ vout["scriptPubKey"]["addresses"][0] }}</td>
-              <td>{{ vout["value"] }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        <table class="table table-borderless">
-          <h4>Signers</h4>
-          <tbody>
-            <!-- FIXME: determine whether each has signed -->
-            <tr>
-              <td>{{ wallet.signers[0].name }}</td>
-              <td><input type="email" class="form-control" placeholder="pin"></td>
+    {% if not wallet.ready() %}
+      <!-- Add Signers -->
+      <div> add signers</div>
+    {% else %}
+      <!-- PSBT -->
+      {% if not wallet.psbt %}
+          <div> create psbt</div>
+      {% else %}
+      <div class="card">
+        <div class="card-body">
+          <table class="table table-borderless">
+            <h4>Outputs</h4>
+            <tbody>
+              <!-- FIXME: fee (can i estimate sat/vbyte?) -->
+              <!-- FIXME: display what is and isn't change -->
+              {% for vout in psbt["tx"]["vout"] %}
+              <tr>
+                <td>#{{ loop.index0 }}</td>
+                <td>{{ vout["scriptPubKey"]["addresses"][0] }}</td>
+                <td>{{ vout["value"] }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <table class="table table-borderless">
+            <h4>Signers</h4>
+            <tbody>
+              <!-- FIXME: determine whether each has signed -->
+              <tr>
+                <td>{{ wallet.signers[0].name }}</td>
+                <td><input type="email" class="form-control" placeholder="pin"></td>
 
-              <td><button type="button" class="btn btn-primary">Sign</button>
-            <tr>
-            </tr>
-              <td>{{ wallet.signers[1].name }}</td>
-              <td>Signed</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="d-flex">
-          <button type="button" class="btn btn-primary ml-auto">Broadcast</button>
+                <td><button type="button" class="btn btn-primary">Sign</button>
+              <tr>
+              </tr>
+                <td>{{ wallet.signers[1].name }}</td>
+                <td>Signed</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="d-flex">
+            <button type="button" class="btn btn-primary ml-auto">Broadcast</button>
+          </div>
         </div>
       </div>
-    </div>
+      {% endif %}
+    {% endif %}
     <pre>{{ psbt_str }}</pre>
   </div>
 {% endblock %}
