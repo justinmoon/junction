@@ -76,12 +76,21 @@
             <tbody>
               <!-- FIXME: determine whether each has signed -->
               {% for signer in wallet.signers %}
-              <form action="/sign-psbt/{{ signer['fingerprint'] }}" method="post">
+                {% if signer['device_state'] == 'unlocked' %}
+                <form action="/sign-psbt/{{ signer['fingerprint'] }}" method="post">
+                  <tr>
+                    <td>{{ signer.name }}</td>
+                    <td><button type="submit" class="btn btn-primary">Sign</button>
+                  <tr>
+                </form>
+                {% else %}
                 <tr>
                   <td>{{ signer.name }}</td>
-                  <td><button type="submit" class="btn btn-primary">Sign</button>
-                <tr>
-              </form>
+                  <td><a href="/unlock">
+                    <button type="submit" class="btn btn-primary">Unlock</button>
+                  </a></td>
+                </tr>
+                {% endif %}
               {% endfor %}
             </tbody>
           </table>

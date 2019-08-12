@@ -1,7 +1,7 @@
 import json
 import os
 from os.path import isfile
-from pprint import pformat
+from pprint import pformat, pprint
 from flask import Flask, render_template, jsonify, request, redirect, flash, url_for
 from hwilib import commands, serializations
 from hwilib.devices import coldcard, digitalbitbox, ledger, trezor
@@ -12,7 +12,8 @@ from junction import MultiSig, bitcoin_rpc, JunctionError
 app = Flask(__name__)
 app.secret_key = b'fixme'  # requied to flash messages for some reason ...
 
-bitbox_pw = os.environ['BITBOX_PW']
+# bitbox_password = os.environ['BITBOX_PW']
+bitbox_password = None
 
 @app.before_request
 def onboarding(): 
@@ -35,7 +36,7 @@ def onboarding():
 
 @app.route('/')
 def index():
-    devices = commands.enumerate(bitbox_pw)
+    devices = commands.enumerate(bitbox_password)
     return render_template('index.html', devices=str(devices))
 
 @app.route('/create-wallet', methods=['GET', 'POST'])
@@ -67,8 +68,14 @@ def wallet():
     wallet_name = get_first_wallet_name()
     wallet = MultiSig.open(wallet_name)
 
-    devices = commands.enumerate(bitbox_pw)
-
+    devices = commands.enumerate(bitbox_password)
+    pprint(devices)
+    fingerprints = [device.get('fingerprint') for device in devices]
+    for signer in wallet.signers:
+        if signer['fingerprint'] in fingerprints:
+            signer['device_state'] = 'unlocked'
+        else:
+            signer['device_state'] = 'unavailable'
 
     # FIXME
     if wallet.psbt:
@@ -123,7 +130,7 @@ def sign_psbt(fingerprint):
 
 def get_client_and_device(fingerprint):
     # get device
-    devices = commands.enumerate(bitbox_pw)
+    devices = commands.enumerate(bitbox_password)
     device = None
     for d in devices:
         if d.get('fingerprint') == fingerprint:
@@ -137,7 +144,7 @@ def get_client_and_device(fingerprint):
         client = coldcard.ColdcardClient(device['path'])
     # maybe make a global password map for bitbox? it just stays in memory for each session ...
     elif device['type'] == 'digitalbitbox':
-        client = digitalbitbox.DigitalbitboxClient(device['path'], bitbox_pw)
+        client = digitalbitbox.DigitalbitboxClient(device['path'], bitbox_password)
     # elif device['type'] == 'trezor':
         # client = trezor.TrezorClient(device['path'])
     else:
@@ -163,7 +170,7 @@ def add_signer(fingerprint):
 
 @app.route('/api/devices')
 def devices():
-    devices = commands.enumerate(bitbox_pw)
+    devices = commands.enumerate(bitbox_password)
     return jsonify(devices)
 
 @app.route('/export')
@@ -190,3 +197,54 @@ def broadcast():
     multisig.save()
     flash('transaction broadcasted successfully', 'success')
     return redirect(url_for('wallet'))
+
+@app.route('/unlock', methods=['GET', 'POST'])
+def unlock():
+    global bitbox_password
+    if request.method == 'GET':
+        devices = commands.enumerate(bitbox_password)
+
+        # prompt pins
+        for device in devices:
+            if device.get('needs_pin_sent'):
+                # HACK
+                client = trezor.TrezorClient(device['path'])
+                print(device['path'])
+                client.is_testnet = True
+                client.prompt_pin()
+
+        return render_template('unlock.html', devices=devices)
+    else:
+        print(request.form)
+        if 'bitbox-password' in request.form:
+            bitbox_password = request.form['bitbox-password']
+        if 'trezor-1' in request.form:
+            print(request.args)
+            pin = ''
+            next_digit = 1
+            while len(pin) < 9:
+                found = False
+                for key, value in request.form.items():
+                    print(value, next_digit)
+                    if int(value) == next_digit:
+                        place = key.split('-')[-1]
+                        pin += place
+                        next_digit += 1
+                        found = True
+                assert found, 'bad pin entry'
+                print(repr(pin))
+            devices = commands.enumerate(bitbox_password)
+            for device in devices:
+                if device['type'] == 'trezor':
+                    print(device)
+                    print(device['path'])
+                    client = trezor.TrezorClient(device['path'])
+                    client.is_testnet = True
+                    result = client.send_pin(pin)
+                    print(result)
+
+        # Make sure bitbox password doesn't get into the query args ...
+        # FIXME
+        return redirect(url_for('unlock'))
+
+
