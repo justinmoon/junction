@@ -4,36 +4,36 @@
 
 {% block content %}
   <div class="container my-5">
-    <h2 class="text-center mb-4">"{{ wallet.name }}" Wallet</h2>
-    <!-- Wallet -->
-    <div class="card" style="width: 30rem;">
-      <div class="card-body">
-        <h4 class="card-title text-center">{{ wallet.name }} {{ wallet.m }}/{{ wallet.n }}</h4>
-        <p class="card-text"></p>
-        {% if wallet.signers | length == wallet.n %}
-          <div>Signers:</div>
-        {% else %}
-          <div>Signers ({{ wallet.signers | length }}/{{ wallet.n }}):</div>
-        {% endif %}
-        <ul>
-          {% for signer in wallet.signers %}
-          <li>{{ signer["name"] }} ({{ signer["fingerprint"] }})</li>
-          {% endfor %}
-        </ul>
-        {% if wallet.signers | length != wallet.n %}
-          <a href="#" class="card-link">Add Signer</a>
-        {% else %}
-          {% if not wallet.psbt %}
-            <a href="#" class="card-link">Create PSBT</a>
-          {% endif %}
-        {% endif %}
-      </div>
-    </div>
+    <h1 class="text-center mb-4">"{{ wallet.name }}" Wallet ({{ wallet.m }}/{{ wallet.n }})</h2>
+    <!-- Signers -->
+    {% if wallet.signers | length > 0 %}
+      <h3 class="text-center">Signers</h3>
+      <ul>
+        {% for signer in wallet.signers %}
+        <li>{{ signer['name'] }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
     {% if not wallet.ready() %}
       <!-- Add Signers -->
-      <div> add signers</div>
+      <h3 class="text-center">Add {{ wallet.n - wallet.signers | length }} More Signers</h3>
+        {% for device in devices %}
+        <form action="/add-signer/{{ device['fingerprint'] }}" method="post">
+          <div>Type: {{ device['type'] }} <button type="submit" class="btn btn-primary">Add Signer</button></div>
+        </form>
+        {% endfor %}
+      <h3 class="text-center">Device Notes</h3>
+      <ul>
+        <li>ColdCard</li>
+        <li>
+          <ul>
+            <li>Plug your ColdCard in and enter the pin. Then it should show up as an option in the "add signers" section above.</li>
+          </ul>
+        </li>
+      </ul>
     {% else %}
       <!-- PSBT -->
+      <h3 class="text-center">PSBT</h3>
       {% if not wallet.psbt %}
           <div> create psbt</div>
       {% else %}

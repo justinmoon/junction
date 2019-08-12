@@ -3,6 +3,7 @@ from os.path import isfile
 from pprint import pformat
 from flask import Flask, render_template, jsonify, request, redirect, flash, url_for
 from hwilib import commands
+from hwilib.devices import coldcard, digitalbitbox, ledger, trezor
 from utils import read_json_file, write_json_file, test_rpc, wallets_exist, get_first_wallet_name
 
 from junction import MultiSig, bitcoin_rpc, JunctionError
@@ -53,6 +54,11 @@ def create_wallet():
 def wallet():
     wallet_name = get_first_wallet_name()
     wallet = MultiSig.open(wallet_name)
+
+    devices = commands.enumerate()
+    print(devices)
+
+
     # FIXME
     if wallet.psbt:
         psbt = bitcoin_rpc.decodepsbt(wallet.psbt.serialize())
@@ -64,7 +70,7 @@ def wallet():
         # for deriv in psbt['bip32_derivs']:
             # if deriv['master_fingerprint'] == signer.fingerprint:
                 # signer_to_signed[signer.name] = 
-    return render_template('wallet.html', wallet=wallet, psbt=psbt, psbt_str=psbt_str)
+    return render_template('wallet.html', devices=devices, wallet=wallet, psbt=psbt, psbt_str=psbt_str)
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
@@ -88,6 +94,44 @@ def settings():
             return render_template("settings.html", settings=settings)
     else:
         return render_template("settings.html", settings=settings)
+
+
+
+@app.route('/add-signer/<fingerprint>', methods=['POST'])
+def add_signer(fingerprint):
+    wallet_name = get_first_wallet_name()
+    multisig = MultiSig.open(wallet_name)
+    # get device
+    devices = commands.enumerate()
+    device = None
+    for d in devices:
+        if d.get('fingerprint') == fingerprint:
+            device = d
+    assert device is not None
+
+    # get client
+    if device['type'] == 'ledger':
+        client = ledger.LedgerClient(device['path'])
+    elif device['type'] == 'coldcard':
+        client = coldcard.ColdcardClient(device['path'])
+    # maybe make a global password map for bitbox? it just stays in memory for each session ...
+    # elif device['type'] == 'digitalbitbox':
+        # client = digitalbitbox.DigitalbitboxClient(device['path'], PASSWORD)
+    # elif device['type'] == 'trezor':
+        # client = trezor.TrezorClient(device['path'])
+    else:
+        raise JunctionError(f'Devices of type "{device["type"]}" not yet supported')
+    client.is_testnet = True
+
+    # Add a "signer" to the wallet
+    master_xpub = client.get_pubkey_at_path('m/0h')['xpub']
+    origin_path = "m/44h/1h/0h"
+    base_key = client.get_pubkey_at_path(origin_path)['xpub']
+    multisig.add_signer(device['type'], device['fingerprint'], base_key, origin_path)
+    flash(f"Signer \"{device['type']}\" has been added to your \"{multisig.name}\" wallet", 'success')
+
+    # return to wallet page
+    return redirect(url_for('wallet'))
 
 @app.route('/api/devices')
 def devices():
