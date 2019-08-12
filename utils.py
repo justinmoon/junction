@@ -1,7 +1,6 @@
 import json
 from os import listdir
-
-from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
+from rpc import RPC
 
 def write_json_file(data, filename):
     with open(filename, 'w') as f:
@@ -14,7 +13,7 @@ def read_json_file(filename):
 def test_rpc(rpc_settings):
     # FIXME: this rpc_settings variable is whack
     uri = "http://{username}:{password}@{host}:{port}"
-    rpc = AuthServiceProxy(uri.format(**rpc_settings))
+    rpc = RPC(uri.format(**rpc_settings))
     try:
         rpc.getblockchaininfo()
         return True

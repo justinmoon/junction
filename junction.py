@@ -1,4 +1,5 @@
 import logging
+import time
 import os.path
 import hwilib
 
@@ -180,7 +181,8 @@ class MultiSig:
         logger.info("Starting watch-only export")
         self.wallet_rpc.importmulti([{
             "desc": self.descriptor(),
-            "timestamp": "now",
+            # 24 hours just in case
+            "timestamp": int(time.time()) - 60*60*24,
             "range": [self.address_index, settings["wallet"]["address_chunk"]],
             "watchonly": True,
             "keypool": True,

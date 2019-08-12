@@ -1,8 +1,9 @@
 import json
+import os
 from os.path import isfile
 from pprint import pformat
 from flask import Flask, render_template, jsonify, request, redirect, flash, url_for
-from hwilib import commands
+from hwilib import commands, serializations
 from hwilib.devices import coldcard, digitalbitbox, ledger, trezor
 from utils import read_json_file, write_json_file, test_rpc, wallets_exist, get_first_wallet_name
 
@@ -10,6 +11,8 @@ from junction import MultiSig, bitcoin_rpc, JunctionError
 
 app = Flask(__name__)
 app.secret_key = b'fixme'  # requied to flash messages for some reason ...
+
+bitbox_pw = os.environ['BITBOX_PW']
 
 @app.before_request
 def onboarding(): 
@@ -21,7 +24,6 @@ def onboarding():
 
     # onboarding
     # step 1: settings
-    print(isfile('settings.json'), endpoint)
     if not isfile('settings.json'):
         if endpoint != 'settings':
             return redirect(url_for('settings'))
@@ -33,7 +35,7 @@ def onboarding():
 
 @app.route('/')
 def index():
-    devices = commands.enumerate()
+    devices = commands.enumerate(bitbox_pw)
     return render_template('index.html', devices=str(devices))
 
 @app.route('/create-wallet', methods=['GET', 'POST'])
@@ -42,21 +44,30 @@ def create_wallet():
         return render_template('create-wallet.html')
     else:
         try:
-            MultiSig.create(**dict(request.form))
+            name = request.form['name']
+            # FIXME: for some reason these are strings ...
+            m = int(request.form['m'])
+            n = int(request.form['n'])
+            MultiSig.create(name, m, n)
             flash('Wallet created', 'success')
         except JunctionError as e:
             flash(str(e), 'danger')
             return render_template('create-wallet.html')
-        print(url_for('wallet'))
         return redirect('http://localhost:5000/wallet')
+
+@app.route('/create-psbt', methods=['POST'])
+def create_psbt():
+    wallet_name = get_first_wallet_name()
+    multisig = MultiSig.open(wallet_name)
+    multisig.create_psbt(request.form['recipient'], request.form['amount'])
+    return redirect(url_for('wallet'))
 
 @app.route('/wallet')
 def wallet():
     wallet_name = get_first_wallet_name()
     wallet = MultiSig.open(wallet_name)
 
-    devices = commands.enumerate()
-    print(devices)
+    devices = commands.enumerate(bitbox_pw)
 
 
     # FIXME
@@ -96,13 +107,23 @@ def settings():
         return render_template("settings.html", settings=settings)
 
 
-
-@app.route('/add-signer/<fingerprint>', methods=['POST'])
-def add_signer(fingerprint):
+@app.route('/sign-psbt/<fingerprint>', methods=['POST'])
+def sign_psbt(fingerprint):
     wallet_name = get_first_wallet_name()
     multisig = MultiSig.open(wallet_name)
+    client, device = get_client_and_device(fingerprint)
+    psbt = multisig.psbt
+    raw_signed_psbt = client.sign_tx(multisig.psbt)['psbt']
+    new_psbt = serializations.PSBT()
+    new_psbt.deserialize(raw_signed_psbt)
+    multisig.psbt = new_psbt
+    multisig.save()
+    flash(f'{multisig.name} signed successfully', 'success')
+    return redirect(url_for('wallet'))
+
+def get_client_and_device(fingerprint):
     # get device
-    devices = commands.enumerate()
+    devices = commands.enumerate(bitbox_pw)
     device = None
     for d in devices:
         if d.get('fingerprint') == fingerprint:
@@ -115,13 +136,20 @@ def add_signer(fingerprint):
     elif device['type'] == 'coldcard':
         client = coldcard.ColdcardClient(device['path'])
     # maybe make a global password map for bitbox? it just stays in memory for each session ...
-    # elif device['type'] == 'digitalbitbox':
-        # client = digitalbitbox.DigitalbitboxClient(device['path'], PASSWORD)
+    elif device['type'] == 'digitalbitbox':
+        client = digitalbitbox.DigitalbitboxClient(device['path'], bitbox_pw)
     # elif device['type'] == 'trezor':
         # client = trezor.TrezorClient(device['path'])
     else:
         raise JunctionError(f'Devices of type "{device["type"]}" not yet supported')
     client.is_testnet = True
+    return client, device
+
+@app.route('/add-signer/<fingerprint>', methods=['POST'])
+def add_signer(fingerprint):
+    wallet_name = get_first_wallet_name()
+    multisig = MultiSig.open(wallet_name)
+    client, device = get_client_and_device(fingerprint)
 
     # Add a "signer" to the wallet
     master_xpub = client.get_pubkey_at_path('m/0h')['xpub']
@@ -135,5 +163,30 @@ def add_signer(fingerprint):
 
 @app.route('/api/devices')
 def devices():
-    devices = commands.enumerate()
+    devices = commands.enumerate(bitbox_pw)
     return jsonify(devices)
+
+@app.route('/export')
+def export():
+    wallet_name = get_first_wallet_name()
+    multisig = MultiSig.open(wallet_name)
+    multisig.export_watchonly()
+    return redirect(url_for('wallet'))
+
+@app.route('/address')
+def address():
+    wallet_name = get_first_wallet_name()
+    multisig = MultiSig.open(wallet_name)
+    address = multisig.address()
+    return address, 200
+
+@app.route('/broadcast', methods=['POST'])
+def broadcast():
+    wallet_name = get_first_wallet_name()
+    multisig = MultiSig.open(wallet_name)
+    multisig.broadcast()
+    # FIXME: this is a little sketchy ...
+    multisig.psbt = ''
+    multisig.save()
+    flash('transaction broadcasted successfully', 'success')
+    return redirect(url_for('wallet'))
