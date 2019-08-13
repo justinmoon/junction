@@ -13,7 +13,6 @@ class RPC:
         except:
             if tries_remaining > 0:
                 tries_remaining -= 1
-                print('retrying')
                 r = getattr(self.rpc, name)
             else:
                 raise

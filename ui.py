@@ -12,8 +12,11 @@ from junction import MultiSig, bitcoin_rpc, JunctionError
 app = Flask(__name__)
 app.secret_key = b'fixme'  # requied to flash messages for some reason ...
 
-# bitbox_password = os.environ['BITBOX_PW']
+# global variable for bitbox password
 bitbox_password = None
+# global variable for TrezorClient instance. You must prompt and send pin with same instance
+trezor_client = None
+
 
 @app.before_request
 def onboarding(): 
@@ -208,10 +211,9 @@ def unlock():
         for device in devices:
             if device.get('needs_pin_sent'):
                 # HACK
-                client = trezor.TrezorClient(device['path'])
-                print(device['path'])
-                client.is_testnet = True
-                client.prompt_pin()
+                global trezor_client
+                trezor_client = trezor.TrezorClient(device['path'])
+                trezor_client.prompt_pin()
 
         return render_template('unlock.html', devices=devices)
     else:
@@ -238,13 +240,13 @@ def unlock():
                 if device['type'] == 'trezor':
                     print(device)
                     print(device['path'])
-                    client = trezor.TrezorClient(device['path'])
-                    client.is_testnet = True
-                    result = client.send_pin(pin)
+                    result = trezor_client.send_pin(pin)
+                    del trezor_client
                     print(result)
 
         # Make sure bitbox password doesn't get into the query args ...
         # FIXME
         return redirect(url_for('unlock'))
 
-
+if __name__ == '__main__':
+    app.run(debug=True, threaded=False)
