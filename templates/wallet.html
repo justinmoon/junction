@@ -55,7 +55,7 @@
               <input name="recipient" type="text" class="form-control" placeholder="Recipient Address">
             </div>
             <div class="col">
-              <input name="amount" type="number" class="form-control" placeholder="Satoshis to Send">
+              <input name="satoshis" type="number" class="form-control" placeholder="Satoshis to Send">
             </div>
             <button type="submit" class="btn btn-primary">Create PSBT</button>
           </div>
@@ -73,7 +73,7 @@
               <tr>
                 <td>#{{ loop.index0 }}</td>
                 <td>{{ vout["scriptPubKey"]["addresses"][0] }}</td>
-                <td>{{ vout["value"] }}</td>
+                <td class="text-right">{{ btc_to_sat(vout["value"]) }}</td>
               </tr>
               {% endfor %}
             </tbody>

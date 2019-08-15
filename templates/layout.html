@@ -12,11 +12,10 @@
   </head>
 
   <body>
-    <div>
-      <a href="/">Devices</a>
-      <a href="/settings">Settings</a>
-      <a href="/create-wallet">Create Wallet</a>
-      <a href="/wallet">Wallet</a>
+    <div class="text-center">
+      <a href="/">Wallet</a><span>  |  </span>
+      <a href="/settings">Settings</a><span>  |  </span>
+      <a href="/enumerate">Devices</a><span>
     </div>
     {% with messages = get_flashed_messages(with_categories=true) %}
       <!-- Categories: success (green), info (blue), warning (yellow), danger (red) -->

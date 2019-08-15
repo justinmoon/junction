@@ -6,7 +6,7 @@ import hwilib
 from pprint import pprint
 from hwilib.serializations import PSBT
 
-from utils import write_json_file, read_json_file, RPC, JSONRPCException
+from utils import write_json_file, read_json_file, RPC, JSONRPCException, sat_to_btc
 
 logger = logging.getLogger(__name__)
 
@@ -137,9 +137,10 @@ class MultiSig:
         # TODO: consider using HWI's Descriptor class
         origin_path = "/44h/1h/0h"
         path_suffix = "/0/*"
-        xpubs = [f'[{signer["fingerprint"]}{origin_path}]{signer["xpub"]}{path_suffix}' for signer in self.signers]
+        xpubs = [f'[{signer["fingerprint"]}{origin_path}]{signer["xpub"]}{path_suffix}' 
+                for signer in self.signers]
         xpubs = ",".join(xpubs)
-        descriptor = f"wsh(multi({self.m},{xpubs}))"
+        descriptor = f"sh(multi({self.m},{xpubs}))"
         logger.info(f"Exporting descriptor: {descriptor}")
         # validates and appends checksum
         r = self.wallet_rpc.getdescriptorinfo(descriptor)
@@ -158,7 +159,6 @@ class MultiSig:
 
     def create_watchonly(self):
         # Create watch-only Bitcoin Core wallet (FIXME super ugly)
-        # Prefix the wallet name with "junction_" to make it clear this is a junction wallet
         watch_only_name = self.watchonly_name()
         bitcoin_wallets = bitcoin_rpc.listwallets()
         if watch_only_name not in bitcoin_wallets:
@@ -189,16 +189,16 @@ class MultiSig:
         }])
         logger.info("Finished watch-only export")
 
-    def create_psbt(self, recipient, amount):
+    def create_psbt(self, recipient, satoshis):
         if self.psbt:
             raise JunctionError('PSBT already present')
-        # FIXME bitcoin core can't generate change addrs
+        # FIXME bitcoin core can't generate change addresses
         change_address = self.address()
         raw_psbt = self.wallet_rpc.walletcreatefundedpsbt(
             # let Bitcoin Core choose inputs
             [],
             # Outputs
-            [{recipient: amount}],
+            [{recipient: sat_to_btc(satoshis)}],
             # Locktime
             0, 
             {

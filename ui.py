@@ -5,14 +5,13 @@ from pprint import pformat, pprint
 from flask import Flask, render_template, jsonify, request, redirect, flash, url_for
 from hwilib import commands, serializations
 from hwilib.devices import coldcard, digitalbitbox, ledger, trezor
-from utils import read_json_file, write_json_file, test_rpc, wallets_exist, get_first_wallet_name, btc_to_sat, JSONRPCException
+from utils import read_json_file, write_json_file, test_rpc, wallets_exist, get_first_wallet_name, btc_to_sat, JSONRPCException, coldcard_enroll
 from junction import MultiSig, bitcoin_rpc, JunctionError
 
 app = Flask(__name__)
-app.secret_key = b'fixme'  # requied to flash messages for some reason ...
+app.secret_key = b'orangecoingood'  # flashed messages stored on session
 
-# global variable for bitbox password
-# global variable for TrezorClient instance. You must prompt and send pin with same instance
+# global variable for TrezorClient instance b/c you must prompt and send pin with same instance
 trezor_client = None
 
 def flash_success(msg):
@@ -42,10 +41,9 @@ def onboarding():
     elif not wallets_exist():
         if endpoint != 'create_wallet':
             return redirect(url_for('create_wallet'))
-    # now they can use other features
 
-@app.route('/')
-def index():
+@app.route('/enumerate')
+def enumerate():
     devices = commands.enumerate()
     return render_template('index.html', devices=str(devices))
 
@@ -70,10 +68,10 @@ def create_wallet():
 def create_psbt():
     wallet_name = get_first_wallet_name()
     multisig = MultiSig.open(wallet_name)
-    multisig.create_psbt(request.form['recipient'], request.form['amount'])
+    multisig.create_psbt(request.form['recipient'], int(request.form['satoshis']))
     return redirect(url_for('wallet'))
 
-@app.route('/wallet')
+@app.route('/')
 def wallet():
     wallet_name = get_first_wallet_name()
     wallet = MultiSig.open(wallet_name)
@@ -93,17 +91,17 @@ def wallet():
                     pubkey_match = deriv['pubkey'] in input.get('partial_signatures', [])
                     if fingerprint_match and pubkey_match:
                         signed = True
-                        print('SIGNED', signer['name'])
             signer['signed'] = signed
 
     else:
         psbt = None
+
     # FIXME: 'signed' isn't always present
     signed = all([signer.get('signed') for signer in wallet.signers])
 
-    # FIXME
+    # FIXME: ugly
     for signer in wallet.signers:
-        match = {'error': "Not found"}
+        match = {'error': "Not found"}  # note: "Not found" is used in UI
         for device in devices:
             if device.get('fingerprint') == signer['fingerprint']:
                 match = device
@@ -112,10 +110,12 @@ def wallet():
 
     # FIXME: ugly
     signer_fingerprints = [signer['fingerprint'] for signer in wallet.signers]
-    potential_signers = [d for d in devices if d.get('fingerprint') not in signer_fingerprints]
-    print('potential signers', potential_signers)
+    potential_signers = [d for d in devices if d.get('fingerprint') 
+            and d.get('fingerprint') not in signer_fingerprints]
+    pprint(potential_signers)
 
-    return render_template('wallet.html', devices=devices, wallet=wallet, psbt=psbt, potential_signers=potential_signers, balance=balance, signed=signed)
+    return render_template('wallet.html', devices=devices, wallet=wallet, psbt=psbt,
+            potential_signers=potential_signers, balance=balance, signed=signed, btc_to_sat=btc_to_sat)
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
@@ -127,7 +127,6 @@ def settings():
 
     # handle requests
     if request.method == 'POST':
-        # FIXME: attempt to exercise RPC with these settings
         rpc_settings = dict(request.form)
         if test_rpc(rpc_settings):
             settings['rpc'] = dict(request.form)
@@ -160,7 +159,6 @@ def get_client_and_device(fingerprint):
     # get device
     devices = commands.enumerate()
     device = None
-    print(devices)
     for d in devices:
         if d.get('fingerprint') == fingerprint:
             device = d
@@ -176,6 +174,7 @@ def get_client_and_device(fingerprint):
     else:
         raise JunctionError(f'Devices of type "{device["type"]}" not yet supported')
     client.is_testnet = True
+
     return client, device
 
 @app.route('/add-signer/<fingerprint>', methods=['POST'])
@@ -185,11 +184,17 @@ def add_signer(fingerprint):
     client, device = get_client_and_device(fingerprint)
 
     # Add a "signer" to the wallet
-    master_xpub = client.get_pubkey_at_path('m/0h')['xpub']
-    origin_path = "m/44h/1h/0h"
-    base_key = client.get_pubkey_at_path(origin_path)['xpub']
-    multisig.add_signer(device['type'], device['fingerprint'], base_key, origin_path)
-    flash(f"Signer \"{device['type']}\" has been added to your \"{multisig.name}\" wallet", 'success')
+    account_path = "m/44h/1h/0h"
+    base_key = client.get_pubkey_at_path(account_path)['xpub']
+    multisig.add_signer(device['type'], device['fingerprint'], base_key, account_path)
+
+    msg = f"Signer \"{device['type']}\" has been added to your \"{multisig.name}\" wallet."
+    if device['type'] == 'coldcard':
+        client.close()
+        coldcard_enroll(multisig)
+        msg += ' Please confirm on your ColdCard.'
+
+    flash_success(msg)
 
     # return to wallet page
     return redirect(url_for('wallet'))
