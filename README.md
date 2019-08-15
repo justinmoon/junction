@@ -1,4 +1,4 @@
-# Junction: UI For MultiSig With Bitcoin Core
+# Junction: UI For Multisig With Bitcoin Core
 
 ```
 python3 -m venv venv

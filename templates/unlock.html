@@ -7,7 +7,7 @@
     <h1 class="text-center mb-4">Unlock Devices</h1>
     {% if everything_unlocked %}
     <div>No devices currently available. Try replugging and reloading page if there should be one.</div>
-    <div>If you're done unlocking, <a href="/wallet">click here</a> to return to dashboard</div>
+    <div>If you're done unlocking, <a href="/">click here</a> to return to dashboard</div>
     {% endif %}
     {% for device in devices %}
       {% if 'error' in device %}

@@ -62,7 +62,7 @@ def create_wallet():
         except JunctionError as e:
             flash(str(e), 'danger')
             return render_template('create-wallet.html')
-        return redirect('http://localhost:5000/wallet')
+        return redirect(url_for('wallet'))
 
 @app.route('/create-psbt', methods=['POST'])
 def create_psbt():
