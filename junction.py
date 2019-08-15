@@ -3,11 +3,10 @@ import time
 import os.path
 import hwilib
 
-from rpc import RPC, JSONRPCException
 from pprint import pprint
 from hwilib.serializations import PSBT
 
-from utils import write_json_file, read_json_file
+from utils import write_json_file, read_json_file, RPC, JSONRPCException
 
 logger = logging.getLogger(__name__)
 
@@ -220,9 +219,16 @@ class MultiSig:
         self.psbt = None
 
     def decode_psbt(self):
-        return self.wallet_rpc.decodepsbt(self.psbt.serialize())
+        if self.psbt:
+            return self.wallet_rpc.decodepsbt(self.psbt.serialize())
+        else:
+            return None
 
     def broadcast(self):
         psbt_hex = self.psbt.serialize()
         tx_hex = self.wallet_rpc.finalizepsbt(psbt_hex)["hex"]
         return self.wallet_rpc.sendrawtransaction(tx_hex)
+    
+    def balance(self):
+        # FIXME: I should also get unconfirmed balance but settings min_conf=0 doesn't work
+        return self.wallet_rpc.getbalance("*", 1, True)

@@ -1,11 +1,12 @@
 {% extends "layout.html" %}
 
-{% block title %}"{{ wallet.name }}" Wallet{% endblock %}
+{% block title %}{{ wallet.name }} ({{ wallet.m }}/{{ wallet.n }}){% endblock %}
 
 {% block content %}
   <div class="container my-5">
-    <h1 class="text-center mb-4">"{{ wallet.name }}" Wallet ({{ wallet.m }}/{{ wallet.n }})</h2>
+    <h1 class="text-center mb-4">{{ wallet.name }} ({{ wallet.m }}/{{ wallet.n }})</h2>
     {% if wallet.ready() %}
+    <div class="text-center mb-3">Balance: {{ balance }} satoshis</div>
     <div class="text-center mb-3">
       <a href="/address">
         <button class="btn btn-primary">Generate Receving Address</button>
@@ -17,27 +18,33 @@
       <h3 class="text-center">Signers</h3>
       <ul>
         {% for signer in wallet.signers %}
-        <li>{{ signer['name'] }}</li>
+        <li>{{ signer['name'] }} ({{ signer['fingerprint'] }})</li>
         {% endfor %}
       </ul>
     {% endif %}
+
     {% if not wallet.ready() %}
       <!-- Add Signers -->
       <h3 class="text-center">Add {{ wallet.n - wallet.signers | length }} More Signers</h3>
-        {% for device in devices %}
-        <form action="/add-signer/{{ device['fingerprint'] }}" method="post">
-          <div>Type: {{ device['type'] }} <button type="submit" class="btn btn-primary">Add Signer</button></div>
-        </form>
+      <table class="table table-borderless">
+        {% for device in potential_signers %}
+        <tr>
+          <td>{{ device['type'] }}</td>
+          {% if device['needs_pin_sent'] %}
+          <td class="text-right">
+            <a href="/unlock">
+              <button type="submit" class="btn btn-primary">Unlock</button>
+            </a>
+          </td>
+          {% else %}
+          <form action="/add-signer/{{ device['fingerprint'] }}" method="post">
+            <td class="text-right">
+              <button type="submit" class="btn btn-primary">Add signer</button>
+            </td>
+          </form>
+          {% endif %}
+        </tr>
         {% endfor %}
-      <h3 class="text-center">Device Notes</h3>
-      <ul>
-        <li>ColdCard</li>
-        <li>
-          <ul>
-            <li>Plug your ColdCard in and enter the pin. Then it should show up as an option in the "add signers" section above.</li>
-          </ul>
-        </li>
-      </ul>
     {% else %}
       <!-- PSBT -->
       {% if not wallet.psbt %}
@@ -74,35 +81,40 @@
           <table class="table table-borderless">
             <h4>Signers</h4>
             <tbody>
-              <!-- FIXME: determine whether each has signed -->
               {% for signer in wallet.signers %}
-                {% if signer['device_state'] == 'unlocked' %}
+                {% if signer['signed'] %}
+                  <tr>
+                    <td>{{ signer.name }} ({{ signer['fingerprint'] }})</td>
+                    <td class="text-right">Signed</button>
+                  <tr>
+                {% elif signer['device']['error'] == 'Not found' %}
+                  <tr>
+                    <td>{{ signer.name }} ({{ signer['fingerprint'] }})</td>
+                    <td class="text-right"><a href="/unlock">
+                      <button class="btn btn-primary text-right">Unlock</button>
+                    </a></td>
+                  <tr>
+                {% else %}
                 <form action="/sign-psbt/{{ signer['fingerprint'] }}" method="post">
                   <tr>
-                    <td>{{ signer.name }}</td>
-                    <td><button type="submit" class="btn btn-primary">Sign</button>
+                    <td>{{ signer.name }} ({{ signer['fingerprint'] }})</td>
+                    <td class="text-right"><button type="submit" class="btn btn-primary">Sign</button>
                   <tr>
                 </form>
-                {% else %}
-                <tr>
-                  <td>{{ signer.name }}</td>
-                  <td><a href="/unlock">
-                    <button type="submit" class="btn btn-primary">Unlock</button>
-                  </a></td>
-                </tr>
                 {% endif %}
               {% endfor %}
             </tbody>
           </table>
+          {% if signed %}
           <form action="/broadcast" method="post">
             <div class="d-flex">
               <button type="submit" class="btn btn-primary ml-auto">Broadcast</button>
             </div>
           </form>
+          {% endif %}
         </div>
       </div>
       {% endif %}
     {% endif %}
-    <pre>{{ psbt_str }}</pre>
   </div>
 {% endblock %}

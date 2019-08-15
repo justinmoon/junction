@@ -1,6 +1,7 @@
 import json
 from os import listdir
-from rpc import RPC
+from decimal import Decimal
+from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 
 def write_json_file(data, filename):
     with open(filename, 'w') as f:
@@ -28,3 +29,36 @@ def get_first_wallet_name():
     wallet_name = file_name.split('.')[0]
     return wallet_name
     
+###  Currency conversions
+
+COIN_PER_SAT = Decimal(10) ** -8
+SAT_PER_COIN = 100_000_000
+
+def btc_to_sat(btc):
+    return int(btc*SAT_PER_COIN)
+
+def sat_to_btc(sat):
+    return Decimal(sat/100_000_000).quantize(COIN_PER_SAT)
+
+
+
+### RPC
+
+
+class RPC:
+
+    def __init__(self, uri):
+        self.uri = uri
+
+    def __getattr__(self, name):
+        rpc = AuthServiceProxy(self.uri, timeout=60*10)  # 10 minute timeout
+        tries_remaining = 5
+        try:
+            r = getattr(rpc, name)
+        except:
+            if tries_remaining > 0:
+                tries_remaining -= 1
+                r = getattr(self.rpc, name)
+            else:
+                raise
+        return r  # FIXME
