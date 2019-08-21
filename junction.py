@@ -6,7 +6,7 @@ import hwilib
 from pprint import pprint
 from hwilib.serializations import PSBT
 
-from utils import write_json_file, read_json_file, RPC, JSONRPCException, sat_to_btc
+from utils import write_json_file, read_json_file, RPC, JSONRPCException, sat_to_btc, btc_to_sat
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ if os.path.isfile('settings.json'):
 else:
     settings = read_json_file('settings.json.ex')
 
-bitcoin_uri = "http://{username}:{password}@{host}:{port}"
+bitcoin_uri = "http://{username}:{password}@{host}:{port}/wallet/"
 bitcoin_rpc = RPC(bitcoin_uri.format(**settings["rpc"]))
 
 
@@ -136,6 +136,7 @@ class MultiSig:
         '''Descriptor for shared multisig addresses'''
         # TODO: consider using HWI's Descriptor class
         origin_path = "/44h/1h/0h"
+        # TODO: add change parameter and inject here
         path_suffix = "/0/*"
         xpubs = [f'[{signer["fingerprint"]}{origin_path}]{signer["xpub"]}{path_suffix}' 
                 for signer in self.signers]
@@ -147,7 +148,6 @@ class MultiSig:
         return r['descriptor']
 
     def address(self):
-        # TODO: this check could work nicely as a decorator
         if not self.ready():
             raise JunctionError(f'{self.n} signers required, {len(self.signers)} registered')
         address = self.wallet_rpc.deriveaddresses(
@@ -158,7 +158,7 @@ class MultiSig:
         return address
 
     def create_watchonly(self):
-        # Create watch-only Bitcoin Core wallet (FIXME super ugly)
+        # Create watch-only Bitcoin Core wallet
         watch_only_name = self.watchonly_name()
         bitcoin_wallets = bitcoin_rpc.listwallets()
         if watch_only_name not in bitcoin_wallets:
@@ -184,7 +184,8 @@ class MultiSig:
             "timestamp": int(time.time()) - 60*60*24,
             "range": [self.address_index, settings["wallet"]["address_chunk"]],
             "watchonly": True,
-            "keypool": True,
+            # Bitcoin Core cannot import P2SH/P2WSH: https://bitcoin.stackexchange.com/a/89118/85335
+            "keypool": False,
             "internal": False,
         }])
         logger.info("Finished watch-only export")
@@ -192,7 +193,6 @@ class MultiSig:
     def create_psbt(self, recipient, satoshis):
         if self.psbt:
             raise JunctionError('PSBT already present')
-        # FIXME bitcoin core can't generate change addresses
         change_address = self.address()
         raw_psbt = self.wallet_rpc.walletcreatefundedpsbt(
             # let Bitcoin Core choose inputs
@@ -229,6 +229,20 @@ class MultiSig:
         tx_hex = self.wallet_rpc.finalizepsbt(psbt_hex)["hex"]
         return self.wallet_rpc.sendrawtransaction(tx_hex)
     
-    def balance(self):
-        # FIXME: I should also get unconfirmed balance but settings min_conf=0 doesn't work
-        return self.wallet_rpc.getbalance("*", 1, True)
+    def balances(self):
+        confirmed = 0
+        unconfirmed = 0
+        spendable = 0
+
+        transactions = self.wallet_rpc.listtransactions("*", 100, 0, True)
+        for tx in transactions:
+            if tx["confirmations"] == 0:
+                unconfirmed += tx["amount"]
+            else:
+                confirmed += tx["amount"]
+
+        unspents = self.wallet_rpc.listunspent()
+        for tx in unspents:
+            spendable += tx["amount"]
+
+        return btc_to_sat(unconfirmed), btc_to_sat(confirmed), btc_to_sat(spendable)

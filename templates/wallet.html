@@ -6,7 +6,10 @@
   <div class="container my-5">
     <h1 class="text-center mb-4">{{ wallet.name }} ({{ wallet.m }}/{{ wallet.n }})</h2>
     {% if wallet.ready() %}
-    <div class="text-center mb-3">Balance: {{ balance }} satoshis</div>
+    {% if unconfirmed %}
+      <div class="text-center mb-3">Unconfirmed balance: {{ unconfirmed }} satoshis</div>
+    {% endif %}
+    <div class="text-center mb-3">Confirmed balance: {{ confirmed }} satoshis</div>
     <div class="text-center mb-3">
       <a href="/address">
         <button class="btn btn-primary">Generate Receving Address</button>
@@ -30,7 +33,7 @@
         {% for device in potential_signers %}
         <tr>
           <td>{{ device['type'] }}</td>
-          {% if device['needs_pin_sent'] %}
+          {% if device['needs_pin_sent'] or 'fingerprint' not in device %}
           <td class="text-right">
             <a href="/unlock">
               <button type="submit" class="btn btn-primary">Unlock</button>
@@ -49,6 +52,7 @@
       <!-- PSBT -->
       {% if not wallet.psbt %}
         <h3 class="text-center">Create PSBT</h3>
+        {% if spendable > 0 %}
         <form action="/create-psbt" method="post">
           <div class="form-row">
             <div class="col">
@@ -60,6 +64,9 @@
             <button type="submit" class="btn btn-primary">Create PSBT</button>
           </div>
         </form>
+        {% else %}
+        <div class="text-center">No confirmed UTXOs to spend</div>
+        {% endif %}
       {% else %}
       <h3 class="text-center">Sign PSBT</h3>
       <div class="card">

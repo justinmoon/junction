@@ -76,7 +76,7 @@ def wallet():
     wallet_name = get_first_wallet_name()
     wallet = MultiSig.open(wallet_name)
     devices = commands.enumerate()
-    balance = btc_to_sat(wallet.balance())
+    unconfirmed, confirmed, spendable = wallet.balances()
 
     # FIXME: ugly
     if wallet.psbt:
@@ -110,12 +110,14 @@ def wallet():
 
     # FIXME: ugly
     signer_fingerprints = [signer['fingerprint'] for signer in wallet.signers]
-    potential_signers = [d for d in devices if d.get('fingerprint') 
-            and d.get('fingerprint') not in signer_fingerprints]
+    potential_signers = [d for d in devices if 'fingerprint' not in d
+            or d['fingerprint'] not in signer_fingerprints]
+    print('potential signers')
     pprint(potential_signers)
 
     return render_template('wallet.html', devices=devices, wallet=wallet, psbt=psbt,
-            potential_signers=potential_signers, balance=balance, signed=signed, btc_to_sat=btc_to_sat)
+            spendable=spendable,
+            potential_signers=potential_signers, confirmed=confirmed, unconfirmed=unconfirmed, signed=signed, btc_to_sat=btc_to_sat)
 
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
@@ -269,10 +271,16 @@ def display():
     for device in devices:
         if device['type'] == 'trezor':
             client = trezor.TrezorClient(device['path'])
-            print(multisig.descriptor())
             res = commands.displayaddress(client, desc=multisig.descriptor())
             return str(res), 200
     return 'no trezor', 200
 
 if __name__ == '__main__':
+    try:
+        wallet_name = get_first_wallet_name()
+        multisig = MultiSig.open(wallet_name)
+        # FIXME: hack to prevent unloaded wallet
+        multisig.create_watchonly()
+    except:
+        pass
     app.run(debug=True, threaded=False)
