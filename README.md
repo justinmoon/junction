@@ -6,7 +6,7 @@ See [this tweetstorm](https://twitter.com/_JustinMoon_/status/116690572232566784
 
 Junction project uses [HWI](https://github.com/bitcoin-core/HWI) to communicate with hardware wallets. Follow [these instructions](https://github.com/bitcoin-core/HWI#prerequisites) to install dependencies for HWI. If you're on Linux you may need to install udev rules.
 
-Also, you need Python 3.7 or higher.
+Also, you need Python 3.6 or higher.
 
 ```
 python3 -m venv venv
