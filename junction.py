@@ -240,7 +240,7 @@ class MultisigWallet:
         return self.wallet_rpc.sendrawtransaction(tx_hex)
     
     def balances(self):
-        '''(unconfirmed, confirmed) balances tuple. Unconfirmed doesn't work right now'''
+        '''(unconfirmed, confirmed) balances tuple'''
         # try to use new getbalances rpc (available in bitcoin core master branch)
         try:
             balances = self.wallet_rpc.getbalances()
@@ -251,4 +251,12 @@ class MultisigWallet:
                 return 0, 0
         # fall back to getbalance and no unconfirmed balance
         except:
-            return 0, self.wallet_rpc.getbalance('*', 0, True)
+            unconfirmed_balance = 0
+            confirmed_balance = 0
+            unspent = self.wallet_rpc.listunspent(0, 9999999, [], True)
+            for u in unspent:
+                if u['confirmations'] > 0:
+                    confirmed_balance += u['amount']
+                else:
+                    unconfirmed_balance += u['amount']
+            return unconfirmed_balance, confirmed_balance
