@@ -1,4 +1,4 @@
-# UI For Hardware Wallet Multisig w/ Bitcoin Core
+# UI For Hardware Wallet Multisig with Bitcoin Core
 
 ![image](./logo.jpg)
 
