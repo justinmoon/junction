@@ -1,4 +1,4 @@
-# Junction: UI For Multisig With Bitcoin Core
+# Junction: UI For Hardware Wallet Multisig With Bitcoin Core
 
 ![image](./logo.jpg)
 
