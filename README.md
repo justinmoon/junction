@@ -16,6 +16,8 @@ bitcoind -testnet
 python ui.py
 ```
 
+Open `localhost:5000` in your browser
+
 ## Features
 
 - Supports P2SH multisig with Trezor, Ledger, and ColdCard hardware wallets
