@@ -1,5 +1,9 @@
 # Junction: UI For Multisig With Bitcoin Core
 
+![image](./logo.jpg)
+
+## Usage
+
 Junction project uses [HWI](https://github.com/bitcoin-core/HWI) to communicate with hardware wallets. Follow [these instructions](https://github.com/bitcoin-core/HWI#prerequisites) to install dependencies for HWI. If you're on Linux you may need to install udev rules.
 
 ```
