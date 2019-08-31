@@ -3,7 +3,7 @@ const {PythonShell} = require('python-shell')
 
 function createWindow () {
   // run junction
-  PythonShell.run('ui.py', {}, function  (err, results)  {
+  PythonShell.run('frontend.py', {}, function  (err, results)  {
    if  (err)  console.log(err);
   });
 

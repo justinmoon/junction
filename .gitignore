@@ -126,3 +126,7 @@ dmypy.json
 # Junction
 wallets/
 settings.json
+
+# javascrpit
+package-lock.json
+node_modules
