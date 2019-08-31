@@ -1,0 +1,30 @@
+{
+  "name": "junction",
+  "version": "1.0.0",
+  "description": "## UI For Hardware Wallet Multisig with Bitcoin Core",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron . --no-sandbox"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/justinmoon/junction.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/justinmoon/junction/issues"
+  },
+  "homepage": "https://github.com/justinmoon/junction#readme",
+  "devDependencies": {
+    "electron": "^6.0.7"
+  },
+  "dependencies": {
+    "python-shell": "^1.0.8"
+  }
+}
