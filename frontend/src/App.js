@@ -5,6 +5,7 @@ import { Button, Nav, Container, Col, Row } from 'react-bootstrap'
 import { LinkContainer } from 'react-router-bootstrap'
 
 import Settings from './Settings'
+import History from './History'
 
 // global bootstrap import
 import 'bootstrap/dist/css/bootstrap.css';
@@ -71,11 +72,6 @@ function Sign() {
   return <h2>Sign</h2>;
 }
 
-function History() {
-  return <h2>History</h2>;
-}
-
-
 function AppRouter() {
   return (
     <Router>
@@ -97,7 +93,7 @@ function AppRouter() {
               </LinkContainer>
             </Nav>
           </Col>
-          <Col>
+          <Col xs={10}>
             <Route path="/send/" exact component={Send} />
             <Route path="/sign/" component={Sign} />
             <Route path="/history/" component={History} />

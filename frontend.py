@@ -1,3 +1,4 @@
+import json
 from flask import Flask, render_template, jsonify
 from hwilib import commands
 
@@ -14,3 +15,10 @@ def hello():
 @app.route("/enumerate")
 def enumerate():
     return jsonify(commands.enumerate())
+
+@app.route("/transactions")
+def transactions():
+    with open('data/listtransactions.json', 'r') as f:
+        txns = json.load(f)[::-1]
+    return jsonify(txns)
+
