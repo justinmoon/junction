@@ -22,3 +22,9 @@ def transactions():
         txns = json.load(f)[::-1]
     return jsonify(txns)
 
+@app.route("/psbt")
+def psbt():
+    with open('data/psbt.json', 'r') as f:
+        psbt = json.load(f)
+    return jsonify(psbt)
+

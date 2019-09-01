@@ -1,11 +1,13 @@
 import React from 'react'
 import { BrowserRouter as Router, Route, Link } from "react-router-dom"
 
-import { Button, Nav, Container, Col, Row } from 'react-bootstrap'
+import { Button, OverlayTrigger, Tooltip, ButtonToolbar, Nav, Container, Col, Row } from 'react-bootstrap'
 import { LinkContainer } from 'react-router-bootstrap'
 
 import Settings from './Settings'
 import History from './History'
+import Sign from './Sign'
+import WalletBanner from './WalletBanner'
 
 // global bootstrap import
 import 'bootstrap/dist/css/bootstrap.css';
@@ -68,10 +70,6 @@ function Send() {
   return <h2>Send</h2>;
 }
 
-function Sign() {
-  return <h2>Sign</h2>;
-}
-
 function AppRouter() {
   return (
     <Router>
@@ -79,6 +77,7 @@ function AppRouter() {
         <Row>
           <Col xs={2}>
             <Nav defaultActiveKey="/home" className="flex-column">
+              <h3>Junction</h3>
               <LinkContainer to="/send/">
                 <Link>Send</Link>
               </LinkContainer>
@@ -94,6 +93,7 @@ function AppRouter() {
             </Nav>
           </Col>
           <Col xs={10}>
+            <WalletBanner/>
             <Route path="/send/" exact component={Send} />
             <Route path="/sign/" component={Sign} />
             <Route path="/history/" component={History} />

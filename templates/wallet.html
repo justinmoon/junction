@@ -107,7 +107,7 @@
                 {% if signer['signed'] %}
                   <tr>
                     <td>{{ signer.name }} ({{ signer['fingerprint'] }})</td>
-                    <td class="text-right">Signed</button>
+                    <td class="text-right">Signed</td>
                   <tr>
                 {% elif signer['device']['error'] == 'Not found' %}
                   <tr>
@@ -120,7 +120,7 @@
                 <form action="/sign-psbt/{{ signer['fingerprint'] }}" method="post">
                   <tr>
                     <td>{{ signer.name }} ({{ signer['fingerprint'] }})</td>
-                    <td class="text-right"><button type="submit" class="btn btn-primary">Sign</button>
+                    <td class="text-right"><button type="submit" class="btn btn-primary">Sign</button></td>
                   <tr>
                 </form>
                 {% endif %}

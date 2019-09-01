@@ -1,0 +1,106 @@
+{
+  "tx": {
+    "txid": "0000ba693f6f1cbd02a9880da6dab2d13f9dbe9792de3d68b8a535ae2ffd1e8e",
+    "hash": "0000ba693f6f1cbd02a9880da6dab2d13f9dbe9792de3d68b8a535ae2ffd1e8e",
+    "version": 2,
+    "size": 126,
+    "vsize": 126,
+    "weight": 504,
+    "locktime": 0,
+    "vin": [
+      {
+        "txid": "a078f05bd75179aea20dffa557fdb571be6344a9a8a5c4a1350fa1e5b76f82b1",
+        "vout": 0,
+        "scriptSig": {
+          "asm": "",
+          "hex": ""
+        },
+        "sequence": 4294967294
+      }
+    ],
+    "vout": [
+      {
+        "value": 1.00000000,
+        "n": 0,
+        "scriptPubKey": {
+          "asm": "OP_HASH160 aa30b2a02c7e61d4cdf42fd0ac8f41fac32bd9d8 OP_EQUAL",
+          "hex": "a914aa30b2a02c7e61d4cdf42fd0ac8f41fac32bd9d887",
+          "reqSigs": 1,
+          "type": "scripthash",
+          "addresses": [
+            "2N8m7CUUhTpp5fBU9AnmWZGU65Wj8c3gkwm"
+          ]
+        }
+      },
+      {
+        "value": 0.56246360,
+        "n": 1,
+        "scriptPubKey": {
+          "asm": "0 107c71ec977db1f5ebc03dae307866dd931417326a979a7b334445ad3aa8ed9b",
+          "hex": "0020107c71ec977db1f5ebc03dae307866dd931417326a979a7b334445ad3aa8ed9b",
+          "reqSigs": 1,
+          "type": "witness_v0_scripthash",
+          "addresses": [
+            "tb1qzp78rmyh0kclt67q8khrq7rxmkf3g9ejd2te57eng3z66w4gakds0ueh59"
+          ]
+        }
+      }
+    ]
+  },
+  "unknown": {
+  },
+  "inputs": [
+    {
+      "witness_utxo": {
+        "amount": 1.56250000,
+        "scriptPubKey": {
+          "asm": "0 561716a7bf1f04e2b55dab15c777d8907fc225c9b42307949822ba69fba61a7c",
+          "hex": "0020561716a7bf1f04e2b55dab15c777d8907fc225c9b42307949822ba69fba61a7c",
+          "type": "witness_v0_scripthash",
+          "address": "tb1q2ct3dfalruzw9d2a4v2uwa7cjpluyfwfks3s09ycy2axn7axrf7qx9r979"
+        }
+      },
+      "witness_script": {
+        "asm": "2 03197e0c4450f424a9432bbc7fe6b0884706078c8ce8ad7f5344e3dfa74eb5281e 0235b6e663c592bfbbe7f8e74923b57efd9572d3fbea90f5a762fbb3d8a497eba0 2 OP_CHECKMULTISIG",
+        "hex": "522103197e0c4450f424a9432bbc7fe6b0884706078c8ce8ad7f5344e3dfa74eb5281e210235b6e663c592bfbbe7f8e74923b57efd9572d3fbea90f5a762fbb3d8a497eba052ae",
+        "type": "multisig"
+      },
+      "bip32_derivs": [
+        {
+          "pubkey": "0235b6e663c592bfbbe7f8e74923b57efd9572d3fbea90f5a762fbb3d8a497eba0",
+          "master_fingerprint": "5b98d98d",
+          "path": "m/44'/1'/0'/0/0"
+        },
+        {
+          "pubkey": "03197e0c4450f424a9432bbc7fe6b0884706078c8ce8ad7f5344e3dfa74eb5281e",
+          "master_fingerprint": "6bb3d403",
+          "path": "m/44'/1'/0'/0/0"
+        }
+      ]
+    }
+  ],
+  "outputs": [
+    {
+    },
+    {
+      "witness_script": {
+        "asm": "2 024af32c657565868af8d09112dbba06f3e1a7aa246d61aca618301ba4401d1c91 03eb7a483c361f49fd522c988ba94766d34b50edb5b28cf53e164b8a99524d9387 2 OP_CHECKMULTISIG",
+        "hex": "5221024af32c657565868af8d09112dbba06f3e1a7aa246d61aca618301ba4401d1c912103eb7a483c361f49fd522c988ba94766d34b50edb5b28cf53e164b8a99524d938752ae",
+        "type": "multisig"
+      },
+      "bip32_derivs": [
+        {
+          "pubkey": "024af32c657565868af8d09112dbba06f3e1a7aa246d61aca618301ba4401d1c91",
+          "master_fingerprint": "6bb3d403",
+          "path": "m/44'/1'/0'/0/3"
+        },
+        {
+          "pubkey": "03eb7a483c361f49fd522c988ba94766d34b50edb5b28cf53e164b8a99524d9387",
+          "master_fingerprint": "5b98d98d",
+          "path": "m/44'/1'/0'/0/3"
+        }
+      ]
+    }
+  ],
+  "fee": 0.00003640
+}
