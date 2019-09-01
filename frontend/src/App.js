@@ -4,6 +4,8 @@ import { BrowserRouter as Router, Route, Link } from "react-router-dom"
 import { Button, Nav, Container, Col, Row } from 'react-bootstrap'
 import { LinkContainer } from 'react-router-bootstrap'
 
+import Settings from './Settings'
+
 // global bootstrap import
 import 'bootstrap/dist/css/bootstrap.css';
 
@@ -73,9 +75,6 @@ function History() {
   return <h2>History</h2>;
 }
 
-function Settings() {
-  return <h2>Settings</h2>;
-}
 
 function AppRouter() {
   return (

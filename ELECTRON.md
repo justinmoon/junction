@@ -16,7 +16,12 @@ npm start
 ## Notes
 
 - Had to do [https://github.com/hundredrabbits/Orca/issues/91#issuecomment-508750882](this hack) to get electron to run on arch ...
+
+## Dependencies
+
+- "react-router-bootstrap" made bootstrap "<Link/>" behave correctly w/ react-router
 - I wrote a "dev" command in frontend/package.json that isn't being used currently. Remove this if it's never used ...
+  - "watch"
 
 ## React Router
 - [nested routing](https://reacttraining.com/react-router/web/guides/quick-start/example-nested-routing) would be a good way to do routing with multiple wallets.
