@@ -2,10 +2,21 @@ import json
 from flask import Flask, render_template, jsonify
 from hwilib import commands
 
+# FIXME: I should have 1 blueprint and prod + dev apps that register diff directoreis
+# import os, sys
+# if getattr(sys, 'frozen', False):
+    # print('frozen')
+    # app = Flask(
+        # __name__,
+        # static_folder=os.path.join(sys._MEIPASS, 'build/static')
+        # template_folder=os.path.join(sys._MEIPASS, 'build')
+    # )
+# else:
+    # print('not frozen')
 app = Flask(
     __name__,
-    static_folder="frontend/build/static",
-    template_folder="frontend/build",
+    static_folder="build/static",
+    template_folder="build",
 )
 
 @app.route("/")
