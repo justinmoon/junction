@@ -2,12 +2,15 @@ import json
 from os import listdir
 import os.path
 from decimal import Decimal
-from flask import flash
+from flask import flash, current_app as app
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 from hwilib import commands
 from hwilib.devices import coldcard, digitalbitbox, ledger, trezor
 
 class JunctionError(Exception):
+    pass
+
+class JunctionWarning(Exception):
     pass
 
 ### io
@@ -104,12 +107,27 @@ class RPC:
         return getattr(rpc, name)
 
 def test_rpc(settings):
+    ''' raises JunctionErrors or Warnings if RPC-connection doesn't work'''
     rpc = RPC(settings=settings)
     try:
         rpc.getblockchaininfo()
-        return True
-    except:
-        return False
+        if int(rpc.getnetworkinfo()['version']) < 170000:
+           raise JunctionWarning("Update your Bitcoin Node to at least version > 0.17 otherwise this won't work.") 
+        rpc.listwallets()
+    except ConnectionRefusedError as e:
+        raise JunctionError("ConnectionRefusedError: check https://bitcoin.stackexchange.com/questions/74337/testnet-bitcoin-connection-refused-111")
+    except JSONRPCException as e:
+        if "Unauthorized" in str(e):
+            raise JunctionError("Please double-check your credentials!")
+        elif "Method not found" in str(e):
+            raise JunctionWarning("Make sure to have 'disablewallet=0' in your bitcoin.conf otherwise this won't work")
+        else:
+            handle_exception(e)
+        return False 
+    except Exception as e:
+        app.logger.error("rpc-settings: {}".format(settings))
+        handle_exception(e)
+        raise JunctionError(e)
 
 ### ColdCard
 
@@ -148,3 +166,9 @@ def coldcard_enroll(wallet):
 
     dev.send_recv(CCProtocolPacker.multisig_enroll(file_len, sha))
 
+def handle_exception(exception, user=None):
+    ''' prints the exception and most important the stacktrace '''
+    app.logger.error("Unexpected error")
+    app.logger.error("----START-TRACEBACK-----------------------------------------------------------------")
+    app.logger.exception(exception)    # the exception instance
+    app.logger.error("----END---TRACEBACK-----------------------------------------------------------------")

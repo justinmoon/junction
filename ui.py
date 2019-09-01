@@ -2,11 +2,11 @@ import json
 import os
 from os.path import isfile
 from pprint import pformat, pprint
-from flask import Flask, render_template, jsonify, request, redirect, url_for
+from flask import Flask, render_template, jsonify, request, redirect, url_for, current_app as app
 from hwilib import commands, serializations
 from hwilib.devices import trezor
-from utils import read_json_file, write_json_file, test_rpc, get_first_wallet_name, btc_to_sat, JSONRPCException, coldcard_enroll, flash_success, flash_error, update_settings, get_client_and_device, get_settings
-from junction import MultisigWallet, JunctionError
+from utils import read_json_file, write_json_file, test_rpc, get_first_wallet_name, btc_to_sat, JSONRPCException, coldcard_enroll, flash_success, flash_error, update_settings, get_client_and_device, get_settings, handle_exception, JunctionError, JunctionWarning
+from junction import MultisigWallet
 
 app = Flask(__name__)
 app.secret_key = b'orangecoingood'  # flashed messages stored on session
@@ -114,13 +114,18 @@ def wallet():
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
     if request.method == 'POST':
-        rpc_settings = dict(request.form)
-        if test_rpc(rpc_settings):
+        rpc_settings = request.form.to_dict()
+        try:
+            test_rpc(rpc_settings)
             update_settings(rpc_settings)
             flash_success('Settings updated')
             return redirect(url_for('wallet'))
-        else:
-            flash_error('Invalid settings')
+        except JunctionWarning as jw:
+            update_settings(rpc_settings)
+            flash_success('Settings Updated but: {}'.format(jw))
+            return redirect(url_for('settings'))
+        except JunctionError as je:
+            flash_error('Error: {}'.format(je))
             return redirect(url_for('settings'))
     else:
         settings = get_settings()

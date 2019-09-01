@@ -6,7 +6,7 @@ import os.path
 from pprint import pprint
 from hwilib.serializations import PSBT
 
-from utils import write_json_file, read_json_file, RPC, JSONRPCException, sat_to_btc, btc_to_sat, get_settings, JunctionError
+from utils import write_json_file, read_json_file, RPC, JSONRPCException, sat_to_btc, btc_to_sat, get_settings, JunctionError, handle_exception
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +161,11 @@ class MultisigWallet:
         # Create watch-only Bitcoin Core wallet
         watch_only_name = self.watchonly_name()
         default_wallet_rpc = RPC()
-        bitcoin_wallets = default_wallet_rpc.listwallets()
+        try:
+            bitcoin_wallets = default_wallet_rpc.listwallets()
+        except Exception as e:
+            handle_exception(e)
+            raise JunctionError(e)
         if watch_only_name not in bitcoin_wallets:
             try:
                 default_wallet_rpc.loadwallet(watch_only_name)
@@ -171,6 +175,7 @@ class MultisigWallet:
                     default_wallet_rpc.createwallet(watch_only_name, True)
                     logger.info(f"Created watch-only Bitcoin Core wallet \"{watch_only_name}\"")
                 except JSONRPCException as e:
+                    handle_exception(e)
                     raise JunctionError("Couldn't establish watch-only Bitcoin Core wallet")
 
     def watchonly_name(self):
