@@ -1,4 +1,5 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
+from hwilib import commands
 
 app = Flask(
     __name__,
@@ -10,7 +11,6 @@ app = Flask(
 def hello():
     return render_template('index.html')
 
-print('Starting Flask!')
-
-app.debug=True
-app.run(host='0.0.0.0')
+@app.route("/enumerate")
+def enumerate():
+    return jsonify(commands.enumerate())

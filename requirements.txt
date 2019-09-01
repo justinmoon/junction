@@ -2,3 +2,6 @@ hwi
 flask
 python-bitcoinrpc
 ckcc-protocol
+
+# temporary hack for development
+flask_cors
