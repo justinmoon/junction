@@ -136,3 +136,6 @@ there are some permissions problems in the output `dist/` folder ... some stuff 
 
 - everything gets copied into dist/electron_prod -- hwi, frontend.py, build directory
     - but this isn't getting found when running in electron
+- super strange error where all of a index.html couldn't be located by flask and any changes to flask routes didn't have any effect ...
+    - deleting `buidl/` directory seemed to fix it ...
+- show i do python stuff inside the docker container

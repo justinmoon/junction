@@ -12,10 +12,9 @@ let mainWindow;
 var spawn = require('child_process').spawn;
 if (isDev) {
   // FIXME use python-shell in development
-  throw new Error('fuck me')
-  var executablePath = "./dist/electron_dev/electron_dev"
+  var executablePath = path.normalize(path.join(__dirname, "../dist/electron_dev/electron_dev"))
 } else {
-  var executablePath = "./dist/electron_prod/electron_prod"
+  var executablePath = path.normalize(path.join(__dirname, "../dist/electron_prod/electron_prod"))
 }
 var spawned = spawn(executablePath)
 spawned.stdout.on('data', function(data) {

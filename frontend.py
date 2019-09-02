@@ -26,13 +26,13 @@ app = Flask(
     template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build'),
 )
 
-# @app.route("/")
-# def hello():
-    # return render_template('index.html')
+@app.route("/")
+def hello():
+    return render_template('index.html')
 
 @app.route("/path")
 def path():
-    return str(path.join(os.path.dirname(os.path.abspath(__file__)), 'build/static'))
+    return str(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build/static'))
 
 @app.route("/enumerate")
 def enumerate():
