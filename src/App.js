@@ -94,7 +94,7 @@ function AppRouter() {
           </Col>
           <Col xs={10}>
             <WalletBanner/>
-            <Route path="/send/" exact component={Send} />
+            <Route path="/send/" exact component={EnumerateDevices} />
             <Route path="/sign/" component={Sign} />
             <Route path="/history/" component={History} />
             <Route path="/settings/" component={Settings} />

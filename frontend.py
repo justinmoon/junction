@@ -1,6 +1,8 @@
 import json
+import os
 from flask import Flask, render_template, jsonify
 from hwilib import commands
+import logging
 
 # FIXME: I should have 1 blueprint and prod + dev apps that register diff directoreis
 # import os, sys
@@ -13,15 +15,24 @@ from hwilib import commands
     # )
 # else:
     # print('not frozen')
+logging.basicConfig()
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+logger.info(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build/static'))
+logger.info(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build'))
 app = Flask(
     __name__,
-    static_folder="build/static",
-    template_folder="build",
+    static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build/static'),
+    template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build'),
 )
 
-@app.route("/")
-def hello():
-    return render_template('index.html')
+# @app.route("/")
+# def hello():
+    # return render_template('index.html')
+
+@app.route("/path")
+def path():
+    return str(path.join(os.path.dirname(os.path.abspath(__file__)), 'build/static'))
 
 @app.route("/enumerate")
 def enumerate():

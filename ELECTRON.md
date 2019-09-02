@@ -103,7 +103,7 @@ I'm copying the dev dependencies to get this working here -- but note that it us
 - changed package.json to `"electron-pack": "build -l"`
   - to get a multi-platform build it should be `build -mwl` [(docs)](https://www.electron.build/multi-platform-build)
 - [how to build windows on linux](https://www.electron.build/multi-platform-build#docker)
-  - run `yarn build -w` inside the container to just build for windows
+  - run `yarn && yarn build -w` inside the container to just build for windows
 
 - ^^ not that comment 
 
@@ -115,8 +115,24 @@ I was able to get an executable with `pyinstaller electron.py` ... output as `bu
 
 ## Bait and switch
 
-- don't forget python-shell dep](https://github.com/electron-userland/electron-builder/issues/2529)
+- don't forget [python-shell dep](https://github.com/electron-userland/electron-builder/issues/2529)
 - don't touch the python
 - yarn installations gets a lot of "too old" warnings
 - `yaarn start` doesn't work in the original project. seems it's trying to import "crypto" project in the browser -- but it's a node thing, not a browser thing.
 - I had to [manually add](https://github.com/electron-userland/electron-builder/issues/2529) `jquery` and `popper.js`
+
+## Windows build
+
+Had to build a custom docker container b/c node version was too old in `electronuserland/builder:wine` ... not sure why this is ...
+
+```
+docker build -t junction .
+```
+
+there are some permissions problems in the output `dist/` folder ... some stuff owned by root ...
+
+
+## FUCK ME
+
+- everything gets copied into dist/electron_prod -- hwi, frontend.py, build directory
+    - but this isn't getting found when running in electron

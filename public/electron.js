@@ -10,7 +10,13 @@ let mainWindow;
 // hacks
 // FIXME: how to delay BrowserWindow until this is running
 var spawn = require('child_process').spawn;
-var executablePath = "./dist/dev/dev"
+if (isDev) {
+  // FIXME use python-shell in development
+  throw new Error('fuck me')
+  var executablePath = "./dist/electron_dev/electron_dev"
+} else {
+  var executablePath = "./dist/electron_prod/electron_prod"
+}
 var spawned = spawn(executablePath)
 spawned.stdout.on('data', function(data) {
     console.log('stdout: ' + data.toString());
@@ -29,7 +35,12 @@ const sleep = (milliseconds) => {
 
 function createWindow() {
   mainWindow = new BrowserWindow({width: 900, height: 680});
-  mainWindow.loadURL('http://localhost:5000')
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:3000')
+  } else {
+    mainWindow.loadURL('http://localhost:5000')
+  }
+
   //mainWindow.loadURL(isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
   //if (isDev) {
     //// Open the DevTools.
@@ -39,7 +50,8 @@ function createWindow() {
   mainWindow.on('closed', () => mainWindow = null);
 }
 
-app.on('ready', sleep(1000).then(createWindow));
+function startInOneSecond() {sleep(1000).then(createWindow)}
+app.on('ready', startInOneSecond);
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
