@@ -2,3 +2,4 @@ hwi
 flask
 python-bitcoinrpc
 ckcc-protocol
+flask-cors

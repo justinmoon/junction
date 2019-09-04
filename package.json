@@ -7,9 +7,11 @@
     "@types/node": "12.7.4",
     "@types/react": "16.9.2",
     "@types/react-dom": "16.9.0",
+    "bootstrap": "4.3.1",
     "react": "^16.9.0",
     "react-dom": "^16.9.0",
     "react-scripts": "3.1.1",
+    "reactstrap": "8.0.1",
     "standard": "^14.1.0",
     "typescript": "3.6.2"
   },
@@ -33,5 +35,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/reactstrap": "8.0.4"
   }
 }
