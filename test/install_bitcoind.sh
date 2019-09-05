@@ -1,5 +1,6 @@
 # Clone bitcoind if it doesn't exist, or update it if it does
 # (copied from HWI)
+cd test
 bitcoind_setup_needed=false
 if [ ! -d "bitcoin" ]; then
     git clone https://github.com/bitcoin/bitcoin.git
