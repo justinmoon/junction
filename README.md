@@ -45,3 +45,19 @@ _This is buggy, alpha, proof-of-concept software_
     - [No change detection](https://github.com/bitcoin-core/HWI/issues/170#issuecomment-491843963)
     - Cannot display multisig receiving addresses on hardware wallet display
     - Sometimes HWI thinks wallets are locked when they clearly aren't
+
+## Testing
+
+To run tests:
+
+1. Install `bitcoind` to `test` directory
+
+```
+$ ./test/install_bitcoind.sh
+```
+
+1. Run tests
+
+```
+python -m unittest test.test_wallet.py
+```
