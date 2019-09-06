@@ -13,16 +13,6 @@ class JunctionError(Exception):
 class JunctionWarning(Exception):
     pass
 
-### io
-
-def write_json_file(data, filename):
-    with open(filename, 'w') as f:
-        return json.dump(data, f, indent=4)
-
-def read_json_file(filename):
-    with open(filename, 'r') as f:
-        return json.load(f)
-
 ### HWI
 
 def get_client_and_device(fingerprint):
@@ -46,29 +36,6 @@ def get_client_and_device(fingerprint):
     client.is_testnet = True
 
     return client, device
-
-
-### wallets
-
-def get_first_wallet_name():
-    file_names = listdir('wallets')
-    if not file_names:
-        return None
-    file_name = file_names[0]
-    return file_name.split('.')[0]
-
-### settings
-
-def get_settings():
-    if os.path.isfile('settings.json'):
-        return read_json_file("settings.json")
-    else:
-        return read_json_file('settings.json.ex')
-
-def update_settings(new_settings):
-    settings = get_settings()
-    settings.update(new_settings)
-    write_json_file(settings, 'settings.json')
 
 ### Flask
 
@@ -94,17 +61,25 @@ def sat_to_btc(sat):
 
 class RPC:
 
-    wallet_template = "http://{rpc_username}:{rpc_password}@{rpc_host}:{rpc_port}/wallet/{wallet_name}"
+    uri_template = "http://{user}:{password}@{host}:{port}/wallet/{wallet_name}"
 
-    def __init__(self, wallet_name='', settings=None):
-        if settings is None:
-            settings = get_settings()
-        self.uri = self.wallet_template.format(**settings, wallet_name=wallet_name)
+    def __init__(self, settings, wallet_name=''):
+        self.uri = self.uri_template.format(
+            user=settings['rpc_username'],
+            password=settings['rpc_password'], 
+            host=settings['rpc_host'], 
+            port=settings['rpc_port'], 
+            wallet_name=wallet_name
+        )
 
     def __getattr__(self, name):
         '''Create new proxy for every call to prevent timeouts'''
         rpc = AuthServiceProxy(self.uri, timeout=60)  # 1 minute timeout
         return getattr(rpc, name)
+
+    def test(self):
+        '''TODO: move test_rpc logic in here'''
+        raise NotImplementedError()
 
 def test_rpc(settings):
     ''' raises JunctionErrors or Warnings if RPC-connection doesn't work'''
@@ -128,47 +103,3 @@ def test_rpc(settings):
         app.logger.error("rpc-settings: {}".format(settings))
         handle_exception(e)
         raise JunctionError(e)
-
-### ColdCard
-
-# FIXME: do this with hwilib.devices.coldcard
-# `real_file_upload` is the only thing that's missing
-from utils import get_first_wallet_name
-from ckcc.cli import ColdcardDevice, real_file_upload, MAX_BLK_LEN, CCProtocolPacker
-from io import BytesIO
-
-multisig_header = \
-"""Name: {name}
-Policy: {m} of {n}
-Derivation: {path}
-Format: {format}
-
-"""
-multisig_key = "\n{fingerprint}: {xpub}"
-
-def coldcard_multisig_file(wallet):
-    name = wallet.name[:20]  # 20 character max
-    contents = multisig_header.format(name=name, m=wallet.m, n=wallet.n, 
-                                      path="m/44'/1'/0'", format='P2SH')
-    for signer in wallet.signers:
-        contents += multisig_key.format(fingerprint=signer['fingerprint'],
-                                        xpub=signer['xpub'])
-
-    return BytesIO(contents.encode())
-
-def coldcard_enroll(wallet):
-    multisig_file = coldcard_multisig_file(wallet)
-
-    force_serial = None
-    dev = ColdcardDevice(sn=force_serial)
-
-    file_len, sha = real_file_upload(multisig_file, MAX_BLK_LEN, dev=dev)
-
-    dev.send_recv(CCProtocolPacker.multisig_enroll(file_len, sha))
-
-def handle_exception(exception, user=None):
-    ''' prints the exception and most important the stacktrace '''
-    app.logger.error("Unexpected error")
-    app.logger.error("----START-TRACEBACK-----------------------------------------------------------------")
-    app.logger.exception(exception)    # the exception instance
-    app.logger.error("----END---TRACEBACK-----------------------------------------------------------------")

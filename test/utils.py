@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 import shutil
 import os
+import json
 import time
 import unittest
 
@@ -20,8 +21,8 @@ def start_bitcoind(bitcoind_path):
         time.sleep(0.5)
     # Read .cookie file to get user and pass
     with open(datadir + '/regtest/.cookie') as f:
-        userpass = f.readline().lstrip().rstrip()
-    rpc = AuthServiceProxy('http://{}@127.0.0.1:18443'.format(userpass))
+        rpc_username, rpc_password = f.readline().lstrip().rstrip().split(':')
+    rpc = AuthServiceProxy('http://{}:{}@127.0.0.1:18443/wallet/'.format(rpc_username, rpc_password))
 
     # Wait for bitcoind to be ready
     ready = False
@@ -35,5 +36,14 @@ def start_bitcoind(bitcoind_path):
 
     # Make sure there are blocks and coins available
     rpc.generatetoaddress(101, rpc.getnewaddress())
-    return (rpc, userpass)
+    return (rpc, rpc_username, rpc_password)
 
+def write_json_file(data, filename):
+    path = os.path.join(junction_dir, filename)
+    with open(path, 'w') as f:
+        return json.dump(data, f, indent=4)
+
+def read_json_file(filename):
+    path = os.path.join(junction_dir, filename)
+    with open(path, 'r') as f:
+        return json.load(f)
