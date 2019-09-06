@@ -63,13 +63,14 @@ class WalletTests(unittest.TestCase):
         wallet.add_signer('coldcard', '5b98d98d', 'tpubDDSFSPwTa8AnvogHXTsJ29745CDLrSmn9Jsi5LN9ks1T6szBk7xmkNAjZ1gXfQHdfuD1rae939z93rXE7he3QkLxNmaLh1XuvyzZoTAAWYm', derivation_path)
         self.assertFalse(wallet.ready())
 
-        # can't add signer twice
+        # can't add same signer twice
         with self.assertRaises(JunctionError):
             wallet.add_signer('coldcard', '5b98d98d', 'tpubDDSFSPwTa8AnvogHXTsJ29745CDLrSmn9Jsi5LN9ks1T6szBk7xmkNAjZ1gXfQHdfuD1rae939z93rXE7he3QkLxNmaLh1XuvyzZoTAAWYm', derivation_path)
 
         # add third signer
         wallet.add_signer('trezor', 'ecbc6bc1', 'tpubDDsVS9pwqzLB92RZ6uTiixhDLPcoL1JESsYUCGootaTYu4JVh1aCu5t9oY3RRC1ic2dAbt7AqsE8uXLeq1p2DC5SP27ntmx4dUUPnvWhNhW', derivation_path)
         self.assertTrue(wallet.ready())
+        # check that we can derive addresses
         self.assertIsNotNone(wallet.address())
 
         # can't add more signers once wallet "ready"
@@ -77,8 +78,11 @@ class WalletTests(unittest.TestCase):
             wallet.add_signer('x', 'x', 'x', 'x')
 
     def test_create_wallet_already_exists(self):
-        
+        disk.write_json_file({}, 'wallets/test_create_wallet_already_exists.json')
+        with self.assertRaises(JunctionError):
+            wallet = MultisigWallet.create('test_create_wallet_already_exists', 2, 3)
 
+        
 
         # create wallet w/o existing wallet file
         # create wallet w/ existing wallet file
