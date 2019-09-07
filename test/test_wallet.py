@@ -15,10 +15,11 @@ signers = [
     ('coldcard', '5b98d98d', 'tpubDDSFSPwTa8AnvogHXTsJ29745CDLrSmn9Jsi5LN9ks1T6szBk7xmkNAjZ1gXfQHdfuD1rae939z93rXE7he3QkLxNmaLh1XuvyzZoTAAWYm', derivation_path),
     ('trezor', 'ecbc6bc1', 'tpubDDsVS9pwqzLB92RZ6uTiixhDLPcoL1JESsYUCGootaTYu4JVh1aCu5t9oY3RRC1ic2dAbt7AqsE8uXLeq1p2DC5SP27ntmx4dUUPnvWhNhW', derivation_path),
 ]
+TEST_WALLET_NAME = '____test_wallet'
 
 def make_wallet_file():
     wallet_file = {
-        'name': '____test_wallet',
+        'name': TEST_WALLET_NAME,
         'm': '2',
         'n': '3',
         'signers': signers,
@@ -123,28 +124,32 @@ class WalletTests(unittest.TestCase):
         # - not deleted when it shouldn't be
         # 
         # can we create an pre-existing transaction and test that bitcoind finds it?
-        pass
 
     def test_open_wallet_file_doesnt_exist(self):
         with self.assertRaises(FileNotFoundError):
-            MultisigWallet.open('wallets/test_open_wallet_doesnt_exist.json')
+            MultisigWallet.open('test_open_wallet_doesnt_exist')
 
     def test_open_wallet_watchonly_doesnt_exist(self):
         make_wallet_file()
         # watch-only wallet doesn't exist
-        self.assertNotIn('____test_wallet', self.rpc.listwallets())
+        self.assertNotIn(TEST_WALLET_NAME, self.rpc.listwallets())
         # load wallet
-        wallet = MultisigWallet.open('____test_wallet')
+        wallet = MultisigWallet.open(TEST_WALLET_NAME)
         # watch-only wallet was created
-        self.assertIn('____test_wallet', self.rpc.listwallets())
-
-    def test_open_wallet(self):
-        pass
+        self.assertIn(TEST_WALLET_NAME, self.rpc.listwallets())
 
     def test_save_wallet(self):
         # try to make sure that wallet files can't be overwritten accidentally
         # open and save is idempotent
-        pass
+        make_wallet_file()
+        wallet_file_path = os.path.join(self.wallet_dir, f'{TEST_WALLET_NAME}.json')
+        with open(wallet_file_path, 'r') as f:
+            initial_contents = f.read()
+        wallet = MultisigWallet.open(TEST_WALLET_NAME)
+        wallet.save()
+        with open(wallet_file_path, 'r') as f:
+            final_contents = f.read()
+        assert initial_contents == final_contents
 
     def test_descriptor(self):
         pass
