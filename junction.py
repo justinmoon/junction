@@ -78,7 +78,8 @@ class MultisigWallet:
         relative_path = f'wallets/{wallet_name}.json'
         wallet_dict = read_json_file(relative_path)
         wallet = cls.from_dict(wallet_dict)
-        logger.info(f"Opened wallet from {filename}")
+        wallet.ensure_watchonly()
+        logger.info(f"Opened wallet from {relative_path}")
         return wallet
 
     def save(self):

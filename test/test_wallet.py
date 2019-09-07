@@ -16,6 +16,17 @@ signers = [
     ('trezor', 'ecbc6bc1', 'tpubDDsVS9pwqzLB92RZ6uTiixhDLPcoL1JESsYUCGootaTYu4JVh1aCu5t9oY3RRC1ic2dAbt7AqsE8uXLeq1p2DC5SP27ntmx4dUUPnvWhNhW', derivation_path),
 ]
 
+def make_wallet_file():
+    wallet_file = {
+        'name': '____test_wallet',
+        'm': '2',
+        'n': '3',
+        'signers': signers,
+        'psbt': '',
+        'address_index': 0
+    }
+    disk.write_json_file(wallet_file, 'wallets/____test_wallet.json')
+
 class WalletTests(unittest.TestCase):
 
     @classmethod
@@ -114,12 +125,20 @@ class WalletTests(unittest.TestCase):
         # can we create an pre-existing transaction and test that bitcoind finds it?
         pass
 
-    def test_open_wallet_doesnt_exist(self):
+    def test_open_wallet_file_doesnt_exist(self):
         with self.assertRaises(FileNotFoundError):
             MultisigWallet.open('wallets/test_open_wallet_doesnt_exist.json')
-        # watch-only wallet doesn't exist (what to do?)
-        # wallet file doesn't exist (JunctionError?)
-        # watch-only wallet exists, is loaded
+
+    def test_open_wallet_watchonly_doesnt_exist(self):
+        make_wallet_file()
+        # watch-only wallet doesn't exist
+        self.assertNotIn('____test_wallet', self.rpc.listwallets())
+        # load wallet
+        wallet = MultisigWallet.open('____test_wallet')
+        # watch-only wallet was created
+        self.assertIn('____test_wallet', self.rpc.listwallets())
+
+    def test_open_wallet(self):
         pass
 
     def test_save_wallet(self):
