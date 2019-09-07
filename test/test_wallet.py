@@ -114,7 +114,9 @@ class WalletTests(unittest.TestCase):
         # can we create an pre-existing transaction and test that bitcoind finds it?
         pass
 
-    def test_open_wallet(self):
+    def test_open_wallet_doesnt_exist(self):
+        with self.assertRaises(FileNotFoundError):
+            MultisigWallet.open('wallets/test_open_wallet_doesnt_exist.json')
         # watch-only wallet doesn't exist (what to do?)
         # wallet file doesn't exist (JunctionError?)
         # watch-only wallet exists, is loaded
