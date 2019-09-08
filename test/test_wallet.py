@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 derivation_path = "m/44h/1h/0h"
 
+# FIXME: generate xpubs randomly ...
 signers = [
     {
         'name': 'trezor',
@@ -180,23 +181,43 @@ class WalletTests(unittest.TestCase):
         self.assertEqual(want, wallet.descriptor())
 
     def test_export(self):
+        self.rpc.generatetoaddress(1, self.rpc.getnewaddress())
         wallet = make_wallet(self._testMethodName)
-        assert len(wallet.wallet_rpc.listtransactions()) == 0
-        count = 0
-        while wallet.address_index < 101 :  # cross address export boundary
+        count = len(wallet.wallet_rpc.listtransactions())
+        while wallet.address_index < 201 :  # cross address export boundary
             address = wallet.address()
             ai = wallet.wallet_rpc.getaddressinfo(address)
+            # Check BIP67
             self.assertEqual(ai['pubkeys'], sorted(ai['pubkeys']))
-            self.rpc.sendtoaddress(address, 1)
+            self.rpc.sendtoaddress(address, .1)
             count += 1
         self.rpc.generatetoaddress(1, self.rpc.getnewaddress())
-        assert len(wallet.wallet_rpc.listtransactions()) == count
+        self.assertEqual(len(wallet.wallet_rpc.listtransactions('*', 1000)), count)
 
     def test_create_psbt(self):
         # fixture: get some coins for coin selection
         # check that receiver and change addresses are correct
         # check that bitcoin core funds the psbt
-        pass
+        wallet = make_wallet(self._testMethodName)
+        # fund out wallet
+        self.rpc.sendtoaddress(wallet.address(), 1)
+        self.rpc.generatetoaddress(1, self.rpc.getnewaddress())
+        # create psbt
+        receiving_address = self.rpc.getnewaddress()
+        wallet.create_psbt(receiving_address, 100000)
+        self.assertTrue(bool(wallet.psbt))  # FIXME
+        psbt = wallet.decode_psbt()
+
+        # receiving address is in the outputs
+        output_addrs = [vout['scriptPubKey']['addresses'][0] for vout in psbt['tx']['vout']]
+        self.assertIn(receiving_address, output_addrs)
+        output_addrs.remove(receiving_address)
+        wallet_addrs = wallet.wallet_rpc.deriveaddresses(
+            wallet.descriptor(), 
+            [0, wallet.export_index + 1])  # FIXME: +1 just to be safe
+
+        # the remaining output address (change) belongs to wallet
+        self.assertIn(output_addrs[0], wallet_addrs)
 
     def test_signing_complete(self):
         # test with finished and unfinished psbts
