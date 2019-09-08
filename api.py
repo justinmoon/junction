@@ -5,6 +5,8 @@ from flask_json_schema import JsonSchema, JsonValidationError
 from hwilib import commands
 from hwilib.devices import trezor, ledger, coldcard
 
+import disk
+
 api = Blueprint(__name__, 'api')
 schema = JsonSchema()
 logger = logging.getLogger(__name__)
@@ -100,7 +102,10 @@ def unlock_device():
 @api.route('/wallets', methods=['GET'])
 def list_wallets():
     # TODO: does this include addresses?
-    raise NotImplementedError()
+    wallets = disk.get_wallets()
+    # FIXME: probably shouldn't include xpubs in this response?
+    wallet_dicts = [wallet.to_dict() for wallet in wallets]
+    return jsonify(wallet_dicts)
 
 @api.route('/wallets', methods=['POST'])
 @schema.validate({

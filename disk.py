@@ -31,3 +31,23 @@ def ensure_datadir():
 
 def get_settings():
     return read_json_file('settings.json')
+
+def get_wallet_names():
+    wallet_names = []
+    wallets_dir = os.path.join(DATADIR, 'wallets')
+    wallet_files = os.listdir(wallets_dir)
+    for wallet_file in wallet_files:
+        wallet_name = wallet_file.split('.')[0]
+        wallet_names.append(wallet_name)
+    return wallet_names
+
+def get_wallets():
+    from junction import MultisigWallet  # FIXME: circular imports
+    wallets = []
+    wallet_names = get_wallet_names()
+    for wallet_name in wallet_names:
+        wallet = MultisigWallet.open(wallet_name)
+        wallets.append(wallet)
+    return wallets
+
+

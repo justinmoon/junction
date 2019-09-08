@@ -13,6 +13,25 @@ logger = logging.getLogger(__name__)
 
 ADDRESS_CHUNK = 100
 
+class HardwareMultisigSigner:
+
+    def __init__(self, *, name, xpub, fingerprint):
+        self.name = name
+        self.xpub = xpub
+        self.fingerprint = fingerprint
+        # FIXME: type (trezor, ledger, etc)
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'xpub': self.xpub,
+            'fingerprint': self.fingerprint,
+        }
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(**d)
+
 class MultisigWallet:
 
     def __init__(self, name, m, n, signers, psbt, address_index, export_index):
@@ -82,6 +101,8 @@ class MultisigWallet:
         relative_path = f'wallets/{wallet_name}.json'
         wallet_dict = read_json_file(relative_path)
         wallet = cls.from_dict(wallet_dict)
+        # FIXME: this probably isn't right. people should be able to use wallet w/o bitcoind running
+        # decorating methods that require bitcoind might be a better approach
         wallet.ensure_watchonly()
         logger.info(f"Opened wallet from {relative_path}")
         return wallet
@@ -100,6 +121,7 @@ class MultisigWallet:
             psbt = hwilib.serializations.PSBT()
             psbt.deserialize(d["psbt"])
             d["psbt"] = psbt
+        d['signers'] = [HardwareMultisigSigner.from_dict(signer) for signer in d['signers']]
         return cls(**d)
         
     def to_dict(self):
@@ -108,7 +130,7 @@ class MultisigWallet:
             "name": self.name,
             "m": self.m,
             "n": self.n,
-            "signers": self.signers,
+            "signers": [signer.to_dict() for signer in self.signers],
             "psbt": self.psbt.serialize() if self.psbt else "",
             "address_index": self.address_index,
             "export_index": self.export_index,
