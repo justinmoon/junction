@@ -179,16 +179,15 @@ class WalletTests(unittest.TestCase):
         want = "sh(multi(2,[ecbc6bc1/44'/1'/0']tpubDDsVS9pwqzLB92RZ6uTiixhDLPcoL1JESsYUCGootaTYu4JVh1aCu5t9oY3RRC1ic2dAbt7AqsE8uXLeq1p2DC5SP27ntmx4dUUPnvWhNhW/0/*,[6bb3d403/44'/1'/0']tpubDCpR7Xjiho9KdidtHf3gJ1ZRbzu64HAiYTG9vR6JE5jJrPZbqJYBVXT33rFboKG8PBh4rJudjpBjFjD4ADwdwKUdMYZGJr2bBvLNBZLPMyF/0/*,[5b98d98d/44'/1'/0']tpubDDSFSPwTa8AnvogHXTsJ29745CDLrSmn9Jsi5LN9ks1T6szBk7xmkNAjZ1gXfQHdfuD1rae939z93rXE7he3QkLxNmaLh1XuvyzZoTAAWYm/0/*))#ef6uqs3s"
         self.assertEqual(want, wallet.descriptor())
 
-    def test_address(self):
-        '''generate N new addresses, make sure that none violate BIP67?'''
-        pass
-
     def test_export(self):
         wallet = make_wallet(self._testMethodName)
         assert len(wallet.wallet_rpc.listtransactions()) == 0
         count = 0
         while wallet.address_index < 101 :  # cross address export boundary
-            self.rpc.sendtoaddress(wallet.address(), 1)
+            address = wallet.address()
+            ai = wallet.wallet_rpc.getaddressinfo(address)
+            self.assertEqual(ai['pubkeys'], sorted(ai['pubkeys']))
+            self.rpc.sendtoaddress(address, 1)
             count += 1
         self.rpc.generatetoaddress(1, self.rpc.getnewaddress())
         assert len(wallet.wallet_rpc.listtransactions()) == count
