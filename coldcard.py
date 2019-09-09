@@ -31,10 +31,3 @@ def coldcard_enroll(wallet):
     file_len, sha = real_file_upload(multisig_file, MAX_BLK_LEN, dev=dev)
 
     dev.send_recv(CCProtocolPacker.multisig_enroll(file_len, sha))
-
-def handle_exception(exception, user=None):
-    ''' prints the exception and most important the stacktrace '''
-    app.logger.error("Unexpected error")
-    app.logger.error("----START-TRACEBACK-----------------------------------------------------------------")
-    app.logger.exception(exception)    # the exception instance
-    app.logger.error("----END---TRACEBACK-----------------------------------------------------------------")

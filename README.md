@@ -50,13 +50,13 @@ _This is buggy, alpha, proof-of-concept software_
 
 To run tests:
 
-1. Install `bitcoind` to `test` directory
+Install `bitcoind` to `test` directory
 
 ```
 $ ./test/install_bitcoind.sh
 ```
 
-1. Run tests
+Run tests
 
 ```
 python -m unittest test.test_wallet.py

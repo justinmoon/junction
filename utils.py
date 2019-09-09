@@ -10,11 +10,20 @@ from hwilib.devices import coldcard, digitalbitbox, ledger, trezor
 
 logger = logging.getLogger(__name__)
 
+### Exceptions
+
 class JunctionError(Exception):
     pass
 
 class JunctionWarning(Exception):
     pass
+
+def handle_exception(exception):
+    ''' prints the exception and most important the stacktrace '''
+    logger.error("Unexpected error")
+    logger.error("----START-TRACEBACK-----------------------------------------------------------------")
+    logger.exception(exception)
+    logger.error("----END---TRACEBACK-----------------------------------------------------------------")
 
 ### HWI
 
