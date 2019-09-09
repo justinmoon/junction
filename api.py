@@ -145,16 +145,22 @@ def add_signer():
     wallet.add_signer(name=signer_name, fingerprint=device['fingerprint'], type=device['type'], xpub=xpub, derivation_path=derivation_path)
     return jsonify(wallet.to_dict())
 
-@api.route('/addresses', methods=['POST'])
+@api.route('/address', methods=['POST'])
 @schema.validate({
-    'required': ['wallet', 'fingerprint'],
+    'required': ['wallet_name'],
     'properties': {
-        'wallet': { 'type': 'string' },
-        'fingerprint': { 'type': 'string' },  # FIXME: regex
+        'wallet_name': { 'type': 'string' },
     },
 })
-def generate_address(wallet_name):
-    raise NotImplementedError()
+def generate_address():
+    # TODO: it would be better to generate addresses ahead of time and store them on the wallet
+    # just not sure how to implement that
+    wallet_name = request.json['wallet_name']
+    wallet = MultisigWallet.open(wallet_name)
+    address = wallet.address()
+    return jsonify({
+        'address': address,
+    })
 
 @api.route('/psbt', methods=['GET'])
 def list_psbt():
