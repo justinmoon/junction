@@ -138,7 +138,9 @@ class MultisigWallet:
             "address_index": self.address_index,
             "export_index": self.export_index,
         }
+        # FIXME: this sucks, but we need a way to serialize for API
         if extras:
+            # TODO: consider adding some metadata to psbt -- e.g. # signatures remaining
             unconfirmed, confirmed = self.balances()
             base['balances'] = {
                 'confirmed': confirmed,
