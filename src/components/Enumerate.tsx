@@ -1,41 +1,42 @@
 import React from 'react'
-import { enumerate } from '../api'
-import { Device } from '../types';
+import { observer, connect } from '../store';
+import { DeviceStore } from '../store/device';
+
+interface StoreProps {
+  device: DeviceStore;
+}
+
+type Props = StoreProps;
 
 interface State {
-  devices: Device[];
-  isLoaded: boolean;
+  isLoading: boolean;
   error: null | Error;
 }
 
-class Enumerate extends React.Component<{}, State> {
+@observer
+class Enumerate extends React.Component<Props, State> {
   state: State = {
     error: null,
-    isLoaded: false,
-    devices: []
+    isLoading: false,
   };
 
-  componentDidMount() {
-    enumerate().then(
-      (result) => {
-        this.setState({
-          isLoaded: true,
-          devices: result
-        });
-      },
-      (error) => {
-        this.setState({
-          isLoaded: true,
-          error
-        });
-      }
-    )
+  async componentDidMount() {
+    const { device } = this.props;
+    try {
+      this.setState({ isLoading: true });
+      await device.getDevices();
+    } catch(error) {
+      this.setState({ error });
+    }
+    this.setState({ isLoading: false });
   }
+
   render() {
-    const { error, isLoaded, devices } = this.state
+    const { devices } = this.props.device;
+    const { error, isLoading } = this.state
     if (error) {
       return <div>Error: {error.message}</div>;
-    } else if (!isLoaded) {
+    } else if (isLoading) {
       return <div>Loading...</div>;
     } else {
       return (
@@ -51,4 +52,6 @@ class Enumerate extends React.Component<{}, State> {
   }
 }
 
-export default Enumerate
+export default connect<StoreProps>(
+  ({ device }) => ({ device })
+)(Enumerate);
