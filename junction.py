@@ -13,19 +13,22 @@ logger = logging.getLogger(__name__)
 
 ADDRESS_CHUNK = 100
 
-class HardwareMultisigSigner:
+class HardwareSigner:
 
-    def __init__(self, *, name, xpub, fingerprint):
+    def __init__(self, *, name, xpub, fingerprint, type, derivation_path):
         self.name = name
         self.xpub = xpub
         self.fingerprint = fingerprint
-        # FIXME: type (trezor, ledger, etc)
+        self.type = type
+        self.derivation_path = derivation_path
 
     def to_dict(self):
         return {
             'name': self.name,
             'xpub': self.xpub,
             'fingerprint': self.fingerprint,
+            'type': self.type,
+            'derivation_path': self.derivation_path,
         }
 
     @classmethod
@@ -121,7 +124,7 @@ class MultisigWallet:
             psbt = hwilib.serializations.PSBT()
             psbt.deserialize(d["psbt"])
             d["psbt"] = psbt
-        d['signers'] = [HardwareMultisigSigner.from_dict(signer) for signer in d['signers']]
+        d['signers'] = [HardwareSigner.from_dict(signer) for signer in d['signers']]
         return cls(**d)
         
     def to_dict(self):
@@ -136,20 +139,22 @@ class MultisigWallet:
             "export_index": self.export_index,
         }
 
-    def add_signer(self, name, fingerprint, xpub, derivation_path):
+    def add_signer(self, *, name, fingerprint, xpub, type, derivation_path):
         '''Add a signer to multisig wallet'''
         if self.ready():
             raise JunctionError(f'Already have {len(self.signers)} of {self.n} required signers')
 
         # Check if name used before
-        if name in [signer["name"] for signer in self.signers]:
+        if name in [signer.name for signer in self.signers]:
             raise JunctionError(f'Name "{name}" already taken')
 
         # Check if fingerprint used before
-        if fingerprint in [signer["fingerprint"] for signer in self.signers]:
+        if fingerprint in [signer.fingerprint for signer in self.signers]:
             raise JunctionError(f'Fingerprint "{fingerprint}" already used')
 
-        self.signers.append({"name": name, "fingerprint": fingerprint, "xpub": xpub, 'derivation_path': derivation_path})
+        signer = HardwareSigner(name=name, fingerprint=fingerprint, xpub=xpub,
+                type=type, derivation_path=derivation_path)
+        self.signers.append(signer)
         logger.info(f"Registered signer \"{name}\"")
 
         # Export next chunk watch-only addresses to Bitcoin Core if we're done adding signers
@@ -168,7 +173,7 @@ class MultisigWallet:
         path_prefix = "/44h/1h/0h"
         # TODO: add change parameter and inject here
         path_suffix = "/0/*"
-        xpubs = [f'[{signer["fingerprint"]}{path_prefix}]{signer["xpub"]}{path_suffix}' 
+        xpubs = [f'[{signer.fingerprint}{path_prefix}]{signer.xpub}{path_suffix}' 
                 for signer in self.signers]
         xpubs = ",".join(xpubs)
         descriptor = f"sh(multi({self.m},{xpubs}))"

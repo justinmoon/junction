@@ -5,6 +5,7 @@ from flask_json_schema import JsonSchema, JsonValidationError
 from hwilib import commands
 from hwilib.devices import trezor, ledger, coldcard
 
+from junction import MultisigWallet, JunctionError
 import disk
 
 api = Blueprint(__name__, 'api')
@@ -25,12 +26,14 @@ def get_client(device):
     client.is_testnet = True
     return client
 
-def get_client_and_device(path):
+def get_client_and_device(path_or_fingerprint):
     for device in commands.enumerate():
         # TODO: maybe accept path or fingerprint?
-        if device.get('path') == path:
+        if device.get('path') == path_or_fingerprint:
             return get_client(device), device
-    raise JunctionError(f'Device with path {path} not found')
+        if device.get('fingerprint') == path_or_fingerprint:
+            return get_client(device), device
+    raise JunctionError(f'Device not found')
 
 @api.errorhandler(Exception)
 def handle_unexpected_error(error):
@@ -117,18 +120,30 @@ def list_wallets():
     },
 })
 def create_wallet():
-    raise NotImplementedError()
+    wallet = MultisigWallet.create(**request.json)
+    return jsonify({})  # FIXME
 
 @api.route('/signers', methods=['POST'])
 @schema.validate({
-    'required': ['wallet', 'fingerprint'],
+    'required': ['wallet_name', 'signer_name', 'fingerprint'],
     'properties': {
-        'wallet': { 'type': 'string' },
+        'wallet_name': { 'type': 'string' },
+        'signer_name': { 'type': 'string' },
+        # FIXME: or path???
         'fingerprint': { 'type': 'string' },  # FIXME: regex
     },
 })
-def add_signer(wallet_name):
-    raise NotImplementedError()
+def add_signer():
+    wallet_name = request.json['wallet_name']
+    signer_name = request.json['signer_name']
+    fingerprint = request.json['fingerprint']
+    wallet = MultisigWallet.open(wallet_name)
+    client, device = get_client_and_device(fingerprint)
+    derivation_path = "m/44h/1h/0h"  # FIXME segwit
+    # FIXME: validate xpub/tpub?
+    xpub = client.get_pubkey_at_path(derivation_path)['xpub']
+    wallet.add_signer(name=signer_name, fingerprint=device['fingerprint'], type=device['type'], xpub=xpub, derivation_path=derivation_path)
+    return jsonify(wallet.to_dict())
 
 @api.route('/addresses', methods=['POST'])
 @schema.validate({
