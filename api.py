@@ -6,35 +6,13 @@ from hwilib import commands, serializations
 from hwilib.devices import trezor, ledger, coldcard
 
 from junction import MultisigWallet, JunctionError
-import disk
-from utils import RPC
+from disk import get_wallets, get_settings, update_settings
+from utils import RPC, get_client, get_client_and_device
 
 api = Blueprint(__name__, 'api')
 schema = JsonSchema()
 logger = logging.getLogger(__name__)
 CLIENT = None
-
-def get_client(device):
-    if device['type'] == 'ledger':
-        client = ledger.LedgerClient(device['path'])
-    elif device['type'] == 'coldcard':
-        client = coldcard.ColdcardClient(device['path'])
-    elif device['type'] == 'trezor':
-        client = trezor.TrezorClient(device['path'])
-    else:
-        raise JunctionError(f'Devices of type "{device["type"]}" not yet supported')
-    # FIXME: junction needs mainnet / testnet flag somewhere ...
-    client.is_testnet = True
-    return client
-
-def get_client_and_device(path_or_fingerprint):
-    for device in commands.enumerate():
-        # TODO: maybe accept path or fingerprint?
-        if device.get('path') == path_or_fingerprint:
-            return get_client(device), device
-        if device.get('fingerprint') == path_or_fingerprint:
-            return get_client(device), device
-    raise JunctionError(f'Device not found')
 
 @api.errorhandler(Exception)
 def handle_unexpected_error(error):
@@ -106,7 +84,7 @@ def unlock_device():
 @api.route('/wallets', methods=['GET'])
 def list_wallets():
     # TODO: does this include addresses?
-    wallets = disk.get_wallets()
+    wallets = get_wallets()
     # FIXME: probably shouldn't include xpubs in this response?
     wallet_dicts = [wallet.to_dict(True) for wallet in wallets]
     return jsonify(wallet_dicts)
@@ -218,7 +196,7 @@ def sign_psbt():
 
 @api.route('/settings', methods=['GET'])
 def get_settings():
-    settings = disk.get_settings()
+    settings = get_settings()
     return jsonify(settings)
 
 @api.route('/settings', methods=['PUT'])
@@ -239,7 +217,7 @@ def get_settings():
 def update_settings():
     settings = request.json
     RPC(settings['rpc']).test()
-    disk.update_settings(settings)
+    update_settings(settings)
     return jsonify({})
 
 @api.route('/utxos', methods=['GET'])

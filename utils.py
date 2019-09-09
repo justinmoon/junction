@@ -18,16 +18,7 @@ class JunctionWarning(Exception):
 
 ### HWI
 
-def get_client_and_device(fingerprint):
-    # get device
-    devices = commands.enumerate()
-    device = None
-    for d in devices:
-        if d.get('fingerprint') == fingerprint:
-            device = d
-    assert device is not None
-
-    # get client
+def get_client(device):
     if device['type'] == 'ledger':
         client = ledger.LedgerClient(device['path'])
     elif device['type'] == 'coldcard':
@@ -36,18 +27,19 @@ def get_client_and_device(fingerprint):
         client = trezor.TrezorClient(device['path'])
     else:
         raise JunctionError(f'Devices of type "{device["type"]}" not yet supported')
+    # FIXME: junction needs mainnet / testnet flag somewhere ...
     client.is_testnet = True
+    return client
 
-    return client, device
+def get_client_and_device(path_or_fingerprint):
+    for device in commands.enumerate():
+        # TODO: maybe accept path or fingerprint?
+        if device.get('path') == path_or_fingerprint:
+            return get_client(device), device
+        if device.get('fingerprint') == path_or_fingerprint:
+            return get_client(device), device
+    raise JunctionError(f'Device not found')
 
-### Flask
-
-def flash_success(msg):
-    flash(msg, 'success')
-
-def flash_error(msg):
-    flash(msg, 'danger')
-    
 ###  Currency conversions
 
 COIN_PER_SAT = Decimal(10) ** -8
@@ -58,7 +50,6 @@ def btc_to_sat(btc):
 
 def sat_to_btc(sat):
     return Decimal(sat/100_000_000).quantize(COIN_PER_SAT)
-
 
 ### RPC
 
