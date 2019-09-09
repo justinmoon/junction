@@ -66,7 +66,12 @@ class WalletTests(unittest.TestCase):
         cls.maxDiff = 10000  # FIXME: descriptor test maxed out this parameter
         test_dir = os.path.dirname(os.path.realpath(__file__))
         bitcoind_path = os.path.join(test_dir, 'bitcoin/src/bitcoind')
-        cls.rpc, cls.rpc_username, cls.rpc_password = start_bitcoind(bitcoind_path)
+        cls.rpc, cls.rpc_username, cls.rpc_password, cls.bitcoind_proc = start_bitcoind(bitcoind_path)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.bitcoind_proc.kill()
+        cls.rpc._AuthServiceProxy__conn.close()
 
     def setUp(self):
         # a hack to use a new temporary datadir for every unittest ...
