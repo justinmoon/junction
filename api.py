@@ -146,35 +146,44 @@ def add_signer():
     wallet.add_signer(name=signer_name, fingerprint=device['fingerprint'], type=device['type'], xpub=xpub, derivation_path=derivation_path)
     return jsonify(wallet.to_dict())
 
-@api.route('/wallet/<wallet_name>/address')
-def address(wallet_name):
+@api.route('/address', methods=['POST'])
+@schema.validate({
+    'required': ['wallet_name'],
+    'properties': {
+        'wallet_name': { 'type': 'string' },
+    },
+})
+def address():
     # TODO: it would be better to generate addresses ahead of time and store them on the wallet
     # just not sure how to implement that
+    wallet_name = request.json['wallet_name']
     wallet = MultisigWallet.open(wallet_name)
     address = wallet.address()
     return jsonify({
         'address': address,
     })
 
-@api.route('/wallets/<wallet_name>/psbt', methods=['POST'])
+@api.route('/psbt', methods=['POST'])
 @schema.validate({
     'required': ['outputs'],
     'properties': {
+        'wallet_name': {'type': 'string'},
         # todo: inputs, feerate, rbf, etc
         'outputs': {
             'type': 'array',
             'items': {
                 'required': ['address', 'btc'],
                 'properties': {
-                    'address': { 'type': 'string' },   # FIXME: regex
-                    'btc': { 'type': 'number' },      # FIXME: regex
-                    # 'satoshis': { 'type': 'integer' },      # FIXME: regex
+                    'address': {'type': 'string'},   # FIXME: regex
+                    'btc': {'type': 'number'},      # FIXME: regex
+                    # 'satoshis': {'type': 'integer'},      # FIXME: regex
                 },
             },
         },
     },
 })
-def create_psbt(wallet_name):
+def create_psbt():
+    wallet_name = request.json['wallet_name']
     wallet = MultisigWallet.open(wallet_name)
     outputs = []
     for output in request.json['outputs']:
@@ -185,15 +194,17 @@ def create_psbt(wallet_name):
         'psbt': wallet.psbt.serialize(),
     })
 
-@api.route('/wallets/<wallet_name>/sign', methods=['POST'])
+@api.route('/sign', methods=['POST'])
 @schema.validate({
-    'required': ['fingerprint'],
+    'required': ['wallet_name', 'fingerprint'],
     'properties': {
         # TODO: how to identify a specific psbt? index in wallet.psbts? Do they always have txids?
+        'wallet_name': { 'type': 'string' },
         'fingerprint': { 'type': 'string' },  # FIXME: regex
     },
 })
-def sign_psbt(wallet_name):
+def sign_psbt():
+    wallet_name = request.json['wallet_name']
     wallet = MultisigWallet.open(wallet_name)
     fingerprint = request.json['fingerprint']
     client, device = get_client_and_device(fingerprint)

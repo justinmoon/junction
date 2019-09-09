@@ -56,7 +56,7 @@ class MultisigWallet:
         settings = get_settings()  # FIXME
         self.wallet_rpc = RPC(settings['rpc'], name)
         # RPC connection to Bitcoin Core's default wallet
-        self.default_rpc = RPC(settings)
+        self.default_rpc = RPC(settings['rpc'])
 
     def ready(self):
         '''All signers present, ready to create PSBT'''
@@ -281,6 +281,7 @@ class MultisigWallet:
 
     def remove_psbt(self):
         self.psbt = None
+        self.save()
 
     def update_psbt(self, new_psbt):
         # FIXME: make sure this is the same psbt
@@ -303,7 +304,10 @@ class MultisigWallet:
         '''Finalize and broadcast psbt to network'''
         psbt_hex = self.psbt.serialize()
         tx_hex = self.wallet_rpc.finalizepsbt(psbt_hex)["hex"]
-        return self.wallet_rpc.sendrawtransaction(tx_hex)
+        txid = self.wallet_rpc.sendrawtransaction(tx_hex)
+        # FIXME: can we be sure that tx broadcast succeeded here, that we won't need psbt anymore?
+        self.remove_psbt()
+        return txid
     
     def balances(self):
         '''(unconfirmed, confirmed) balances tuple'''
