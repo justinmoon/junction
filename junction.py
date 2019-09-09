@@ -54,7 +54,7 @@ class MultisigWallet:
         self.export_index = export_index
         # RPC connection to corresponding watch-only Bitcoin Core wallet
         settings = get_settings()  # FIXME
-        self.wallet_rpc = RPC(settings, name)
+        self.wallet_rpc = RPC(settings['rpc'], name)
         # RPC connection to Bitcoin Core's default wallet
         self.default_rpc = RPC(settings)
 

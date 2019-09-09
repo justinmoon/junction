@@ -7,6 +7,7 @@ from hwilib.devices import trezor, ledger, coldcard
 
 from junction import MultisigWallet, JunctionError
 import disk
+from utils import RPC
 
 api = Blueprint(__name__, 'api')
 schema = JsonSchema()
@@ -206,11 +207,29 @@ def sign_psbt(wallet_name):
 
 @api.route('/settings', methods=['GET'])
 def get_settings():
-    raise NotImplementedError()
+    settings = disk.get_settings()
+    return jsonify(settings)
 
 @api.route('/settings', methods=['PUT'])
+@schema.validate({
+    'required': ['rpc'],
+    'properties': {
+        'rpc': {
+            'required': ['user', 'password', 'host', 'port'],
+            'properties': {
+                'user': {'type': 'string'},
+                'password': {'type': 'string'},
+                'host': {'type': 'string'},
+                'port': {'type': 'integer'},
+            },
+        },
+    },
+})
 def update_settings():
-    raise NotImplementedError()
+    settings = request.json
+    RPC(settings['rpc']).test()
+    disk.update_settings(settings)
+    return jsonify({})
 
 @api.route('/utxos', methods=['GET'])
 def list_utxos():
