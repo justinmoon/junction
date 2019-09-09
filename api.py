@@ -2,7 +2,7 @@ import logging
 
 from flask import jsonify, request, redirect, url_for, Blueprint
 from flask_json_schema import JsonSchema, JsonValidationError
-from hwilib import commands
+from hwilib import commands, serializations
 from hwilib.devices import trezor, ledger, coldcard
 
 from junction import MultisigWallet, JunctionError
@@ -107,7 +107,7 @@ def list_wallets():
     # TODO: does this include addresses?
     wallets = disk.get_wallets()
     # FIXME: probably shouldn't include xpubs in this response?
-    wallet_dicts = [wallet.to_dict() for wallet in wallets]
+    wallet_dicts = [wallet.to_dict(True) for wallet in wallets]
     return jsonify(wallet_dicts)
 
 @api.route('/wallets', methods=['POST'])
@@ -145,60 +145,64 @@ def add_signer():
     wallet.add_signer(name=signer_name, fingerprint=device['fingerprint'], type=device['type'], xpub=xpub, derivation_path=derivation_path)
     return jsonify(wallet.to_dict())
 
-@api.route('/address', methods=['POST'])
-@schema.validate({
-    'required': ['wallet_name'],
-    'properties': {
-        'wallet_name': { 'type': 'string' },
-    },
-})
-def generate_address():
+@api.route('/wallet/<wallet_name>/address')
+def address(wallet_name):
     # TODO: it would be better to generate addresses ahead of time and store them on the wallet
     # just not sure how to implement that
-    wallet_name = request.json['wallet_name']
     wallet = MultisigWallet.open(wallet_name)
     address = wallet.address()
     return jsonify({
         'address': address,
     })
 
-@api.route('/psbt', methods=['GET'])
-def list_psbt():
-    raise NotImplementedError()
-
-@api.route('/psbt', methods=['POST'])
+@api.route('/wallets/<wallet_name>/psbt', methods=['POST'])
 @schema.validate({
-    'required': ['outputs', 'wallet'],
+    'required': ['outputs'],
     'properties': {
         # todo: inputs, feerate, rbf, etc
-        'wallet': 'string',
         'outputs': {
             'type': 'array',
             'items': {
-                'required': ['recipient', 'amount'],
+                'required': ['address', 'btc'],
                 'properties': {
-                    'recipient': { 'type': 'address' },   # FIXME: regex
-                    # TODO: assume btc if decimal, satoshis if not?
-                    'amount': { 'type': 'integer' },      # FIXME: regex
+                    'address': { 'type': 'string' },   # FIXME: regex
+                    'btc': { 'type': 'number' },      # FIXME: regex
+                    # 'satoshis': { 'type': 'integer' },      # FIXME: regex
                 },
             },
         },
     },
 })
-def create_psbt():
-    raise NotImplementedError()
+def create_psbt(wallet_name):
+    wallet = MultisigWallet.open(wallet_name)
+    outputs = []
+    for output in request.json['outputs']:
+        output_dict = {output['address']: output['btc']}
+        outputs.append(output_dict)
+    wallet.create_psbt(outputs)
+    return jsonify({
+        'psbt': wallet.psbt.serialize(),
+    })
 
-@api.route('/sign', methods=['POST'])
+@api.route('/wallets/<wallet_name>/sign', methods=['POST'])
 @schema.validate({
-    'required': ['txid', 'fingerprint'],
+    'required': ['fingerprint'],
     'properties': {
-        # FIXME: is this sufficient for legacy transactions? 
-        'txid': { 'type': 'string' },  # FIXME: regex
+        # TODO: how to identify a specific psbt? index in wallet.psbts? Do they always have txids?
         'fingerprint': { 'type': 'string' },  # FIXME: regex
     },
 })
-def sign_psbt():
-    raise NotImplementedError()
+def sign_psbt(wallet_name):
+    wallet = MultisigWallet.open(wallet_name)
+    fingerprint = request.json['fingerprint']
+    client, device = get_client_and_device(fingerprint)
+    raw_signed_psbt = client.sign_tx(wallet.psbt)['psbt']
+    new_psbt = serializations.PSBT()
+    new_psbt.deserialize(raw_signed_psbt)
+    wallet.update_psbt(new_psbt)
+    return jsonify({
+        'psbt': wallet.psbt.serialize(),
+    })
 
 @api.route('/settings', methods=['GET'])
 def get_settings():
@@ -220,10 +224,15 @@ def list_transactions():
 
 @api.route('/broadcast', methods=['POST'])
 @schema.validate({
-    'required': ['txid'],
+    'required': ['wallet_name'],
     'properties': {
-        'txid': { 'type': 'string' },  # FIXME: regex
+        'wallet_name': { 'type': 'string' },
     },
 })
-def broadcast_transaction():
-    raise NotImplementedError()
+def broadcast():
+    wallet_name = request.json['wallet_name']
+    wallet = MultisigWallet.open(wallet_name)
+    txid = wallet.broadcast()
+    return jsonify({
+        'txid': txid,
+    })

@@ -127,17 +127,24 @@ class MultisigWallet:
         d['signers'] = [HardwareSigner.from_dict(signer) for signer in d['signers']]
         return cls(**d)
         
-    def to_dict(self):
+    def to_dict(self, extras=False):
         '''Represent instance as a dictionary'''
-        return {
+        base = {
             "name": self.name,
             "m": self.m,
             "n": self.n,
             "signers": [signer.to_dict() for signer in self.signers],
-            "psbt": self.psbt.serialize() if self.psbt else "",
+            "psbt": self.psbt.serialize() if self.psbt is not None else None,
             "address_index": self.address_index,
             "export_index": self.export_index,
         }
+        if extras:
+            unconfirmed, confirmed = self.balances()
+            base['balances'] = {
+                'confirmed': confirmed,
+                'unconfirmed': unconfirmed,
+            }
+        return base
 
     def add_signer(self, *, name, fingerprint, xpub, type, derivation_path):
         '''Add a signer to multisig wallet'''
@@ -246,7 +253,7 @@ class MultisigWallet:
         self.save()
         logger.info("Finished watch-only export")
 
-    def create_psbt(self, recipient, satoshis):
+    def create_psbt(self, outputs):
         '''Create a new PSBT paying single recipient'''
         if self.psbt:
             raise JunctionError('PSBT already present')
@@ -255,7 +262,7 @@ class MultisigWallet:
             # let Bitcoin Core choose inputs
             [],
             # Outputs
-            [{recipient: sat_to_btc(satoshis)}],
+            outputs,
             # Locktime
             0, 
             {
@@ -274,6 +281,12 @@ class MultisigWallet:
 
     def remove_psbt(self):
         self.psbt = None
+
+    def update_psbt(self, new_psbt):
+        # FIXME: make sure this is the same psbt
+        # does HWI PSBT class expose any "update" functionality?
+        self.psbt = new_psbt
+        self.save()
 
     def decode_psbt(self):
         '''Fetch Bitcoin Core psbt deserialization if it exists'''
