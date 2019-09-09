@@ -144,17 +144,6 @@ class WalletTests(unittest.TestCase):
         with self.assertRaises(JSONRPCException):
             wallet.add_signer(**signers[2])
 
-        # watch-only wallet
-        # - is created
-        # - importmulti is called
-        # - right behavior when watch-only wallet with same name already exists
-
-        # wallet file
-        # - is created
-        # - not deleted when it shouldn't be
-        # 
-        # can we create an pre-existing transaction and test that bitcoind finds it?
-
     def test_open_wallet_file_doesnt_exist(self):
         with self.assertRaises(FileNotFoundError):
             MultisigWallet.open('test_open_wallet_doesnt_exist')
