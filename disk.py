@@ -10,7 +10,7 @@ def full_path(relative_path):
 
 def write_json_file(data, relative_path):
     path = full_path(relative_path)
-    serialized = json.dumps(data, indent=4)
+    serialized = json.dumps(data, indent=4, sort_keys=True)
     with open(path, 'w') as f:
         f.write(serialized)
 

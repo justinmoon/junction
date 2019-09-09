@@ -37,13 +37,3 @@ def start_bitcoind(bitcoind_path):
     # Make sure there are blocks and coins available
     rpc.generatetoaddress(101, rpc.getnewaddress())
     return (rpc, rpc_username, rpc_password)
-
-def write_json_file(data, filename):
-    path = os.path.join(junction_dir, filename)
-    with open(path, 'w') as f:
-        return json.dump(data, f, indent=4)
-
-def read_json_file(filename):
-    path = os.path.join(junction_dir, filename)
-    with open(path, 'r') as f:
-        return json.load(f)

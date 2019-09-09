@@ -2,6 +2,7 @@ import unittest
 import tempfile
 import os
 import logging
+from decimal import Decimal
 from junction import MultisigWallet, JunctionError
 
 from .utils import start_bitcoind
@@ -18,19 +19,22 @@ derivation_path = "m/44h/1h/0h"
 # FIXME: generate xpubs randomly ...
 signers = [
     {
-        'name': 'trezor',
+        'name': 'mytrezor',
+        'type': 'trezor',
         'fingerprint': 'ecbc6bc1',
         'xpub': 'tpubDDsVS9pwqzLB92RZ6uTiixhDLPcoL1JESsYUCGootaTYu4JVh1aCu5t9oY3RRC1ic2dAbt7AqsE8uXLeq1p2DC5SP27ntmx4dUUPnvWhNhW',
         'derivation_path': derivation_path,
     },
     {
-        'name': 'ledger',
+        'name': 'myledger',
+        'type': 'ledger',
         'fingerprint': '6bb3d403',
         'xpub': 'tpubDCpR7Xjiho9KdidtHf3gJ1ZRbzu64HAiYTG9vR6JE5jJrPZbqJYBVXT33rFboKG8PBh4rJudjpBjFjD4ADwdwKUdMYZGJr2bBvLNBZLPMyF',
         'derivation_path': derivation_path,
     },
     {
-        'name': 'coldcard',
+        'name': 'mycoldcard',
+        'type': 'coldcard',
         'fingerprint': '5b98d98d',
         'xpub': 'tpubDDSFSPwTa8AnvogHXTsJ29745CDLrSmn9Jsi5LN9ks1T6szBk7xmkNAjZ1gXfQHdfuD1rae939z93rXE7he3QkLxNmaLh1XuvyzZoTAAWYm',
         'derivation_path': derivation_path,
@@ -43,7 +47,7 @@ def make_wallet_file(wallet_name):
         'm': 2,
         'n': 3,
         'signers': signers,
-        'psbt': '',
+        'psbt': None,
         'address_index': 0,
         'export_index': 100,
     }
@@ -71,10 +75,12 @@ class WalletTests(unittest.TestCase):
         disk.DATADIR = tempfile.mktemp()
         self.wallet_dir = os.path.join(disk.DATADIR, 'wallets')  # FIXME
         settings = {
-            'rpc_host': '127.0.0.1',
-            'rpc_port': 18443,
-            'rpc_username': self.rpc_username,
-            'rpc_password': self.rpc_password,
+            'rpc': {
+                'host': '127.0.0.1',
+                'port': 18443,
+                'user': self.rpc_username,
+                'password': self.rpc_password,
+            },
         }
         disk.ensure_datadir()
         disk.write_json_file(settings, 'settings.json')
@@ -119,7 +125,7 @@ class WalletTests(unittest.TestCase):
 
         # can't add more signers once wallet "ready"
         with self.assertRaises(JunctionError):
-            wallet.add_signer('x', 'x', 'x', 'x')
+            wallet.add_signer(name='x', fingerprint='x', xpub='x', type='x', derivation_path='x')
 
     def test_create_wallet_already_exists(self):
         disk.write_json_file({}, 'wallets/test_create_wallet_already_exists.json')
@@ -204,7 +210,8 @@ class WalletTests(unittest.TestCase):
         self.rpc.generatetoaddress(1, self.rpc.getnewaddress())
         # create psbt
         receiving_address = self.rpc.getnewaddress()
-        wallet.create_psbt(receiving_address, 100000)
+        outputs = [{receiving_address: Decimal('0.0001')}]
+        wallet.create_psbt(outputs)
         self.assertTrue(bool(wallet.psbt))  # FIXME
         psbt = wallet.decode_psbt()
 
