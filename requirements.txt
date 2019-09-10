@@ -5,3 +5,4 @@ ckcc-protocol
 flask_json_schema
 # with simplejson flask can serialize decimals
 simplejson
+flask-cors

@@ -1,7 +1,9 @@
 from flask import Flask
 from api import api, schema
+from flask_cors import CORS
 
 server = Flask(__name__)
+CORS(server)
 
 server.register_blueprint(api)
 schema.init_app(server)
