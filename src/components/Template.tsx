@@ -1,5 +1,5 @@
 import React from 'react';
-import { observer } from 'mobx-react';
+import { connect } from 'react-redux';
 import { Link, NavLink as RRNavLink } from 'react-router-dom';
 import {
   Navbar,
@@ -16,44 +16,40 @@ import {
   DropdownItem,
   UncontrolledDropdown,
 } from 'reactstrap';
-import { connect } from '../store';
-import { WalletStore } from '../store/wallet';
+import { getWallets, changeWallet } from '../store/wallet';
+import { AppState } from '../store';
 
-interface StoreProps {
-  wallet: WalletStore;
+interface StateProps {
+  wallets: AppState['wallet']['wallets'];
+  activeWallet: AppState['wallet']['activeWallet'];
+}
+
+interface DispatchProps {
+  getWallets: typeof getWallets;
+  changeWallet: typeof changeWallet
 }
 
 interface OwnProps {
   children: React.ReactNode;
 }
 
-type Props = StoreProps & OwnProps;
+type Props = StateProps & DispatchProps & OwnProps;
 
 interface State {
-  isLoadingWallets: boolean;
   isOpen: boolean;
 }
 
-@observer
 class Template extends React.Component<Props, State> {
   state: State = {
-    isLoadingWallets: false,
     isOpen: false,
   };
 
   async componentDidMount() {
-    try {
-      this.setState({ isLoadingWallets: true });
-      await this.props.wallet.getWallets();
-    } catch(error) {
-      alert(error.message);
-    }
-    this.setState({ isLoadingWallets: false });
+    this.props.getWallets();
   }
 
   render() {
-    const { wallet } = this.props;
-    const { isOpen, isLoadingWallets } = this.state;
+    const { wallets, activeWallet } = this.props;
     const navLinks = [{
       to: '/send',
       children: 'Send',
@@ -63,12 +59,12 @@ class Template extends React.Component<Props, State> {
     }];
 
     let dropdownLabel;
-    if (isLoadingWallets) {
-      dropdownLabel = <Spinner size="sm" />;
-    } else if (wallet.activeWallet) {
-      dropdownLabel = wallet.activeWallet.name;
-    } else {
+    if (activeWallet) {
+      dropdownLabel = activeWallet.name;
+    } else if (wallets.data) {
       dropdownLabel = 'Select a Wallet';
+    } else {
+      dropdownLabel = <Spinner size="sm" />;
     }
 
     return (
@@ -92,20 +88,22 @@ class Template extends React.Component<Props, State> {
                   </NavItem>
                 ))}
                 <UncontrolledDropdown nav inNavbar>
-                  <DropdownToggle nav caret>
+                  <DropdownToggle nav caret={!!wallets.data}>
                     {dropdownLabel}
                   </DropdownToggle>
-                  <DropdownMenu>
-                    {wallet.wallets.map(w => (
-                      <DropdownItem
-                        key={w.name}
-                        active={w === wallet.activeWallet}
-                        onClick={() => wallet.changeWallet(w)}
-                      >
-                        {w.name} ({w.m} of {w.n})
-                      </DropdownItem>
-                    ))}
-                  </DropdownMenu>
+                  {wallets.data && (
+                    <DropdownMenu>
+                      {wallets.data.map(w => (
+                        <DropdownItem
+                          key={w.name}
+                          active={w === activeWallet}
+                          onClick={() => this.props.changeWallet(w)}
+                        >
+                          {w.name} ({w.m} of {w.n})
+                        </DropdownItem>
+                      ))}
+                    </DropdownMenu>
+                  )}
                 </UncontrolledDropdown>
               </Nav>
             </Collapse>
@@ -123,4 +121,10 @@ class Template extends React.Component<Props, State> {
   };
 };
 
-export default connect(({ wallet }) => ({ wallet }))(Template);
+export default connect<StateProps, DispatchProps, OwnProps, AppState>(
+  state => ({
+    wallets: state.wallet.wallets,
+    activeWallet: state.wallet.activeWallet,
+  }),
+  { getWallets, changeWallet },
+)(Template);
