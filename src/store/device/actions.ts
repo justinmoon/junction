@@ -15,3 +15,17 @@ export function getDevices(): ThunkAction {
     }
   };
 }
+
+export function startDeviceScan(): ThunkAction {
+  return async (dispatch, getState) => {
+    dispatch({ type: T.SCAN_DEVICES_START });
+    while (getState().device.isScanning) {
+      dispatch(getDevices());
+      await sleep(3000);
+    }
+  };
+}
+
+export function stopDeviceScan() {
+  return { type: T.SCAN_DEVICES_STOP };
+}

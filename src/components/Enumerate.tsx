@@ -1,6 +1,6 @@
 import React from 'react'
 import { connect } from 'react-redux';
-import { getDevices } from '../store/device';
+import { startDeviceScan, stopDeviceScan } from '../store/device';
 import { AppState } from '../store';
 import { Spinner } from 'reactstrap';
 
@@ -9,14 +9,19 @@ interface StateProps {
 }
 
 interface DispatchProps {
-  getDevices: typeof getDevices;
+  startDeviceScan: typeof startDeviceScan;
+  stopDeviceScan: typeof stopDeviceScan;
 }
 
 type Props = StateProps & DispatchProps;
 
 class Enumerate extends React.Component<Props> {
-  async componentDidMount() {
-    this.props.getDevices();
+  componentDidMount() {
+    this.props.startDeviceScan();
+  }
+
+  componentWillUnmount() {
+    this.props.stopDeviceScan();
   }
 
   render() {
@@ -43,5 +48,5 @@ export default connect<StateProps, DispatchProps, {}, AppState>(
   state => ({
     devices: state.device.devices,
   }),
-  { getDevices },
+  { startDeviceScan, stopDeviceScan },
 )(Enumerate);

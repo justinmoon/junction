@@ -23,6 +23,7 @@ export const loadableLoading = (l: Loadable<any>): Loadable<any> => ({
 export const loadableSuccess = <T>(l: Loadable<T>, data: T): Loadable<T> => ({
   ...l,
   data,
+  error: null,
   isLoading: false,
   hasLoaded: true,
 });

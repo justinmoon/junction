@@ -5,10 +5,12 @@ import { DeviceActionTypes as T } from './types';
 
 export interface DeviceState {
   devices: Loadable<Device[]>;
+  isScanning: boolean;
 }
 
 export const INITIAL_STATE: DeviceState = {
   devices: { ...DEFAULT_LOADABLE },
+  isScanning: false,
 };
 
 export function deviceReducer(
@@ -22,6 +24,17 @@ export function deviceReducer(
       return {
         ...state,
         devices: handleLoadable(state.devices, action),
+      };
+    
+    case T.SCAN_DEVICES_START:
+      return {
+        ...state,
+        isScanning: true,
+      };
+    case T.SCAN_DEVICES_STOP:
+      return {
+        ...state,
+        isScanning: false,
       };
   }
   return state;
