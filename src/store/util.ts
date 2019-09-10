@@ -31,13 +31,14 @@ export const loadableFailure = (l: Loadable<any>, error: Error): Loadable<any> =
   ...l,
   error,
   isLoading: false,
+  hasLoaded: false,
 });
 
 export const handleLoadable = <T>(l: Loadable<T>, action: AnyAction): Loadable<T> => {
   if (action.type.includes('SUCCESS')) {
     return loadableSuccess(l, action.payload);
   } else if (action.type.includes('FAILURE')) {
-    return loadableSuccess(l, action.payload);
+    return loadableFailure(l, action.payload);
   } else {
     return loadableLoading(l);
   }
