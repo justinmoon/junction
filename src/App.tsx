@@ -6,6 +6,7 @@ import Home from './components/Home';
 import Send from './components/Send';
 import Sign from './components/Sign';
 import History from './components/History';
+import Create from './components/Create';
 
 const App: React.FC = () => {
   return (
@@ -16,6 +17,7 @@ const App: React.FC = () => {
           <Route path="/send" component={Send} />
           <Route path="/sign" component={Sign} />
           <Route path="/history" component={History} />
+          <Route path="/create" component={Create} />
         </Switch>
       </Template>
     </HashRouter>

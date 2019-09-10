@@ -102,6 +102,9 @@ class Template extends React.Component<Props, State> {
                           {w.name} ({w.m} of {w.n})
                         </DropdownItem>
                       ))}
+                      <DropdownItem>
+                        <Link to="/create">Create a New Wallet</Link>
+                      </DropdownItem>
                     </DropdownMenu>
                   )}
                 </UncontrolledDropdown>

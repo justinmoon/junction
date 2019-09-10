@@ -1,4 +1,6 @@
 import { stringify } from 'query-string';
+import * as T from '../api/types';
+export * from '../api/types';
 
 class API {
   url: string;
@@ -10,6 +12,14 @@ class API {
   // Public methods
   getDevices() {
     return this.request<any>('GET', '/devices');
+  }
+
+  getWallets() {
+    return this.request<any>('GET', '/wallets');
+  }
+
+  createWallet(args: T.CreateWalletArguments) {
+    return this.request<any>('POST', '/wallets', args);
   }
 
   // Internal fetch function

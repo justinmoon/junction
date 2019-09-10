@@ -28,7 +28,7 @@ def handle_validation_error(e):
     return jsonify({
         'error': e.message,
         'errors': [validation_error.message for validation_error  in e.errors],
-    })
+    }), 400
 
 @api.route('/devices', methods=['GET'])
 def list_devices():
@@ -100,7 +100,7 @@ def list_wallets():
 })
 def create_wallet():
     wallet = MultisigWallet.create(**request.json)
-    return jsonify({})  # FIXME
+    return jsonify(wallet.to_dict(True))
 
 @api.route('/signers', methods=['POST'])
 @schema.validate({

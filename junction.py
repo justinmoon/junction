@@ -7,7 +7,7 @@ from pprint import pprint
 from hwilib.serializations import PSBT
 
 from utils import RPC, JSONRPCException, sat_to_btc, btc_to_sat, JunctionError
-from disk import write_json_file, read_json_file, ensure_datadir, DATADIR, get_settings, full_path
+from disk import write_json_file, read_json_file, get_settings, full_path
 
 logger = logging.getLogger(__name__)
 
@@ -76,9 +76,6 @@ class MultisigWallet:
             raise JunctionError(f"\"m\" ({m}) must be larger than 0")
         if n > 5:
             raise JunctionError(f"\"n\" ({n}) cannot exceed 5")
-
-        # Make sure datadir exists
-        ensure_datadir()
 
         # MultisigWallet instance
         wallet = cls(name, m, n, [], None, 0, 0)
