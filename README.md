@@ -11,15 +11,31 @@ See [this tweetstorm](https://twitter.com/_JustinMoon_/status/116690572232566784
 
 Junction project uses [HWI](https://github.com/bitcoin-core/HWI) to communicate with hardware wallets. Follow [these instructions](https://github.com/bitcoin-core/HWI#prerequisites) to install libusb dependency for HWI (don't do the `poetry install` step). If you're on Linux you may need to install udev rules.
 
+
+#### To run the server:
+
 ```
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 mkdir wallets
-python ui.py
+python server.py
 ```
 
-Open `localhost:5000` in your browser
+Open `localhost:5000` in your browser.
+
+#### To run the client:
+Use either npm or yarn.
+```
+npm install 
+npm start
+```
+```
+yarn install
+yarn start
+```
+Open `localhost:3000` in your browser.
+
 
 ## Features
 
