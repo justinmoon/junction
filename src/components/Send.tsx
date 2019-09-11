@@ -4,8 +4,8 @@ import { withRouter, RouteComponentProps } from 'react-router';
 import { Form, FormGroup, Input, Label, Button } from 'reactstrap';
 import { getWallets } from '../store/wallet';
 import { AppState } from '../store';
-import api from '../api';
-import { Wallet, SendFormOutputs, SendFormOutput } from '../types';
+import api, { CreatePSBTOutputs } from '../api';
+import { Wallet } from '../types';
 
 interface DispatchProps {
   getWallets: typeof getWallets;
@@ -24,7 +24,7 @@ interface StateProps {
 }
 
 interface LocalState {
-  outputs: SendFormOutputs;
+  outputs: CreatePSBTOutputs;
   isSubmitting: boolean;
   error: Error | null;
 }
