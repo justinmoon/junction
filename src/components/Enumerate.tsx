@@ -1,54 +1,47 @@
 import React from 'react'
-import { enumerate } from '../api'
-import { Device } from '../types';
+import { connect } from 'react-redux';
+import { getDevices } from '../store/device';
+import { AppState } from '../store';
+import { Spinner } from 'reactstrap';
 
-interface State {
-  devices: Device[];
-  isLoaded: boolean;
-  error: null | Error;
+interface StateProps {
+  devices: AppState['device']['devices'];
 }
 
-class Enumerate extends React.Component<{}, State> {
-  state: State = {
-    error: null,
-    isLoaded: false,
-    devices: []
-  };
+interface DispatchProps {
+  getDevices: typeof getDevices;
+}
 
-  componentDidMount() {
-    enumerate().then(
-      (result) => {
-        this.setState({
-          isLoaded: true,
-          devices: result
-        });
-      },
-      (error) => {
-        this.setState({
-          isLoaded: true,
-          error
-        });
-      }
-    )
+type Props = StateProps & DispatchProps;
+
+class Enumerate extends React.Component<Props> {
+  async componentDidMount() {
+    this.props.getDevices();
   }
+
   render() {
-    const { error, isLoaded, devices } = this.state
+    const { data, error } = this.props.devices;
     if (error) {
       return <div>Error: {error.message}</div>;
-    } else if (!isLoaded) {
-      return <div>Loading...</div>;
-    } else {
+    } else if (data) {
       return (
         <ul>
-          {devices.map(device => (
+          {data.map(device => (
             <li key={device.fingerprint}>
               {device.type} {device.fingerprint}
             </li>
           ))}
         </ul>
       );
+    } else {
+      return <Spinner />;
     }
   }
 }
 
-export default Enumerate
+export default connect<StateProps, DispatchProps, {}, AppState>(
+  state => ({
+    devices: state.device.devices,
+  }),
+  { getDevices },
+)(Enumerate);
