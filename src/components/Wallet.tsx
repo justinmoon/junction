@@ -5,6 +5,7 @@ import Signers from './Signers';
 import { Device } from '../types'
 import { AppState } from '../store';
 import { getWallets, selectCandidateDevicesForActiveWallet, selectActiveWallet } from '../store/wallet';
+import { Spinner } from 'reactstrap';
 import api from '../api'
 
 interface StateProps {
@@ -16,11 +17,19 @@ interface DispatchProps {
   getWallets: typeof getWallets;
 }
 
+interface State {
+  deviceBeingAdded: Device | null;
+}
+
 type Props = StateProps & DispatchProps;
 
-class Wallet extends React.Component<Props> {
+class Wallet extends React.Component<Props, State> {
+  state: State = {
+    deviceBeingAdded: null,
+  }
   private addSigner = async (device: Device) => {
     if (this.props.activeWallet) {
+      this.setState({ deviceBeingAdded: device })
       await api.addSigner({
         wallet_name: this.props.activeWallet.name,
         signer_name: device.type,
@@ -31,6 +40,7 @@ class Wallet extends React.Component<Props> {
     }
   }
   render() {
+    const { deviceBeingAdded } = this.state;
     const { candidateDevices, activeWallet } = this.props;
     if (activeWallet === null) {
       return <div>no active wallet</div>
@@ -47,7 +57,7 @@ class Wallet extends React.Component<Props> {
         <h3>Signers</h3>
         <Signers signers={signers} />
         <h3>Add {activeWallet.n - activeWallet.signers.length} More Signers</h3>
-        <AddSigners devices={candidateDevices} addSigner={this.addSigner}/>
+        <AddSigners devices={candidateDevices} deviceBeingAdded={deviceBeingAdded} addSigner={this.addSigner}/>
       </div>
     )
   }

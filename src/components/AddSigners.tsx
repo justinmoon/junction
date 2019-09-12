@@ -1,15 +1,16 @@
 import React from 'react';
-import { Button } from 'reactstrap';
+import { Button, Spinner } from 'reactstrap';
 import { Device } from '../types'
 
 interface Props {
   devices: Device[];
+  deviceBeingAdded: Device | null;
   addSigner: (device: Device) => void;
 }
 
 export default class AddSigners extends React.Component<Props> {
   render() {
-    const { devices } = this.props;
+    const { devices, deviceBeingAdded } = this.props;
 
     if (!devices || !devices.length) {
       return <p>No hardware wallets detected</p>
@@ -27,7 +28,10 @@ export default class AddSigners extends React.Component<Props> {
         {devices.map((device: Device) => 
           <tr key={device.fingerprint}>
             <td>{ device.type }</td>
-            <td><Button onClick={() => this.props.addSigner(device)}>Add Signer</Button></td>
+            <td>
+              {device !== deviceBeingAdded && <Button onClick={() => this.props.addSigner(device)}>Add Signer</Button>}
+              {device === deviceBeingAdded && <Spinner size="sm"/>}
+            </td>
           </tr>
         )}
         </tbody>
