@@ -9,9 +9,7 @@ export interface CreatePSBTOutput {
   btc: number | undefined;
 }
 
-export interface CreatePSBTOutputs extends Array<CreatePSBTOutput>{}
-
 export interface CreatePSBTArguments {
   wallet_name: string;
-  outputs: CreatePSBTOutputs;
+  outputs: CreatePSBTOutput[];
 }

@@ -4,7 +4,7 @@ import { withRouter, RouteComponentProps } from 'react-router';
 import { Form, FormGroup, Input, Label, Button } from 'reactstrap';
 import { getWallets } from '../store/wallet';
 import { AppState } from '../store';
-import api, { CreatePSBTOutputs } from '../api';
+import api, { CreatePSBTOutput } from '../api';
 import { Wallet } from '../types';
 
 interface DispatchProps {
@@ -24,7 +24,7 @@ interface StateProps {
 }
 
 interface LocalState {
-  outputs: CreatePSBTOutputs;
+  outputs: CreatePSBTOutput[];
   isSubmitting: boolean;
   error: Error | null;
 }
@@ -43,28 +43,28 @@ class Create extends React.Component<Props, LocalState> {
         {outputs.map((output, index) =>
           <div>
             <FormGroup>
-              <Label>Address</Label>
+              <Label>Recipient Address</Label>
               <Input
                 name="address"
                 value={output.address}
-                placeholder="..."
-                onChange={e => this.handleChange(e, index)}
+                placeholder="Recipient Address"
+                onChange={e => this.handleChangeRecipient(e, index)}
               />
             </FormGroup>
             <FormGroup>
-              <Label>Amount</Label>
+              <Label>Amount in BTC</Label>
               <Input
                 name="btc"
                 value={output.btc}
                 type="number"
                 step="0.00000001"
-                placeholder="..."
-                onChange={e => this.handleChange(e, index)}
+                placeholder="Amount in BTC"
+                onChange={e => this.handleChangeAmount(e, index)}
               />
             </FormGroup>
           </div>
         )}
-        <Button color="primary" size="lg" block onClick={this.handleAddOutput}>
+        <Button color="secondary" size="lg" block onClick={this.handleAddOutput}>
           Add Output
         </Button>
         <Button color="primary" size="lg" block>
@@ -74,15 +74,15 @@ class Create extends React.Component<Props, LocalState> {
     );
   }
 
-  private handleChange = (ev: React.ChangeEvent<HTMLInputElement>, index: number) => {
+  private handleChangeRecipient = (ev: React.ChangeEvent<HTMLInputElement>, index: number) => {
     let { outputs } = this.state;
-    let target;
-    if (ev.currentTarget.name === 'btc') {
-      target = Number(ev.currentTarget.value);
-    } else {
-      target = ev.currentTarget.value;
-    }
-    (outputs[index] as any)[ev.currentTarget.name] = target;
+    (outputs[index] as any)[ev.currentTarget.name] = ev.currentTarget.value;
+    this.setState({ outputs });
+  };
+
+  private handleChangeAmount = (ev: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    let { outputs } = this.state;
+    (outputs[index] as any)[ev.currentTarget.name] = Number(ev.currentTarget.value);
     this.setState({ outputs });
   };
 
@@ -103,7 +103,7 @@ class Create extends React.Component<Props, LocalState> {
         outputs
       });
       this.props.getWallets();
-      this.props.history.push('/');
+      this.props.history.push('/sign');
     } catch(error) {
       this.setState({ error });
     }
