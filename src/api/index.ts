@@ -22,6 +22,10 @@ class API {
     return this.request<any>('POST', '/wallets', args);
   }
 
+  addSigner(args: T.AddSignerArguments) {
+    return this.request<any>('POST', '/signers', args);
+  }
+
   // Internal fetch function
   protected request<R extends object>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',

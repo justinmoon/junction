@@ -108,14 +108,14 @@ def create_wallet():
     'properties': {
         'wallet_name': { 'type': 'string' },
         'signer_name': { 'type': 'string' },
-        # FIXME: or path???
-        'fingerprint': { 'type': 'string' },  # FIXME: regex
+        # id is fingerprint or path
+        'id': { 'type': 'string' },  # FIXME: regex
     },
 })
 def add_signer():
     wallet_name = request.json['wallet_name']
     signer_name = request.json['signer_name']
-    fingerprint = request.json['fingerprint']
+    fingerprint = request.json['id']
     wallet = MultisigWallet.open(wallet_name)
     client, device = get_client_and_device(fingerprint)
     derivation_path = "m/44h/1h/0h"  # FIXME segwit

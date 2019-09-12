@@ -3,3 +3,9 @@ export interface CreateWalletArguments {
   n: number;
   m: number;
 }
+
+export interface AddSignerArguments {
+  walet_name: string;
+  signer_name: string;
+  id: string;
+}
