@@ -4,13 +4,15 @@ import { Device } from '../types'
 
 interface Props {
   devices: Device[];
+  deviceError: string;
   deviceBeingAdded: Device | null;
   addSigner: (device: Device) => void;
 }
 
 export default class AddSigners extends React.Component<Props> {
   render() {
-    const { devices, deviceBeingAdded } = this.props;
+    // FIXME: use deviceError
+    const { devices, deviceBeingAdded, deviceError } = this.props;
 
     if (!devices || !devices.length) {
       return <p>No hardware wallets detected</p>

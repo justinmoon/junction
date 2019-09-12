@@ -41,7 +41,7 @@ class Wallet extends React.Component<Props, State> {
   }
   render() {
     const { deviceBeingAdded } = this.state;
-    const { candidateDevices, activeWallet } = this.props;
+    const { candidateDevices, activeWallet, deviceError } = this.props;
     if (activeWallet === null) {
       return <div>no active wallet</div>
     }
@@ -57,7 +57,7 @@ class Wallet extends React.Component<Props, State> {
         <h3>Signers</h3>
         <Signers signers={signers} />
         <h3>Add {activeWallet.n - activeWallet.signers.length} More Signers</h3>
-        <AddSigners devices={candidateDevices} deviceBeingAdded={deviceBeingAdded} addSigner={this.addSigner}/>
+        <AddSigners devices={candidateDevices} deviceError={deviceError}  deviceBeingAdded={deviceBeingAdded} addSigner={this.addSigner}/>
       </div>
     )
   }
@@ -67,6 +67,7 @@ export const mapStateToProps = (state: AppState) => {
   return {
     candidateDevices: selectCandidateDevicesForActiveWallet(state),
     activeWallet: selectActiveWallet(state),
+    deviceError: state.device.devices.error,
   }
 }
 

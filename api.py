@@ -108,7 +108,7 @@ def create_wallet():
     'properties': {
         'wallet_name': { 'type': 'string' },
         'signer_name': { 'type': 'string' },
-        # id is fingerprint or path
+        # device_id is fingerprint or path
         'device_id': { 'type': 'string' },  # FIXME: regex
     },
 })

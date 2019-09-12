@@ -9,7 +9,6 @@ export function selectCandidateDevicesForActiveWallet(state: AppState) {
   const walletFingerprints = state.wallet.activeWallet.signers.map((signer: Signer) => signer.fingerprint);
   return state.device.devices.data.reduce(
     (candidates: Device[], device: Device) => {
-      console.log('device', device)
       if (device.fingerprint && !walletFingerprints.includes(device.fingerprint)) {
         candidates.push(device);
       }
