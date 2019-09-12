@@ -5,7 +5,7 @@ export interface CreateWalletArguments {
 }
 
 export interface AddSignerArguments {
-  walet_name: string;
+  wallet_name: string;
   signer_name: string;
-  id: string;
+  device_id: string;
 }

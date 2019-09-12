@@ -143,6 +143,7 @@ class MultisigWallet:
                 'confirmed': confirmed,
                 'unconfirmed': unconfirmed,
             }
+            base['ready'] = self.ready()
         return base
 
     def add_signer(self, *, name, fingerprint, xpub, type, derivation_path):

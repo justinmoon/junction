@@ -104,18 +104,18 @@ def create_wallet():
 
 @api.route('/signers', methods=['POST'])
 @schema.validate({
-    'required': ['wallet_name', 'signer_name', 'fingerprint'],
+    'required': ['wallet_name', 'signer_name', 'device_id'],
     'properties': {
         'wallet_name': { 'type': 'string' },
         'signer_name': { 'type': 'string' },
         # id is fingerprint or path
-        'id': { 'type': 'string' },  # FIXME: regex
+        'device_id': { 'type': 'string' },  # FIXME: regex
     },
 })
 def add_signer():
     wallet_name = request.json['wallet_name']
     signer_name = request.json['signer_name']
-    fingerprint = request.json['id']
+    fingerprint = request.json['device_id']
     wallet = MultisigWallet.open(wallet_name)
     client, device = get_client_and_device(fingerprint)
     derivation_path = "m/44h/1h/0h"  # FIXME segwit

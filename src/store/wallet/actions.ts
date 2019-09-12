@@ -1,8 +1,7 @@
 import { WalletActionTypes as T } from './types';
 import { ThunkAction } from '../types';
-import { Wallet, DeviceType } from '../../types';
-import { sleep } from '../../util';
-import api, { CreateWalletArguments } from '../../api';
+import { Wallet } from '../../types';
+import api from '../../api';
 
 export function getWallets(): ThunkAction {
   return async (dispatch, getState) => {

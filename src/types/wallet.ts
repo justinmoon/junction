@@ -13,4 +13,6 @@ export interface Wallet {
   m: number;
   n: number;
   signers: Signer[];
+  balances: any;  // FIXME
+  ready: boolean;
 }

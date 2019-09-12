@@ -1,59 +1,37 @@
 import React from 'react';
-import { connect } from 'react-redux';
-import { AppState } from '../store';
-import { withRouter, RouteComponentProps } from 'react-router';
-import api from '../api'
-import { walletReducer } from '../store/wallet';
-import { Signer, Wallet, Device } from '../types'
+import { Button } from 'reactstrap';
+import { Device } from '../types'
 
-
-interface StateProps {
-  candidates: Device[];
-  activeWallet: AppState['wallet']['activeWallet'];
+interface Props {
+  devices: Device[];
+  addSigner: (device: Device) => void;
 }
 
-function selectCandidateDevicesForActiveWallet(state: AppState) {
-  // FIXME this check sucks
-  if (state.device.devices.data === null || state.wallet.activeWallet === null) {
-    return [];
-  }
-  const walletFingerprints = state.wallet.activeWallet.signers.map((signer: Signer) => signer.fingerprint);
-  return state.device.devices.data.reduce(
-    (candidates: Device[], device: Device) => {
-      if (!walletFingerprints.includes(device.fingerprint)) {
-        candidates.push(device);
-      }
-      return candidates;
-  }, [])
-}
-
-class AddSigners extends React.Component<StateProps> {
+export default class AddSigners extends React.Component<Props> {
   render() {
-    const { activeWallet, candidates } = this.props;
-    if (activeWallet === null) {
-      return <h5>FIXME: no active wallet</h5>;
+    const { devices } = this.props;
+
+    if (!devices || !devices.length) {
+      return <p>No hardware wallets detected</p>
     }
-    if (candidates === null) {
-      return <h5>FIXME: no candidates</h5>;
-    }
+
     return (
-      <div>
-        {candidates.map((device: Device) => 
-          <div key={device.fingerprint}>{device.type}</div>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Device</th>
+            <th scope="col" className="text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+        {devices.map((device: Device) => 
+          <tr key={device.fingerprint}>
+            <td>{ device.type }</td>
+            <td><Button onClick={() => this.props.addSigner(device)}>Add Signer</Button></td>
+          </tr>
         )}
-      </div>
+        </tbody>
+      </table>
     )
   }
 }
-
-export const mapStateToProps = (state: AppState) => {
-  return {
-    candidates: selectCandidateDevicesForActiveWallet(state),
-    activeWallet: state.wallet.activeWallet,
-  }
-}
-
-export default connect(
-  mapStateToProps,
-  {},
-)(AddSigners);
