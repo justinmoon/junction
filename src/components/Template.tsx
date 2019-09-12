@@ -96,10 +96,9 @@ class Template extends React.Component<Props, State> {
                       {wallets.data.map(w => (
                         <DropdownItem
                           key={w.name}
-                          active={w === activeWallet}
                           onClick={() => this.props.changeWallet(w)}
                         >
-                          {w.name} ({w.m} of {w.n})
+                          <Link to="/">{w.name} ({w.m} of {w.n})</Link>
                         </DropdownItem>
                       ))}
                       <DropdownItem>
