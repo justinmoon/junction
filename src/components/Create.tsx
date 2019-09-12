@@ -2,11 +2,12 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps } from 'react-router';
 import { Form, FormGroup, Input, Label, Button } from 'reactstrap';
-import { getWallets } from '../store/wallet';
+import { getWallets, changeWallet } from '../store/wallet';
 import api from '../api';
 
 interface DispatchProps {
   getWallets: typeof getWallets;
+  changeWallet: typeof changeWallet;
 }
 
 type Props = DispatchProps & RouteComponentProps;
@@ -76,12 +77,13 @@ class Create extends React.Component<Props, State> {
     try {
       this.setState({ isSubmitting: true });
       const { name, m, n } = this.state;
-      await api.createWallet({
+      const wallet = await api.createWallet({
         name,
         m: parseInt(m, 10),
         n: parseInt(n, 10),
       });
-      this.props.getWallets();
+      await this.props.getWallets();
+      this.props.changeWallet(wallet);
       this.props.history.push('/');
     } catch(error) {
       this.setState({ error });
@@ -92,7 +94,7 @@ class Create extends React.Component<Props, State> {
 
 const ConnectedCreate = connect<{}, DispatchProps, RouteComponentProps, {}>(
   undefined,
-  { getWallets },
+  { getWallets, changeWallet },
 )(Create);
 
 export default withRouter(ConnectedCreate)
