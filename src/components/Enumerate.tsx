@@ -1,11 +1,13 @@
 import React from 'react'
 import { connect } from 'react-redux';
 import { startDeviceScan, stopDeviceScan } from '../store/device';
-import { AppState } from '../store';
+import {AppState, Loadable} from '../store';
 import { Spinner } from 'reactstrap';
+import {Device, Wallet} from "../types";
 
 interface StateProps {
-  devices: AppState['device']['devices'];
+  devices: Loadable<Device[]>;
+  activeWallet: Wallet | null;
 }
 
 interface DispatchProps {
@@ -33,7 +35,8 @@ class Enumerate extends React.Component<Props> {
         <ul>
           {data.map(device => (
             <li key={device.fingerprint}>
-              {device.type} {device.fingerprint}
+              {device.type} ({device.fingerprint})
+              {!device.fingerprint && <button>Add Signer</button>}
             </li>
           ))}
         </ul>
@@ -44,9 +47,14 @@ class Enumerate extends React.Component<Props> {
   }
 }
 
-export default connect<StateProps, DispatchProps, {}, AppState>(
-  state => ({
+export const mapStateToProps = (state: AppState) => {
+  return {
     devices: state.device.devices,
-  }),
+    activeWallet: state.wallet.activeWallet
+  }
+};
+
+export default connect(
+ mapStateToProps,
   { startDeviceScan, stopDeviceScan },
 )(Enumerate);
