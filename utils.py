@@ -66,12 +66,14 @@ class RPC:
 
     uri_template = "http://{user}:{password}@{host}:{port}/wallet/{wallet_name}"
 
-    def __init__(self, rpc_settings, wallet_name=''):
+    def __init__(self, rpc_settings, wallet_name='', timeout=10):
         self.uri = self.uri_template.format(**rpc_settings, wallet_name=wallet_name)
+        self.timeout = timeout
 
     def __getattr__(self, name):
         '''Create new proxy for every call to prevent timeouts'''
-        rpc = AuthServiceProxy(self.uri, timeout=60)  # 1 minute timeout
+        print(self.timeout)
+        rpc = AuthServiceProxy(self.uri, timeout=self.timeout) 
         return getattr(rpc, name)
 
     def test(self):
@@ -91,5 +93,5 @@ class RPC:
                 raise JunctionError(e)
             return False 
         except Exception as e:
-            logger.error("rpc-settings: {}".format(settings))
+            logger.error("rpc-settings: {}".format(self.uri))
             raise JunctionError(e)

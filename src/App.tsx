@@ -7,6 +7,7 @@ import Send from './components/Send';
 import Sign from './components/Sign';
 import History from './components/History';
 import Create from './components/Create';
+import Settings from './components/Settings';
 import RequireData from './components/RequireData';
 
 const App: React.FC = () => {
@@ -15,18 +16,21 @@ const App: React.FC = () => {
       <Template>
         <Switch>
           <Route path="/" exact render={() => (
-            <RequireData activeWallet component={Wallet} />
+            <RequireData rpc activeWallet component={Wallet} />
           )} />
           <Route path="/send" render={() => (
-            <RequireData activeWallet component={Send} />
+            <RequireData rpc activeWallet component={Send} />
           )} />
           <Route path="/sign" render={() => (
-            <RequireData activeWallet component={Sign} />
+            <RequireData rpc activeWallet component={Sign} />
           )} />
           <Route path="/history" render={() => (
-            <RequireData activeWallet component={History} />
+            <RequireData rpc activeWallet component={History} />
           )} />
-          <Route path="/create" component={Create} />
+          <Route path="/create" render={() => (
+            <RequireData rpc component={Create} />
+          )} />
+          <Route path="/settings" component={Settings} />
         </Switch>
       </Template>
     </HashRouter>

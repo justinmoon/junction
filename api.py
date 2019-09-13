@@ -209,8 +209,15 @@ def sign_psbt():
     })
 
 @api.route('/settings', methods=['GET'])
-def get_settings():
+def get_settings_route():
     settings = get_settings()
+    import time
+    print(time.time())
+    try:
+        RPC(settings['rpc'], timeout=5).test()
+    except Exception as e:
+        settings['rpc']['error'] = str(e)
+    print(time.time())
     return jsonify(settings)
 
 @api.route('/settings', methods=['PUT'])
@@ -228,11 +235,14 @@ def get_settings():
         },
     },
 })
-def update_settings():
+def update_settings_route():
     settings = request.json
-    RPC(settings['rpc']).test()
+    try:
+        RPC(settings['rpc'], timeout=5).test()
+    except Exception as e:
+        settings['rpc']['error'] = str(e)
     update_settings(settings)
-    return jsonify({})
+    return jsonify(settings)
 
 @api.route('/utxos', methods=['GET'])
 def list_utxos():

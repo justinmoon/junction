@@ -19,7 +19,7 @@ export function startDeviceScan(): ThunkAction {
   return async (dispatch, getState) => {
     dispatch({ type: T.SCAN_DEVICES_START });
     while (getState().device.isScanning) {
-      dispatch(getDevices());
+      await dispatch(getDevices());
       await sleep(3000);
     }
   };

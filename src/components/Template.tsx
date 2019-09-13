@@ -18,6 +18,7 @@ import {
 } from 'reactstrap';
 import { getWallets, changeWallet } from '../store/wallet';
 import { startDeviceScan, stopDeviceScan } from '../store/device';
+import { getSettings } from '../store/settings';
 import { AppState } from '../store';
 
 interface StateProps {
@@ -30,6 +31,7 @@ interface DispatchProps {
   changeWallet: typeof changeWallet;
   startDeviceScan: typeof startDeviceScan;
   stopDeviceScan: typeof stopDeviceScan;
+  getSettings: typeof getSettings;
 }
 
 interface OwnProps {
@@ -50,6 +52,7 @@ class Template extends React.Component<Props, State> {
   async componentDidMount() {
     this.props.getWallets();
     this.props.startDeviceScan();
+    this.props.getSettings();
   }
 
   componentWillUnmount() {
@@ -63,6 +66,9 @@ class Template extends React.Component<Props, State> {
     }, {
       to: '/sign',
       children: 'Sign',
+    }, {
+      to: '/settings',
+      children: 'Settings',
     }];
 
     let dropdownLabel;
@@ -114,6 +120,7 @@ class Template extends React.Component<Props, State> {
                     </DropdownMenu>
                   )}
                 </UncontrolledDropdown>
+
               </Nav>
             </Collapse>
           </Container>
@@ -139,5 +146,5 @@ const mapStateToProps = (state: AppState) => {
 
 export default connect(
   mapStateToProps,
-  { getWallets, changeWallet, startDeviceScan, stopDeviceScan },
+  { getWallets, changeWallet, startDeviceScan, stopDeviceScan, getSettings },
 )(Template);
