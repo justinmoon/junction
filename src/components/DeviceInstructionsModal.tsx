@@ -6,7 +6,7 @@ interface Props {
 	isOpen: boolean;
 }
 
-export default class AddSigners extends React.Component<Props> {
+export default class DeviceInstructionsModal extends React.Component<Props> {
   render() {
 		// TODO: accept an optional "device" prop and only display that device if present 
 		const { toggle, isOpen } = this.props;

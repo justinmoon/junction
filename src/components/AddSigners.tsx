@@ -3,23 +3,30 @@ import { Button, Spinner, Row } from 'reactstrap';
 import { Device } from '../types'
 import { MyCard, MyTable } from './Toolbox'
 import DeviceInstructionsModal from './DeviceInstructionsModal'
+import EnterPinModal from './EnterPinModal'
+
+import api from '../api';
 
 interface AddDeviceProps {
   device: Device;
   showSpinner: boolean;
-  enterPin(): any;
+  displayPinEntry(): any;
   addSigner: (device: Device) => void;
 }
 
 class AddDevice extends React.Component<AddDeviceProps> {
+  handleUnlock(device: Device) {
+    api.promptPin({ path: device.path }).then(this.props.displayPinEntry)
+  }
+
   render() {
-    const { device, showSpinner, enterPin, addSigner } = this.props;
+    const { device, showSpinner, displayPinEntry, addSigner } = this.props;
     let rightComponent = null;
     if (showSpinner) {
       rightComponent = <Spinner size="sm"/>;
     } else {
       if (device.needs_pin_sent) {
-        rightComponent = <Button onClick={enterPin}>Unlock</Button> 
+        rightComponent = <Button onClick={() => this.handleUnlock(device)}>Unlock</Button>
       // TODO
       // } else if (device.needs_pin_sent) {
       //   rightComponent = <Button onClick={enterPassphrase}>Unlock</Button> 
@@ -47,11 +54,16 @@ interface Props {
 
 interface State {
   modal: boolean;
+  pinModalActive: boolean;
+  // FIXME: keeping track of the device outside the modal sucks
+  pinEntryDevice: Device | null;
 }
 
 export default class AddSigners extends React.Component<Props, State> {
   state: State = {
     modal: false,
+    pinModalActive: false,
+    pinEntryDevice: null,
   }
 
   toggle() {
@@ -60,8 +72,15 @@ export default class AddSigners extends React.Component<Props, State> {
     }));
   }
 
-  enterPin() {
-    console.log('enter pin')
+  togglePinModal() {
+    this.setState(prevState => ({
+      pinModalActive: !prevState.pinModalActive
+    }));
+  }
+
+  openModal(device: Device) {
+    this.togglePinModal();
+    this.setState({ pinEntryDevice: device });
   }
 
   render() {
@@ -78,7 +97,6 @@ export default class AddSigners extends React.Component<Props, State> {
             </Button>
           </Row>
           <DeviceInstructionsModal isOpen={this.state.modal} toggle={this.toggle.bind(this)}/>
-          {/* <PinEntryModal isOpen={this.state.pinEntryModal} toggle={this.togglePinEntryModal.bind(this)}/> */}
         </MyCard>
       )
     }
@@ -92,12 +110,15 @@ export default class AddSigners extends React.Component<Props, State> {
           </tr>
         </thead>
         <tbody>
-        {devices.map((device: Device) => <AddDevice 
-                device={device} 
-                showSpinner={device === deviceBeingAdded}
-                enterPin={this.enterPin}
-                addSigner={addSigner.bind(this)}/>
-        )}
+          {devices.map((device: Device) => <AddDevice
+                  device={device}
+                  showSpinner={device === deviceBeingAdded}
+                  displayPinEntry={() => this.openModal(device)}
+                  addSigner={addSigner.bind(this)}/>
+          )}
+          <EnterPinModal isOpen={this.state.pinModalActive}
+                        toggle={this.togglePinModal.bind(this)}
+                        device={this.state.pinEntryDevice}/>
         </tbody>
       </MyTable>
     )

@@ -26,6 +26,18 @@ class API {
     return this.request<any>('POST', '/signers', args);
   }
 
+  promptPin(args: T.PromptPinArguments) {
+    return this.request<any>('POST', '/prompt', args)
+  }
+
+  enterPin(args: T.EnterPinArguments) {
+    return this.request<any>('POST', '/unlock', args)
+  }
+
+  deletePrompt() {
+    return this.request<any>('DELETE', '/prompt',)
+  }
+
   // Internal fetch function
   protected request<R extends object>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',

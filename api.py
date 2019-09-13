@@ -14,6 +14,15 @@ schema = JsonSchema()
 logger = logging.getLogger(__name__)
 CLIENT = None
 
+def kill_client():
+    global CLIENT
+    if CLIENT is not None:
+        try:
+            CLIENT.close()
+        except:
+            pass
+        CLIENT = None
+
 @api.errorhandler(Exception)
 def handle_unexpected_error(error):
     status_code = 500
@@ -42,9 +51,10 @@ def list_devices():
     },
 })
 def prompt_device():
-    global CLIENT
+    kill_client()
     path = request.json['path']
     client, device = get_client_and_device(path)
+    # FIXME: 'error': 'Could not open client or get fingerprint information: LIBUSB_ERROR_BUSY [-6]'
     if device.get('needs_pin_sent'):
         CLIENT = client
         client.prompt_pin()
@@ -55,13 +65,17 @@ def prompt_device():
         raise Exception(f'Device with path {device["path"]} already unlocked')
     return jsonify({})  # FIXME: what to do here when there's nothing to return
 
+@api.route('/prompt', methods=['DELETE'])
+def destroy_client():
+    '''Kill the persistent CLIENT required for Trezor PIN entry'''
+    kill_client()
+    return jsonify({}), 200
+
 @api.route('/unlock', methods=['POST'])
 @schema.validate({
-    'required': ['path'],
     'properties': {
         'pin': { 'type': 'string' },  # trezor
         'password': { 'type': 'string' },  # bitbox
-        'path':{ 'type': 'string' },
     },
 })
 def unlock_device():
@@ -69,13 +83,13 @@ def unlock_device():
     # more validation
     pin = request.json.get('pin')
     password = request.json.get('password')
-    assert pin or password   # FIXME do in json schema
-
+    if not pin or password:   # FIXME do in json schema
+        raise Exception("'pin' or 'password' must be present")
     # unlock device and return response
     global CLIENT
     result = CLIENT.send_pin(pin)
+    kill_client()
     if result['success']:
-        del CLIENT
         return jsonify({})  # FIXME
     else:
         raise Exception('Failed to unlock device')

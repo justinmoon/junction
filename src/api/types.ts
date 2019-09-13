@@ -9,3 +9,11 @@ export interface AddSignerArguments {
   signer_name: string;
   device_id: string;
 }
+
+export interface PromptPinArguments {
+  path: string;
+}
+
+export interface EnterPinArguments {
+  pin: string;
+}
