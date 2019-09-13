@@ -1,5 +1,6 @@
 import React from 'react';
 import { Signer } from '../types'
+import { MyTable } from './Toolbox'
 
 interface Props {
   signers: Signer[];
@@ -10,22 +11,22 @@ class Signers extends React.Component<Props> {
     const { signers } = this.props;
     // FIXME: this table is whack
     return (
-      <table>
+      <MyTable>
         <thead>
           <tr>
-            <th scope="col">Device</th>
-            <th scope="col" className="text-right">Action</th>
+            <th scope="col">Name</th>
+            <th scope="col" className="text-right">Device</th>
           </tr>
         </thead>
         <tbody>
-        {signers.map((signer: Signer, index: number) => 
+        {signers.map((signer: Signer) => 
           <tr key={signer.fingerprint}>
             <td>{ signer.name }</td>
-            <td>Signer #{index}</td>
+            <td className="text-right">{ signer.type }</td>
           </tr>
         )}
         </tbody>
-      </table>
+      </MyTable>
     )
   }
 }

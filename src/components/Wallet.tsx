@@ -10,6 +10,7 @@ import api from '../api'
 
 interface StateProps {
   candidateDevices: Device[];
+  deviceError: Error | null;
   activeWallet: AppState['wallet']['activeWallet'];
 }
 
@@ -46,19 +47,38 @@ class Wallet extends React.Component<Props, State> {
       return <div>no active wallet</div>
     }
     const { signers } = activeWallet;
+
+    let signersComponent = null;
+    if (signers.length) {
+      signersComponent = (
+        <div>
+          <h3 className='text-center'>Signers</h3>
+          <Signers signers={signers} />
+        </div>
+      )
+    }
+
+    // "Add Signers" section
+    let addSigners = null;
+    if (!activeWallet.ready) {
+      addSigners = (
+        <div>
+          <h3 className='text-center'>Add {activeWallet.n - activeWallet.signers.length} More Signers</h3>
+          <AddSigners devices={candidateDevices} deviceError={deviceError}  deviceBeingAdded={deviceBeingAdded} addSigner={this.addSigner}/>
+        </div>
+      )
+    }
     return (
       <div>
-        <h3>{ activeWallet.name } ({activeWallet.m}/{activeWallet.n})</h3>
+        <h2 className='text-center'>{ activeWallet.name } ({activeWallet.m}/{activeWallet.n})</h2>
         {activeWallet.ready && 
           <div>Confirmed Balance: {activeWallet.balances.confirmed}</div>
         }
         {activeWallet.balances.unconfirmed > 0 &&
           <div>Unconfirmed Balance: {activeWallet.balances.unconfirmed}</div>}
-        <h3>Signers</h3>
-        <Signers signers={signers} />
-        <h3>Add {activeWallet.n - activeWallet.signers.length} More Signers</h3>
-        <AddSigners devices={candidateDevices} deviceError={deviceError}  deviceBeingAdded={deviceBeingAdded} addSigner={this.addSigner}/>
-      </div>
+        {signersComponent}
+        {addSigners}
+        </div>
     )
   }
 }
