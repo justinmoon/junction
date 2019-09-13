@@ -4,6 +4,40 @@ import { Device } from '../types'
 import { MyCard, MyTable } from './Toolbox'
 import DeviceInstructionsModal from './DeviceInstructionsModal'
 
+interface AddDeviceProps {
+  device: Device;
+  showSpinner: boolean;
+  enterPin(): any;
+  addSigner: (device: Device) => void;
+}
+
+class AddDevice extends React.Component<AddDeviceProps> {
+  render() {
+    const { device, showSpinner, enterPin, addSigner } = this.props;
+    let rightComponent = null;
+    if (showSpinner) {
+      rightComponent = <Spinner size="sm"/>;
+    } else {
+      if (device.needs_pin_sent) {
+        rightComponent = <Button onClick={enterPin}>Unlock</Button> 
+      // TODO
+      // } else if (device.needs_pin_sent) {
+      //   rightComponent = <Button onClick={enterPassphrase}>Unlock</Button> 
+      } else {
+        rightComponent = <Button onClick={() => addSigner(device)}>Add Signer</Button>
+      }
+    }
+    return (
+      <tr key={device.fingerprint}>
+        <td>{ device.type }</td>
+        <td className="text-right">
+          {rightComponent}
+        </td>
+      </tr>
+    )
+  }
+}
+
 interface Props {
   devices: Device[];
   deviceError: Error | null;
@@ -25,10 +59,15 @@ export default class AddSigners extends React.Component<Props, State> {
       modal: !prevState.modal
     }));
   }
+
+  enterPin() {
+    console.log('enter pin')
+  }
+
   render() {
     // FIXME: use deviceError
-    const { devices, deviceBeingAdded, deviceError } = this.props;
-
+    const { devices, deviceBeingAdded, addSigner, deviceError } = this.props;
+    
     if (!devices || !devices.length) {
       return (
         <MyCard>
@@ -39,6 +78,7 @@ export default class AddSigners extends React.Component<Props, State> {
             </Button>
           </Row>
           <DeviceInstructionsModal isOpen={this.state.modal} toggle={this.toggle.bind(this)}/>
+          {/* <PinEntryModal isOpen={this.state.pinEntryModal} toggle={this.togglePinEntryModal.bind(this)}/> */}
         </MyCard>
       )
     }
@@ -52,14 +92,11 @@ export default class AddSigners extends React.Component<Props, State> {
           </tr>
         </thead>
         <tbody>
-        {devices.map((device: Device) => 
-          <tr key={device.fingerprint}>
-            <td>{ device.type }</td>
-            <td className="text-right">
-              {device !== deviceBeingAdded && <Button onClick={() => this.props.addSigner(device)}>Add Signer</Button>}
-              {device === deviceBeingAdded && <Spinner size="sm"/>}
-            </td>
-          </tr>
+        {devices.map((device: Device) => <AddDevice 
+                device={device} 
+                showSpinner={device === deviceBeingAdded}
+                enterPin={this.enterPin}
+                addSigner={addSigner.bind(this)}/>
         )}
         </tbody>
       </MyTable>
