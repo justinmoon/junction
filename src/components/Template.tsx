@@ -17,6 +17,7 @@ import {
   UncontrolledDropdown,
 } from 'reactstrap';
 import { getWallets, changeWallet } from '../store/wallet';
+import { startDeviceScan, stopDeviceScan } from '../store/device';
 import { AppState } from '../store';
 
 interface StateProps {
@@ -26,7 +27,9 @@ interface StateProps {
 
 interface DispatchProps {
   getWallets: typeof getWallets;
-  changeWallet: typeof changeWallet
+  changeWallet: typeof changeWallet;
+  startDeviceScan: typeof startDeviceScan;
+  stopDeviceScan: typeof stopDeviceScan;
 }
 
 interface OwnProps {
@@ -46,8 +49,12 @@ class Template extends React.Component<Props, State> {
 
   async componentDidMount() {
     this.props.getWallets();
+    this.props.startDeviceScan();
   }
 
+  componentWillUnmount() {
+    this.props.stopDeviceScan();
+  }
   render() {
     const { wallets, activeWallet } = this.props;
     const navLinks = [{
@@ -96,10 +103,9 @@ class Template extends React.Component<Props, State> {
                       {wallets.data.map(w => (
                         <DropdownItem
                           key={w.name}
-                          active={w === activeWallet}
                           onClick={() => this.props.changeWallet(w)}
                         >
-                          {w.name} ({w.m} of {w.n})
+                          <Link to="/">{w.name} ({w.m} of {w.n})</Link>
                         </DropdownItem>
                       ))}
                       <DropdownItem>
@@ -124,10 +130,14 @@ class Template extends React.Component<Props, State> {
   };
 };
 
-export default connect<StateProps, DispatchProps, OwnProps, AppState>(
-  state => ({
+const mapStateToProps = (state: AppState) => {
+  return {
     wallets: state.wallet.wallets,
     activeWallet: state.wallet.activeWallet,
-  }),
-  { getWallets, changeWallet },
+  }
+}
+
+export default connect(
+  mapStateToProps,
+  { getWallets, changeWallet, startDeviceScan, stopDeviceScan },
 )(Template);

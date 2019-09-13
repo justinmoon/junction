@@ -1,5 +1,6 @@
 import { stringify } from 'query-string';
 import * as T from '../api/types';
+import { Device } from '../types';
 export * from '../api/types';
 
 class API {
@@ -11,7 +12,7 @@ class API {
 
   // Public methods
   getDevices() {
-    return this.request<any>('GET', '/devices');
+    return this.request<Device[]>('GET', '/devices');
   }
 
   getWallets() {
@@ -20,6 +21,22 @@ class API {
 
   createWallet(args: T.CreateWalletArguments) {
     return this.request<any>('POST', '/wallets', args);
+  }
+
+  addSigner(args: T.AddSignerArguments) {
+    return this.request<any>('POST', '/signers', args);
+  }
+
+  promptPin(args: T.PromptPinArguments) {
+    return this.request<any>('POST', '/prompt', args)
+  }
+
+  enterPin(args: T.EnterPinArguments) {
+    return this.request<any>('POST', '/unlock', args)
+  }
+
+  deletePrompt() {
+    return this.request<any>('DELETE', '/prompt',)
   }
 
   // Internal fetch function

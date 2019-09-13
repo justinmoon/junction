@@ -1,6 +1,5 @@
 import { DeviceActionTypes as T } from './types';
 import { ThunkAction } from '../types';
-import { DeviceType } from '../../types';
 import { sleep } from '../../util';
 import api from '../../api';
 
