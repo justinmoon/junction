@@ -1,5 +1,5 @@
 import { AppState } from '..';
-import { Signer, Device } from '../../types'
+import { Signer, Device, isUnlockedDevice } from '../../types'
 
 export function selectCandidateDevicesForActiveWallet(state: AppState) {
   // FIXME this check sucks
@@ -7,17 +7,13 @@ export function selectCandidateDevicesForActiveWallet(state: AppState) {
     return [];
   }
   const walletFingerprints = state.wallet.activeWallet.signers.map((signer: Signer) => signer.fingerprint);
-  return state.device.devices.data.reduce(
-    (candidates: Device[], device: Device) => {
-      // locked device
-      if (!device.fingerprint) {
-        candidates.push(device)
-      // unlocked with matching fingerprint
-      } else if (!walletFingerprints.includes(device.fingerprint)) {
-        candidates.push(device);
-      }
-      return candidates;
-  }, [])
+
+  return state.device.devices.data.filter(device => {
+    if (isUnlockedDevice(device) && walletFingerprints.includes(device.fingerprint)) {
+      return false;
+    }
+    return true;
+  });
 }
 
 // This is hard to use 

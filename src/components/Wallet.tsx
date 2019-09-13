@@ -2,16 +2,15 @@ import React from 'react';
 import { connect } from 'react-redux';
 import AddSigners from './AddSigners';
 import Signers from './Signers';
-import { Device } from '../types'
+import { Device, isUnlockedDevice } from '../types'
 import { AppState } from '../store';
 import { getWallets, selectCandidateDevicesForActiveWallet, selectActiveWallet } from '../store/wallet';
-import { Spinner } from 'reactstrap';
 import api from '../api'
 
 interface StateProps {
-  candidateDevices: Device[];
-  deviceError: Error | null;
-  activeWallet: AppState['wallet']['activeWallet'];
+  candidateDevices: ReturnType<typeof selectCandidateDevicesForActiveWallet>;
+  deviceError: AppState['device']['devices']['error'];
+  activeWallet: ReturnType<typeof selectActiveWallet>;
 }
 
 interface DispatchProps {
@@ -29,16 +28,17 @@ class Wallet extends React.Component<Props, State> {
     deviceBeingAdded: null,
   }
   private addSigner = async (device: Device) => {
-    if (this.props.activeWallet) {
-      this.setState({ deviceBeingAdded: device })
-      await api.addSigner({
-        wallet_name: this.props.activeWallet.name,
-        signer_name: device.type,
-        device_id: device.fingerprint,
-      })
-      // FIXME: state.wallet.activeWallet goes stale here
-      await this.props.getWallets();
+    if (!this.props.activeWallet || !isUnlockedDevice(device))  {
+      return;
     }
+    this.setState({ deviceBeingAdded: device })
+    await api.addSigner({
+      wallet_name: this.props.activeWallet.name,
+      signer_name: device.type,
+      device_id: device.fingerprint,
+    })
+    // FIXME: state.wallet.activeWallet goes stale here
+    await this.props.getWallets();
   }
   render() {
     const { deviceBeingAdded } = this.state;

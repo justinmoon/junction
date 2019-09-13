@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, Modal, ModalHeader, ModalFooter, ModalBody, Row, Spinner } from 'reactstrap';
 import api from '../api'
 import { Device } from '../types';
+import './EnterPinModal.css';
 
 const digits = [
   [7,8,9],
@@ -58,31 +59,9 @@ export default class EnterPinModal extends React.Component<Props, State> {
     }
   }
 
-  getStyles(digit: number) {
-    let style = {
-      height: '100px',
-      width: '100px',
-      backgroundColor: '#868e96',  // Bootstrap's "secondary" grey
-      margin: '10px',
-    }
-    if (this.state.pressed === digit) {
-      style['backgroundColor'] = '#ced4da'  // lighter grey
-    }
-    return style;
-  }
-
-  handleMouseDown(digit: number) {
+  handlePinClick(digit: number) {
     if (!this.state.submitting) {
-      this.setState({ pressed: digit })
-    }
-  }
-
-  handleMouseUp(digit: number) {
-    if (!this.state.submitting) {
-      this.setState(prevState => ({
-        pin: prevState.pin + String(digit),
-        pressed: null,
-      }));
+      this.setState({ pin: this.state.pin + String(digit) });
     }
   }
 
@@ -99,14 +78,18 @@ export default class EnterPinModal extends React.Component<Props, State> {
   renderPin() {
     const { pin } = this.state;
     return (
-      <div>
-        {digits.map((row: number[]) => {
-          return <Row>{row.map((digit: number) => 
-              <div style={this.getStyles(digit)}
-                   onMouseDown={() => this.handleMouseDown(digit)}
-                   onMouseUp={() => this.handleMouseUp(digit)}/>
-            )}</Row>
-        })}
+      <div className="PinModal-pins">
+        {digits.map((row, idx) => (
+          <div className="PinModal-pins-row" key={idx}>
+            {row.map((digit) => (
+              <div
+                className="PinModal-pins-pin"
+                key={digit}
+                onClick={() => this.handlePinClick(digit)}
+              />
+            ))}
+          </div>
+        ))}
         <div>PIN: {"•".repeat(pin.length)}</div>
       </div>
     )
@@ -114,7 +97,15 @@ export default class EnterPinModal extends React.Component<Props, State> {
 
   toggle() {
     this.setState(initialState)
-    api.deletePrompt().then(this.props.toggle)
+    this.props.toggle();
+  }
+
+  handleClosed() {
+    api.deletePrompt();
+  }
+
+  componentWillUnmount() {
+    this.handleClosed();
   }
 
   renderError() {
@@ -146,7 +137,7 @@ export default class EnterPinModal extends React.Component<Props, State> {
 		// TODO: accept an optional "device" prop and only display that device if present 
     const { isOpen } = this.props;
     return (
-			<Modal isOpen={isOpen} toggle={this.toggle.bind(this)}>
+			<Modal isOpen={isOpen} toggle={this.toggle.bind(this)} className="PinModal" onClosed={this.handleClosed}>
 				<ModalHeader toggle={this.toggle.bind(this)}>EnterPin</ModalHeader>
 				<ModalBody>
           {this.renderPin()}

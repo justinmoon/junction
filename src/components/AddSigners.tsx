@@ -30,12 +30,14 @@ class AddDevice extends React.Component<AddDeviceProps> {
       // TODO
       // } else if (device.needs_pin_sent) {
       //   rightComponent = <Button onClick={enterPassphrase}>Unlock</Button> 
+      } else if (device.error) {
+        rightComponent = <Button color="danger" onClick={() => alert(device.error)}>Error</Button>
       } else {
         rightComponent = <Button onClick={() => addSigner(device)}>Add Signer</Button>
       }
     }
     return (
-      <tr key={device.fingerprint}>
+      <tr key={device.path + device.type}>
         <td>{ device.type }</td>
         <td className="text-right">
           {rightComponent}

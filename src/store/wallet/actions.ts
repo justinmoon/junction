@@ -8,11 +8,10 @@ export function getWallets(): ThunkAction {
     dispatch({ type: T.GET_WALLETS });
     try {
       const wallets = await api.getWallets();
-      dispatch({ type: T.GET_WALLETS_SUCCESS, payload: wallets });
-
       if (!getState().wallet.activeWallet) {
         dispatch(changeWallet(wallets[0]));
       }
+      dispatch({ type: T.GET_WALLETS_SUCCESS, payload: wallets });
     } catch(err) {
       dispatch({ type: T.GET_WALLETS_FAILURE, payload: err });
     }

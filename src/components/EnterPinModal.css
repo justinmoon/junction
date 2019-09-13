@@ -1,0 +1,17 @@
+.PinModal-pins-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.PinModal-pins-pin {
+  height: 100px;
+  width: 100px;
+  background-color: #868e96;
+  margin: 10px;
+}
+
+.PinModal-pins-pin:focus,
+.PinModal-pins-pin:active {
+  background: #ced4da;
+}
