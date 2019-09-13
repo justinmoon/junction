@@ -1,5 +1,6 @@
 import { stringify } from 'query-string';
 import * as T from '../api/types';
+import { Device } from '../types';
 export * from '../api/types';
 
 class API {
@@ -11,7 +12,7 @@ class API {
 
   // Public methods
   getDevices() {
-    return this.request<any>('GET', '/devices');
+    return this.request<Device[]>('GET', '/devices');
   }
 
   getWallets() {

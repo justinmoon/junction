@@ -3,7 +3,7 @@ import { Signer, Device } from '../../types'
 
 export function selectCandidateDevicesForActiveWallet(state: AppState) {
   // FIXME this check sucks
-  if (state.device.devices.data === null || state.wallet.activeWallet === null) {
+  if (!state.device.devices.data || !state.wallet.activeWallet) {
     return [];
   }
   const walletFingerprints = state.wallet.activeWallet.signers.map((signer: Signer) => signer.fingerprint);

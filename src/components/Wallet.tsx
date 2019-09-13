@@ -43,7 +43,7 @@ class Wallet extends React.Component<Props, State> {
   render() {
     const { deviceBeingAdded } = this.state;
     const { candidateDevices, activeWallet, deviceError } = this.props;
-    if (activeWallet === null) {
+    if (!activeWallet) {
       return <div>no active wallet</div>
     }
     const { signers } = activeWallet;
