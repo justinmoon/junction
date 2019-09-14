@@ -19,7 +19,7 @@ mkdir wallets
 python ui.py
 ```
 
-Open `localhost:5000` in your browser
+Open `localhost:37128` in your browser
 
 ## Features
 
