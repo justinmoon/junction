@@ -7,6 +7,7 @@ from flask import flash, current_app as app
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 from hwilib import commands
 from hwilib.devices import coldcard, digitalbitbox, ledger, trezor
+from urllib import parse
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ class RPC:
     uri_template = "http://{user}:{password}@{host}:{port}/wallet/{wallet_name}"
 
     def __init__(self, rpc_settings, wallet_name=''):
-        self.uri = self.uri_template.format(**rpc_settings, wallet_name=wallet_name)
+        self.uri = self.uri_template.format(**rpc_settings, wallet_name=parse.quote(wallet_name))
 
     def __getattr__(self, name):
         '''Create new proxy for every call to prevent timeouts'''
