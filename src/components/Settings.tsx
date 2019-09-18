@@ -54,9 +54,9 @@ class Settings extends React.Component<Props> {
     }[] = [{
       label: 'RPC Username (Optional)',
       name: 'user',
-      placeholder: 'Satoshi',
+      placeholder: 'satoshi',
     }, {
-      label: 'RPC Password',
+      label: 'RPC Password (Optional)',
       name: 'password',
       placeholder: '**********',
     }, {
