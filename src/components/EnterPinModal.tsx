@@ -3,6 +3,10 @@ import { Button, Modal, ModalHeader, ModalFooter, ModalBody, Row, Spinner } from
 import api from '../api'
 import { Device } from '../types';
 import './EnterPinModal.css';
+import { AppState } from '../store';
+import { connect } from 'react-redux';
+import { toggleDeviceUnlockModal } from '../store/modal'
+
 
 const digits = [
   [7,8,9],
@@ -10,11 +14,16 @@ const digits = [
   [1,2,3],
 ]
 
-interface Props {
-	toggle(): any;
-  isOpen: boolean;
+interface StateProps {
+  open: boolean;
   device: Device | null;
 }
+
+interface DispatchProps {
+  toggle: typeof toggleDeviceUnlockModal;
+}
+
+type Props = StateProps & DispatchProps
 
 interface State {
   pin: string;
@@ -28,9 +37,9 @@ const initialState = {
   submitting: false,
   error: null,
   pressed: null,
-}
+};
 
-export default class EnterPinModal extends React.Component<Props, State> {
+class EnterPinModal extends React.Component<Props, State> {
   state: State = initialState;
 
   async enterPin() {
@@ -135,9 +144,9 @@ export default class EnterPinModal extends React.Component<Props, State> {
 
   render() {
 		// TODO: accept an optional "device" prop and only display that device if present 
-    const { isOpen } = this.props;
+    const { open } = this.props;
     return (
-			<Modal isOpen={isOpen} toggle={this.toggle.bind(this)} className="PinModal" onClosed={this.handleClosed}>
+			<Modal isOpen={open} toggle={this.toggle.bind(this)} className="PinModal" onClosed={this.handleClosed}>
 				<ModalHeader toggle={this.toggle.bind(this)}>EnterPin</ModalHeader>
 				<ModalBody>
           {this.renderPin()}
@@ -147,3 +156,15 @@ export default class EnterPinModal extends React.Component<Props, State> {
 		)
 	}
 }
+
+export const mapStateToProps = (state: AppState) => {
+  return {
+    device: state.modal.deviceUnlock.device,
+    open: state.modal.deviceUnlock.open,
+  }
+}
+
+export default connect(
+  mapStateToProps,
+  { toggle: toggleDeviceUnlockModal },
+)(EnterPinModal);

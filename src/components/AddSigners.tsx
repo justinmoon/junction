@@ -1,17 +1,20 @@
 import React from 'react';
+import { connect } from 'react-redux';
 import { Button, Spinner, Row } from 'reactstrap';
 import { Device } from '../types'
 import { MyCard, MyTable } from './Toolbox'
 import DeviceInstructionsModal from './DeviceInstructionsModal'
 import EnterPinModal from './EnterPinModal'
-
+import { toggleDeviceInstructionsModal, toggleDeviceUnlockModal, setDeviceUnlockModalDevice } from '../store/modal'
 import api from '../api';
+import { AppState } from '../store';
 
 interface AddDeviceProps {
   device: Device;
   showSpinner: boolean;
   displayPinEntry(): any;
   addSigner: (device: Device) => void;
+  toggleDeviceInstructionsModal: typeof toggleDeviceInstructionsModal;
 }
 
 class AddDevice extends React.Component<AddDeviceProps> {
@@ -31,7 +34,7 @@ class AddDevice extends React.Component<AddDeviceProps> {
       // } else if (device.needs_pin_sent) {
       //   rightComponent = <Button onClick={enterPassphrase}>Unlock</Button> 
       } else if (device.error) {
-        rightComponent = <Button color="danger" onClick={() => alert(device.error)}>Error</Button>
+        rightComponent = <Button color="default" onClick={this.props.toggleDeviceInstructionsModal}>Unavailable</Button>
       } else {
         rightComponent = <Button onClick={() => addSigner(device)}>Add Signer</Button>
       }
@@ -48,57 +51,48 @@ class AddDevice extends React.Component<AddDeviceProps> {
 }
 
 interface Props {
+  // Props
   devices: Device[];
   deviceError: Error | null;
   deviceBeingAdded: Device | null;
   addSigner: (device: Device) => void;
 }
 
-interface State {
-  modal: boolean;
-  pinModalActive: boolean;
-  // FIXME: keeping track of the device outside the modal sucks
-  pinEntryDevice: Device | null;
+interface DispatchProps {
+  setDeviceUnlockModalDevice: typeof setDeviceUnlockModalDevice; 
+  toggleDeviceInstructionsModal: typeof toggleDeviceInstructionsModal;
+  toggleDeviceUnlockModal: typeof toggleDeviceUnlockModal;
 }
 
-export default class AddSigners extends React.Component<Props, State> {
-  state: State = {
-    modal: false,
-    pinModalActive: false,
-    pinEntryDevice: null,
-  }
+interface StateProps {
+  modal: AppState['modal'];
+}
 
-  toggle() {
-    this.setState(prevState => ({
-      modal: !prevState.modal
-    }));
-  }
+type AllProps = Props & StateProps & DispatchProps;
 
-  togglePinModal() {
-    this.setState(prevState => ({
-      pinModalActive: !prevState.pinModalActive
-    }));
-  }
+class AddSigners extends React.Component<AllProps> {
 
-  openModal(device: Device) {
-    this.togglePinModal();
-    this.setState({ pinEntryDevice: device });
+  openDeviceUnlockModal(device: Device) {
+    this.props.setDeviceUnlockModalDevice(device);
+    this.props.toggleDeviceUnlockModal()
   }
 
   render() {
     // FIXME: use deviceError
-    const { devices, deviceBeingAdded, addSigner, deviceError } = this.props;
+    const { devices, deviceBeingAdded, addSigner, deviceError, toggleDeviceInstructionsModal } = this.props;
     
+    // FIXME: two instances of <DeviceInstructionsModal/>
     if (!devices || !devices.length) {
       return (
         <MyCard>
           <h5 className='text-center'>No devices available</h5>
           <Row>
-            <Button onClick={this.toggle.bind(this)} className='mx-auto'>
+            <Button onClick={toggleDeviceInstructionsModal.bind(this)} className='mx-auto'>
               Show instructions
             </Button>
           </Row>
-          <DeviceInstructionsModal isOpen={this.state.modal} toggle={this.toggle.bind(this)}/>
+          <DeviceInstructionsModal isOpen={this.props.modal.deviceInstructions.open} 
+                                   toggle={toggleDeviceInstructionsModal.bind(this)}/>
         </MyCard>
       )
     }
@@ -115,14 +109,27 @@ export default class AddSigners extends React.Component<Props, State> {
           {devices.map((device: Device) => <AddDevice
                   device={device}
                   showSpinner={device === deviceBeingAdded}
-                  displayPinEntry={() => this.openModal(device)}
-                  addSigner={addSigner.bind(this)}/>
+                  displayPinEntry={() => this.openDeviceUnlockModal(device)}
+                  addSigner={addSigner.bind(this)}
+                  toggleDeviceInstructionsModal={toggleDeviceInstructionsModal.bind(this)}
+                  />
           )}
-          <EnterPinModal isOpen={this.state.pinModalActive}
-                        toggle={this.togglePinModal.bind(this)}
-                        device={this.state.pinEntryDevice}/>
+          <EnterPinModal/>
+          <DeviceInstructionsModal isOpen={this.props.modal.deviceInstructions.open} 
+                                   toggle={toggleDeviceInstructionsModal.bind(this)}/>
         </tbody>
       </MyTable>
     )
   }
 }
+
+export const mapStateToProps = (state: AppState) => {
+  return {
+    modal: state.modal
+  }
+}
+
+export default connect(
+  mapStateToProps,
+  { toggleDeviceInstructionsModal, toggleDeviceUnlockModal, setDeviceUnlockModalDevice },
+)(AddSigners);
