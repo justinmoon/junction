@@ -1,11 +1,12 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps } from 'react-router';
-import { Form, FormGroup, Input, Label, Button } from 'reactstrap';
+import { Form, FormGroup, Input, Label, Button, Row, Col } from 'reactstrap';
 import { getWallets } from '../store/wallet';
 import { AppState } from '../store';
 import api, { CreatePSBTOutput } from '../api';
 import { Wallet } from '../types';
+import './Send.css'
 
 interface DispatchProps {
   getWallets: typeof getWallets;
@@ -35,44 +36,6 @@ class Create extends React.Component<Props, LocalState> {
     isSubmitting: false,
     error: null,
   };
-  render() {
-    const { outputs } = this.state;
-
-    return (
-      <Form onSubmit={this.handleSubmit}>
-        {outputs.map((output, index) =>
-          <div>
-            <FormGroup>
-              <Label>Recipient Address</Label>
-              <Input
-                name="address"
-                value={output.address}
-                placeholder="Recipient Address"
-                onChange={e => this.handleChangeRecipient(e, index)}
-              />
-            </FormGroup>
-            <FormGroup>
-              <Label>Amount in BTC</Label>
-              <Input
-                name="btc"
-                value={output.btc}
-                type="number"
-                step="0.00000001"
-                placeholder="Amount in BTC"
-                onChange={e => this.handleChangeAmount(e, index)}
-              />
-            </FormGroup>
-          </div>
-        )}
-        <Button color="secondary" size="lg" block onClick={this.handleAddOutput}>
-          Add Output
-        </Button>
-        <Button color="primary" size="lg" block>
-          Submit
-        </Button>
-      </Form>
-    );
-  }
 
   private handleChangeRecipient = (ev: React.ChangeEvent<HTMLInputElement>, index: number) => {
     let { outputs } = this.state;
@@ -92,6 +55,12 @@ class Create extends React.Component<Props, LocalState> {
     this.setState({ [ev.currentTarget.name]: ev.currentTarget.value } as any);
   };
 
+  private handleRemoveOutput = (index: number) => {
+    let state = this.state;
+    state.outputs.splice(index, 1);
+    this.setState(state);
+  };
+
   private handleSubmit = async (ev: React.FormEvent<HTMLFormElement>) => {
     ev.preventDefault();
     try {
@@ -109,6 +78,65 @@ class Create extends React.Component<Props, LocalState> {
     }
     this.setState({ isSubmitting: false });
   };
+
+  render() {
+    const { outputs } = this.state;
+
+    return (
+      <div className="center-block">
+        <Form onSubmit={this.handleSubmit}>
+        {outputs.map((output, index) =>
+          <div>
+          <Row>
+            <Col xs="8">
+              <FormGroup>
+                <Label>Recipient Address</Label>
+                <Input
+                  name="address"
+                  value={output.address}
+                  placeholder="Recipient Address"
+                  onChange={e => this.handleChangeRecipient(e, index)}
+                />
+              </FormGroup>
+            </Col>
+            <Col xs="3">
+              <FormGroup>
+                <Label>Amount in BTC</Label>
+                <Input
+                  name="btc"
+                  value={output.btc}
+                  type="number"
+                  step="0.00000001"
+                  placeholder="Amount in BTC"
+                  onChange={e => this.handleChangeAmount(e, index)}
+                />
+              </FormGroup>
+            </Col>
+            <Col xs="1">
+              <Button color="danger" className="remove" onClick={() => this.handleRemoveOutput(index)}>
+                X
+              </Button>
+            </Col>
+          </Row>
+          <hr/>
+          </div>
+        )}
+        <Row>
+          <Col xs="6">
+            <Button color="secondary" size="lg" block onClick={this.handleAddOutput}>
+              Add Output
+            </Button>
+          </Col>
+          <Col xs="6">
+            <Button color="primary" block size="lg" >
+              Submit
+            </Button>
+          </Col>
+        </Row>
+      </Form>
+      </div>
+    );
+  }
 }
 
 const ConnectedCreate = connect<StateProps, DispatchProps, RouteComponentProps, AppState>(

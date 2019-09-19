@@ -1,0 +1,14 @@
+.Send-form {
+    width: 300;
+    margin: 20 0 10 0;
+}
+
+.send-container {
+    width: 500px;
+    margin-top: 20px;
+}
+
+.remove {
+    position: relative;
+    top: 32px;
+}

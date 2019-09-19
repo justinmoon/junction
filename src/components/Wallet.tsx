@@ -72,10 +72,10 @@ class Wallet extends React.Component<Props, State> {
       <div>
         <h2 className='text-center'>{ activeWallet.name } ({activeWallet.m}/{activeWallet.n})</h2>
         {activeWallet.ready && 
-          <div>Confirmed Balance: {activeWallet.balances.confirmed}</div>
+          <div className="text-center">Confirmed Balance: {activeWallet.balances.confirmed} BTC</div>
         }
         {activeWallet.balances.unconfirmed > 0 &&
-          <div>Unconfirmed Balance: {activeWallet.balances.unconfirmed}</div>}
+          <div className="text-center">Unconfirmed Balance: {activeWallet.balances.unconfirmed} BTC</div>}
         {signersComponent}
         {addSigners}
         </div>
