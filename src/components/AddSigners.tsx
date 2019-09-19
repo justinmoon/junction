@@ -3,8 +3,6 @@ import { connect } from 'react-redux';
 import { Button, Spinner, Row } from 'reactstrap';
 import { Device } from '../types'
 import { MyCard, MyTable } from './Toolbox'
-import DeviceInstructionsModal from './DeviceInstructionsModal'
-import EnterPinModal from './EnterPinModal'
 import { 
   toggleDeviceInstructionsModal, setDeviceUnlockModalDevice, openDeviceUnlockModal
 } from '../store/modal'
@@ -75,7 +73,6 @@ class AddSigners extends React.Component<AllProps> {
               Show instructions
             </Button>
           </Row>
-          <DeviceInstructionsModal/>
         </MyCard>
       )
     }
@@ -91,8 +88,6 @@ class AddSigners extends React.Component<AllProps> {
         <tbody>
           {devices.map((device: Device) => this.renderAddDevice(device)
           )}
-          <EnterPinModal/>
-          <DeviceInstructionsModal/>
         </tbody>
       </MyTable>
     )

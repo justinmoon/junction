@@ -20,6 +20,8 @@ import { getWallets, changeWallet } from '../store/wallet';
 import { startDeviceScan, stopDeviceScan } from '../store/device';
 import { getSettings } from '../store/settings';
 import { AppState } from '../store';
+import DeviceInstructionsModal from './DeviceInstructionsModal'
+import EnterPinModal from './EnterPinModal'
 
 interface StateProps {
   wallets: AppState['wallet']['wallets'];
@@ -128,6 +130,8 @@ class Template extends React.Component<Props, State> {
         <Container>
           {this.props.children}
         </Container>
+        <DeviceInstructionsModal/>
+        <EnterPinModal/>
       </div>
     );
   }
