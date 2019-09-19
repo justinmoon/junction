@@ -144,6 +144,7 @@ class MultisigWallet:
                 'unconfirmed': unconfirmed,
             }
             base['ready'] = self.ready()
+            base['psbt'] = self.decode_psbt()
         return base
 
     def add_signer(self, *, name, fingerprint, xpub, type, derivation_path):

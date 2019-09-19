@@ -3,7 +3,8 @@ import { Card, Table } from 'reactstrap';
 
 let containerStyle = {
   'margin': '0 auto',
-  'max-width': '400px',
+  // FIXME
+  // 'max-width': '400px',
 }
 
 export const MyCard: FunctionComponent = props => (

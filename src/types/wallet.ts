@@ -15,4 +15,5 @@ export interface Wallet {
   signers: Signer[];
   balances: any;  // FIXME
   ready: boolean;
+  psbt: any;      // FIXME
 }
