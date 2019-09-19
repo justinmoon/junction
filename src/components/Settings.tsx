@@ -97,7 +97,6 @@ class Settings extends React.Component<Props> {
         </Button>
       </Form>
     )
-    // return JSON.stringify(this.props.settings);
   }
 
   private handleChange = (ev: React.ChangeEvent<HTMLInputElement>) => {

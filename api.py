@@ -52,12 +52,13 @@ def list_devices():
 })
 def prompt_device():
     kill_client()
+    global CLIENT
     path = request.json['path']
     client, device = get_client_and_device(path)
     # FIXME: 'error': 'Could not open client or get fingerprint information: LIBUSB_ERROR_BUSY [-6]'
     if device.get('needs_pin_sent'):
         CLIENT = client
-        client.prompt_pin()
+        CLIENT.prompt_pin()
     elif device.get('needs_password_sent'):
         # TODO this is for bitbox. not sure how to implement ...
         raise NotImplementedError()
@@ -211,13 +212,10 @@ def sign_psbt():
 @api.route('/settings', methods=['GET'])
 def get_settings_route():
     settings = get_settings()
-    import time
-    print(time.time())
     try:
         RPC(settings['rpc'], timeout=5).test()
     except Exception as e:
         settings['rpc']['error'] = str(e)
-    print(time.time())
     return jsonify(settings)
 
 @api.route('/settings', methods=['PUT'])

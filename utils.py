@@ -72,7 +72,6 @@ class RPC:
 
     def __getattr__(self, name):
         '''Create new proxy for every call to prevent timeouts'''
-        print(self.timeout)
         rpc = AuthServiceProxy(self.uri, timeout=self.timeout) 
         return getattr(rpc, name)
 
