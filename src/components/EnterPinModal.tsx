@@ -20,7 +20,8 @@ interface StateProps {
 }
 
 interface DispatchProps {
-  toggle: typeof toggleDeviceUnlockModal;
+  // toggleDeviceUnlockModal: typeof toggleDeviceUnlockModal;
+  toggleDeviceUnlockModal: any;  // FIXME
 }
 
 type Props = StateProps & DispatchProps
@@ -32,6 +33,7 @@ interface State {
   pressed: number | null;
 }
 
+// TODO: move to redux?
 const initialState = {
   pin: '',
   submitting: false,
@@ -67,6 +69,11 @@ class EnterPinModal extends React.Component<Props, State> {
       }
     }
   }
+
+  // FIXME: does this help?
+  // async componentWillUnmount() {
+  //   await api.deletePrompt()
+  // }
 
   handlePinClick(digit: number) {
     if (!this.state.submitting) {
@@ -106,16 +113,16 @@ class EnterPinModal extends React.Component<Props, State> {
 
   toggle() {
     this.setState(initialState)
-    this.props.toggle();
+    this.props.toggleDeviceUnlockModal();
   }
 
-  handleClosed() {
-    api.deletePrompt();
-  }
+  // handleClosed() {
+  //   api.deletePrompt();
+  // }
 
-  componentWillUnmount() {
-    this.handleClosed();
-  }
+  // componentWillUnmount() {
+  //   this.handleClosed();
+  // }
 
   renderError() {
     const style = {
@@ -146,7 +153,7 @@ class EnterPinModal extends React.Component<Props, State> {
 		// TODO: accept an optional "device" prop and only display that device if present 
     const { open } = this.props;
     return (
-			<Modal isOpen={open} toggle={this.toggle.bind(this)} className="PinModal" onClosed={this.handleClosed}>
+			<Modal isOpen={open} toggle={this.toggle.bind(this)} className="PinModal">
 				<ModalHeader toggle={this.toggle.bind(this)}>EnterPin</ModalHeader>
 				<ModalBody>
           {this.renderPin()}
@@ -166,5 +173,5 @@ export const mapStateToProps = (state: AppState) => {
 
 export default connect(
   mapStateToProps,
-  { toggle: toggleDeviceUnlockModal },
+  { toggleDeviceUnlockModal },
 )(EnterPinModal);

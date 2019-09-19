@@ -5,34 +5,46 @@ import { Device } from '../types'
 import { MyCard, MyTable } from './Toolbox'
 import DeviceInstructionsModal from './DeviceInstructionsModal'
 import EnterPinModal from './EnterPinModal'
-import { toggleDeviceInstructionsModal, toggleDeviceUnlockModal, setDeviceUnlockModalDevice } from '../store/modal'
-import api from '../api';
+import { 
+  toggleDeviceInstructionsModal, setDeviceUnlockModalDevice, openDeviceUnlockModal
+} from '../store/modal'
 import { AppState } from '../store';
 
-interface AddDeviceProps {
-  device: Device;
-  showSpinner: boolean;
-  displayPinEntry(): any;
+interface Props {
+  devices: Device[];
+  deviceError: Error | null;
+  deviceBeingAdded: Device | null;
   addSigner: (device: Device) => void;
-  toggleDeviceInstructionsModal: typeof toggleDeviceInstructionsModal;
 }
 
-class AddDevice extends React.Component<AddDeviceProps> {
+interface DispatchProps {
+  setDeviceUnlockModalDevice: typeof setDeviceUnlockModalDevice; 
+  toggleDeviceInstructionsModal: typeof toggleDeviceInstructionsModal;
+  openDeviceUnlockModal: typeof openDeviceUnlockModal;
+}
+
+interface StateProps {
+  modal: AppState['modal'];
+}
+
+type AllProps = Props & StateProps & DispatchProps;
+
+class AddSigners extends React.Component<AllProps> {
+
   handleUnlock(device: Device) {
-    api.promptPin({ path: device.path }).then(this.props.displayPinEntry)
+    this.props.openDeviceUnlockModal(device);
   }
 
-  render() {
-    const { device, showSpinner, displayPinEntry, addSigner } = this.props;
+  renderAddDevice(device: Device) {
+    const { addSigner, deviceBeingAdded } = this.props;
+    const showSpinner = device === deviceBeingAdded;
     let rightComponent = null;
     if (showSpinner) {
       rightComponent = <Spinner size="sm"/>;
     } else {
+      // TODO: passwords
       if (device.needs_pin_sent) {
         rightComponent = <Button onClick={() => this.handleUnlock(device)}>Unlock</Button>
-      // TODO
-      // } else if (device.needs_pin_sent) {
-      //   rightComponent = <Button onClick={enterPassphrase}>Unlock</Button> 
       } else if (device.error) {
         rightComponent = <Button color="default" onClick={this.props.toggleDeviceInstructionsModal}>Unavailable</Button>
       } else {
@@ -47,34 +59,6 @@ class AddDevice extends React.Component<AddDeviceProps> {
         </td>
       </tr>
     )
-  }
-}
-
-interface Props {
-  // Props
-  devices: Device[];
-  deviceError: Error | null;
-  deviceBeingAdded: Device | null;
-  addSigner: (device: Device) => void;
-}
-
-interface DispatchProps {
-  setDeviceUnlockModalDevice: typeof setDeviceUnlockModalDevice; 
-  toggleDeviceInstructionsModal: typeof toggleDeviceInstructionsModal;
-  toggleDeviceUnlockModal: typeof toggleDeviceUnlockModal;
-}
-
-interface StateProps {
-  modal: AppState['modal'];
-}
-
-type AllProps = Props & StateProps & DispatchProps;
-
-class AddSigners extends React.Component<AllProps> {
-
-  openDeviceUnlockModal(device: Device) {
-    this.props.setDeviceUnlockModalDevice(device);
-    this.props.toggleDeviceUnlockModal()
   }
 
   render() {
@@ -106,13 +90,7 @@ class AddSigners extends React.Component<AllProps> {
           </tr>
         </thead>
         <tbody>
-          {devices.map((device: Device) => <AddDevice
-                  device={device}
-                  showSpinner={device === deviceBeingAdded}
-                  displayPinEntry={() => this.openDeviceUnlockModal(device)}
-                  addSigner={addSigner.bind(this)}
-                  toggleDeviceInstructionsModal={toggleDeviceInstructionsModal.bind(this)}
-                  />
+          {devices.map((device: Device) => this.renderAddDevice(device)
           )}
           <EnterPinModal/>
           <DeviceInstructionsModal isOpen={this.props.modal.deviceInstructions.open} 
@@ -131,5 +109,7 @@ export const mapStateToProps = (state: AppState) => {
 
 export default connect(
   mapStateToProps,
-  { toggleDeviceInstructionsModal, toggleDeviceUnlockModal, setDeviceUnlockModalDevice },
+  { toggleDeviceInstructionsModal, 
+    setDeviceUnlockModalDevice,
+    openDeviceUnlockModal },
 )(AddSigners);
