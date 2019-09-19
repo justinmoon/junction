@@ -49,6 +49,10 @@ class API {
     return this.request<any>('DELETE', '/prompt',)
   }
 
+  createPSBT(args: T.CreatePSBTArguments) {
+    return this.request<any>('POST', '/psbt', args);
+  }
+
   // Internal fetch function
   protected request<R extends object>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
