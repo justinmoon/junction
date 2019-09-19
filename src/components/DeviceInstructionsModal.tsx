@@ -1,18 +1,26 @@
 import React from 'react';
 import { Button, Modal, ModalHeader, ModalFooter, ModalBody } from 'reactstrap';
+import { AppState } from '../store';
+import { toggleDeviceInstructionsModal } from '../store/modal'
+import { connect } from 'react-redux';
 
-interface Props {
-	toggle(): any;
-	isOpen: boolean;
+interface DispatchProps {
+  toggleDeviceInstructionsModal: typeof toggleDeviceInstructionsModal;
 }
 
-export default class DeviceInstructionsModal extends React.Component<Props> {
+interface StateProps {
+  modal: AppState['modal'];
+}
+
+type Props = DispatchProps & StateProps
+
+class DeviceInstructionsModal extends React.Component<Props> {
   render() {
 		// TODO: accept an optional "device" prop and only display that device if present 
-		const { toggle, isOpen } = this.props;
+		const { toggleDeviceInstructionsModal, modal } = this.props;
 		return (
-			<Modal isOpen={isOpen} toggle={toggle}>
-				<ModalHeader toggle={toggle}>Device Instructions</ModalHeader>
+			<Modal isOpen={modal.deviceInstructions.open} toggle={toggleDeviceInstructionsModal}>
+				<ModalHeader toggle={toggleDeviceInstructionsModal}>Device Instructions</ModalHeader>
 				<ModalBody>
 					<h3 className="text-center mb-3">Trezor</h3>
 					<ul>
@@ -42,9 +50,20 @@ export default class DeviceInstructionsModal extends React.Component<Props> {
 					</ul>
 				</ModalBody>
 				<ModalFooter>
-					<Button color="secondary" onClick={toggle}>OK</Button>
+					<Button color="secondary" onClick={toggleDeviceInstructionsModal}>OK</Button>
 				</ModalFooter>
 			</Modal>
 		)
 	}
 }
+
+export const mapStateToProps = (state: AppState) => {
+	return {
+	  modal: state.modal
+	}
+}
+  
+export default connect(
+	mapStateToProps,
+	{ toggleDeviceInstructionsModal },
+)(DeviceInstructionsModal);

@@ -75,8 +75,7 @@ class AddSigners extends React.Component<AllProps> {
               Show instructions
             </Button>
           </Row>
-          <DeviceInstructionsModal isOpen={this.props.modal.deviceInstructions.open} 
-                                   toggle={toggleDeviceInstructionsModal.bind(this)}/>
+          <DeviceInstructionsModal/>
         </MyCard>
       )
     }
@@ -93,8 +92,7 @@ class AddSigners extends React.Component<AllProps> {
           {devices.map((device: Device) => this.renderAddDevice(device)
           )}
           <EnterPinModal/>
-          <DeviceInstructionsModal isOpen={this.props.modal.deviceInstructions.open} 
-                                   toggle={toggleDeviceInstructionsModal.bind(this)}/>
+          <DeviceInstructionsModal/>
         </tbody>
       </MyTable>
     )
