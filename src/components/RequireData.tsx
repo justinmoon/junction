@@ -2,10 +2,12 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { RouteComponentProps, withRouter } from 'react-router';
 import { AppState } from '../store';
+import { selectActiveWallet } from '../store/wallet'
+import { Wallet } from '../types';
 
 interface StateProps {
   stateWallets: AppState['wallet']['wallets'];
-  stateActiveWallet: AppState['wallet']['activeWallet'];
+  stateActiveWallet: Wallet | null;
   stateSettings: AppState['settings'];
 }
 
@@ -53,7 +55,7 @@ class RequireData extends React.Component<Props> {
 export default connect<StateProps, {}, OwnProps, AppState>(
   state => ({
     stateWallets: state.wallet.wallets,
-    stateActiveWallet: state.wallet.activeWallet,
+    stateActiveWallet: selectActiveWallet(state),
     stateSettings: state.settings,
   }),
 )(withRouter(RequireData));

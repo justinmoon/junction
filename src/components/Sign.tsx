@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps } from 'react-router';
 import { Form, FormGroup, Input, Label, Button, Row, Col } from 'reactstrap';
-import { getWallets } from '../store/wallet';
+import { getWallets, selectActiveWallet } from '../store/wallet';
 import { AppState } from '../store';
 import api, { CreatePSBTOutput } from '../api';
 import { MyCard, MyTable } from './Toolbox'
@@ -16,7 +16,7 @@ interface DispatchProps {
 type Props = DispatchProps & StateProps & RouteComponentProps;
 
 interface StateProps {
-  activeWallet: AppState['wallet']['activeWallet'];
+  activeWallet: Wallet | null;
   devices: AppState['device']['devices']['data'];
 }
 
@@ -120,7 +120,7 @@ class Sign extends React.Component<Props, LocalState> {
 
 const ConnectedSign = connect<StateProps, DispatchProps, RouteComponentProps, AppState>(
   state => ({
-    activeWallet: state.wallet.activeWallet,
+    activeWallet: selectActiveWallet(state),
     devices: state.device.devices.data,
   }),
   { getWallets },

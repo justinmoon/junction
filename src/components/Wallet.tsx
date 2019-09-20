@@ -4,7 +4,7 @@ import AddSigners from './AddSigners';
 import Signers from './Signers';
 import { Device, isUnlockedDevice } from '../types'
 import { AppState } from '../store';
-import { getWallets, selectCandidateDevicesForActiveWallet, selectActiveWallet } from '../store/wallet';
+import { getWallets, selectCandidateDevicesForActiveWallet, selectActiveWallet, addSigner } from '../store/wallet';
 import api from '../api'
 
 interface StateProps {
@@ -15,6 +15,7 @@ interface StateProps {
 
 interface DispatchProps {
   getWallets: typeof getWallets;
+  addSigner: typeof addSigner;
 }
 
 interface State {
@@ -64,7 +65,8 @@ class Wallet extends React.Component<Props, State> {
       addSigners = (
         <div>
           <h3 className='text-center'>Add {activeWallet.n - activeWallet.signers.length} More Signers</h3>
-          <AddSigners devices={candidateDevices} deviceError={deviceError}  deviceBeingAdded={deviceBeingAdded} addSigner={this.addSigner}/>
+          <AddSigners devices={candidateDevices} deviceError={deviceError}  
+                      deviceBeingAdded={deviceBeingAdded} addSigner={this.props.addSigner}/>
         </div>
       )
     }
@@ -93,5 +95,5 @@ export const mapStateToProps = (state: AppState) => {
 
 export default connect(
   mapStateToProps,
-  { getWallets },
+  { getWallets, addSigner },
 )(Wallet);

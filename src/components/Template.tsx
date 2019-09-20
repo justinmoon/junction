@@ -16,16 +16,17 @@ import {
   DropdownItem,
   UncontrolledDropdown,
 } from 'reactstrap';
-import { getWallets, changeWallet } from '../store/wallet';
+import { getWallets, changeWallet, selectActiveWallet } from '../store/wallet';
 import { startDeviceScan, stopDeviceScan } from '../store/device';
 import { getSettings } from '../store/settings';
 import { AppState } from '../store';
 import DeviceInstructionsModal from './DeviceInstructionsModal'
 import EnterPinModal from './EnterPinModal'
+import { Wallet } from '../types';
 
 interface StateProps {
   wallets: AppState['wallet']['wallets'];
-  activeWallet: AppState['wallet']['activeWallet'];
+  activeWallet: Wallet | null;
 }
 
 interface DispatchProps {
@@ -144,7 +145,7 @@ class Template extends React.Component<Props, State> {
 const mapStateToProps = (state: AppState) => {
   return {
     wallets: state.wallet.wallets,
-    activeWallet: state.wallet.activeWallet,
+    activeWallet: selectActiveWallet(state),
   }
 }
 

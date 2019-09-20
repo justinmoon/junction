@@ -59,5 +59,5 @@ $ ./test/install_bitcoind.sh
 Run tests
 
 ```
-python -m unittest test.test_wallet.py
+python -m unittest test.test_wallet
 ```

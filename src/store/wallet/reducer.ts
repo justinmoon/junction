@@ -1,16 +1,24 @@
 import { AnyAction } from 'redux';
-import { Wallet } from '../../types';
+import { Wallet, Device } from '../../types';
 import { Loadable, DEFAULT_LOADABLE, handleLoadable } from '../util';
 import { WalletActionTypes as T } from './types';
 
 export interface WalletState {
   wallets: Loadable<Wallet[]>;
-  activeWallet: Wallet | null;
+  activeWalletName: string | null;
+  addSigner: {
+    isSubmitting: boolean;
+    device: Device | null;
+  }
 }
 
 export const INITIAL_STATE: WalletState = {
   wallets: { ...DEFAULT_LOADABLE },
-  activeWallet: null,
+  activeWalletName: null,
+  addSigner: {
+    isSubmitting: false,
+    device: null,
+  }
 };
 
 export function walletReducer(
@@ -29,7 +37,7 @@ export function walletReducer(
     case T.CHANGE_WALLET:
       return {
         ...state,
-        activeWallet: action.payload,
+        activeWalletName: action.payload,
       };
   }
   return state;

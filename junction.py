@@ -11,7 +11,7 @@ from disk import write_json_file, read_json_file, get_settings, full_path
 
 logger = logging.getLogger(__name__)
 
-ADDRESS_CHUNK = 100
+ADDRESS_CHUNK = 1000
 
 class HardwareSigner:
 
@@ -54,9 +54,9 @@ class MultisigWallet:
         self.export_index = export_index
         # RPC connection to corresponding watch-only Bitcoin Core wallet
         settings = get_settings()  # FIXME
-        self.wallet_rpc = RPC(settings['rpc'], name)
+        self.wallet_rpc = RPC(settings['rpc'], wallet_name=name, timeout=180)
         # RPC connection to Bitcoin Core's default wallet
-        self.default_rpc = RPC(settings['rpc'])
+        self.default_rpc = RPC(settings['rpc'], timeout=180)
 
     def ready(self):
         '''All signers present, ready to create PSBT'''

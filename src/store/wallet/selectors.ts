@@ -3,10 +3,11 @@ import { Signer, Device, isUnlockedDevice } from '../../types'
 
 export function selectCandidateDevicesForActiveWallet(state: AppState) {
   // FIXME this check sucks
-  if (!state.device.devices.data || !state.wallet.activeWallet) {
+  const activeWallet = selectActiveWallet(state)
+  if (!state.device.devices.data || !activeWallet) {
     return [];
   }
-  const walletFingerprints = state.wallet.activeWallet.signers.map((signer: Signer) => signer.fingerprint);
+  const walletFingerprints = activeWallet.signers.map((signer: Signer) => signer.fingerprint);
 
   return state.device.devices.data.filter(device => {
     if (isUnlockedDevice(device) && walletFingerprints.includes(device.fingerprint)) {
@@ -18,9 +19,15 @@ export function selectCandidateDevicesForActiveWallet(state: AppState) {
 
 // This is hard to use 
 export function selectActiveWallet(state: AppState) {
-  const { activeWallet } = state.wallet;
-  // if (activeWallet === null) {
-  //   throw Error('No active wallet');
-  // }
-  return activeWallet;
+  const { activeWalletName } = state.wallet;
+
+  if (state.wallet.wallets.data !== null) {
+    for (let wallet of state.wallet.wallets.data) {
+      if (wallet.name === activeWalletName) {
+        return wallet
+      }
+    }
+  }
+  return null
 }
+

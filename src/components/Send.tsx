@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps } from 'react-router';
 import { Form, FormGroup, Input, Label, Button, Row, Col } from 'reactstrap';
-import { getWallets } from '../store/wallet';
+import { getWallets, selectActiveWallet } from '../store/wallet';
 import { AppState } from '../store';
 import api, { CreatePSBTOutput } from '../api';
 import { Wallet } from '../types';
@@ -21,7 +21,7 @@ interface ConnectProps {
 type Props = DispatchProps & ConnectProps & RouteComponentProps;
 
 interface StateProps {
-  activeWallet: AppState['wallet']['activeWallet'];
+  activeWallet: Wallet | null;
 }
 
 interface LocalState {
@@ -141,7 +141,7 @@ class Create extends React.Component<Props, LocalState> {
 
 const ConnectedCreate = connect<StateProps, DispatchProps, RouteComponentProps, AppState>(
   state => ({
-    activeWallet: state.wallet.activeWallet,
+    activeWallet: selectActiveWallet(state),
   }),
   { getWallets },
 )(Create);
