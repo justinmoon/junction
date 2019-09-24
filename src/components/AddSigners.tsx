@@ -34,7 +34,7 @@ class AddSigners extends React.Component<AllProps> {
   }
 
   renderAddDevice(device: Device) {
-    const { addSigner, deviceBeingAdded } = this.props;
+    const { addSigner, deviceBeingAdded, toggleDeviceInstructionsModal } = this.props;
     const showSpinner = device === deviceBeingAdded;
     let rightComponent = null;
     if (showSpinner) {
@@ -44,7 +44,9 @@ class AddSigners extends React.Component<AllProps> {
       if (device.needs_pin_sent) {
         rightComponent = <Button onClick={() => this.handleUnlock(device)}>Unlock</Button>
       } else if (device.error) {
-        rightComponent = <Button color="default" onClick={this.props.toggleDeviceInstructionsModal}>Unavailable</Button>
+        rightComponent = <Button color="default" onClick={() => toggleDeviceInstructionsModal(device.type)}>
+          Unavailable
+        </Button>
       } else {
         rightComponent = <Button onClick={() => addSigner(device)}>Add Signer</Button>
       }
@@ -61,7 +63,7 @@ class AddSigners extends React.Component<AllProps> {
 
   render() {
     // FIXME: use deviceError
-    const { devices, deviceBeingAdded, addSigner, deviceError, toggleDeviceInstructionsModal } = this.props;
+    const { devices, toggleDeviceInstructionsModal } = this.props;
     
     // FIXME: two instances of <DeviceInstructionsModal/>
     if (!devices || !devices.length) {
@@ -69,7 +71,7 @@ class AddSigners extends React.Component<AllProps> {
         <MyCard>
           <h5 className='text-center'>No devices available</h5>
           <Row>
-            <Button onClick={toggleDeviceInstructionsModal.bind(this)} className='mx-auto'>
+            <Button onClick={() => toggleDeviceInstructionsModal()} className='mx-auto'>
               Show instructions
             </Button>
           </Row>
@@ -86,8 +88,7 @@ class AddSigners extends React.Component<AllProps> {
           </tr>
         </thead>
         <tbody>
-          {devices.map((device: Device) => this.renderAddDevice(device)
-          )}
+          {devices.map((device: Device) => this.renderAddDevice(device))}
         </tbody>
       </MyTable>
     )

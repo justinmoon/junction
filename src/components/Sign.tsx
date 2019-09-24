@@ -3,6 +3,7 @@ import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps } from 'react-router';
 import { Form, FormGroup, Input, Label, Button, Row, Col } from 'reactstrap';
 import { getWallets, selectActiveWallet } from '../store/wallet';
+import { toggleDeviceInstructionsModal } from '../store/modal';
 import { AppState } from '../store';
 import api, { CreatePSBTOutput } from '../api';
 import { MyCard, MyTable } from './Toolbox'
@@ -11,6 +12,7 @@ import './Send.css'
 
 interface DispatchProps {
   getWallets: typeof getWallets;
+  toggleDeviceInstructionsModal: typeof toggleDeviceInstructionsModal;
 }
 
 type Props = DispatchProps & StateProps & RouteComponentProps;
@@ -50,10 +52,10 @@ function deviceAvailable(signer: Signer, devices: Device[]) {
   for (let device of devices) {
     // FIXME: this check sucks
     if ('fingerprint' in device && device.fingerprint === signer.fingerprint) {
-      return true
+      return device
     }
   }
-  return false;
+  return null;
 }
 
 class Sign extends React.Component<Props, LocalState> {
@@ -63,6 +65,8 @@ class Sign extends React.Component<Props, LocalState> {
   };
 
   renderSigner(signer: Signer, psbt: any, devices: Device[]) {
+    const device = deviceAvailable(signer, devices)
+    const { toggleDeviceInstructionsModal } = this.props
     if (signedBySigner(signer, psbt)) {
       return (
         <tr key={signer.fingerprint}>
@@ -70,9 +74,9 @@ class Sign extends React.Component<Props, LocalState> {
           <td className="text-right">Signed</td>
         </tr>
       )
-    } else if (deviceAvailable(signer, devices)) {
+    } else if (device) {
       return (
-        <tr>
+        <tr key={signer.name}>
           <td>{ signer.name }</td>
           <td className="text-right">
             <Button>Sign</Button>
@@ -80,11 +84,12 @@ class Sign extends React.Component<Props, LocalState> {
         </tr>
       )
     } else {
+      console.log(signer)
       return (
-        <tr>
+        <tr key={signer.name}>
           <td>{ signer.name }</td>
           <td className="text-right">
-            <Button>Unlock</Button>
+            <Button onClick={() => toggleDeviceInstructionsModal(signer.type)}>Unlock</Button>
           </td>
         </tr>
       )
@@ -95,6 +100,9 @@ class Sign extends React.Component<Props, LocalState> {
     const { activeWallet, devices } = this.props;
     if (!activeWallet || !devices) {
       return <div>loading</div>
+    }
+    if (!activeWallet.psbt) {
+      return <div>no psbt</div>
     }
     const { psbt, signers } = activeWallet;
     return (
@@ -123,7 +131,7 @@ const ConnectedSign = connect<StateProps, DispatchProps, RouteComponentProps, Ap
     activeWallet: selectActiveWallet(state),
     devices: state.device.devices.data,
   }),
-  { getWallets },
+  { getWallets, toggleDeviceInstructionsModal },
 )(Sign);
 
 export default withRouter(ConnectedSign)

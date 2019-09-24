@@ -1,12 +1,12 @@
 import { AnyAction } from 'redux';
-import { Device } from '../../types';
+import { Device, DeviceType } from '../../types';
 import { Loadable, DEFAULT_LOADABLE, handleLoadable } from '../util';
 import { ModalActionTypes as T } from './types';
 
 // FIXME: "isOpen" would be better than "open"
 export interface ModalState {
   deviceInstructions: {
-    device: Device | null;
+    deviceType: DeviceType | null;
     open: boolean;
   };
   deviceUnlock: {
@@ -17,7 +17,7 @@ export interface ModalState {
 
 export const INITIAL_STATE: ModalState = {
   deviceInstructions: {
-    device: null,
+    deviceType: null,
     open: false,
   },
   deviceUnlock: {
@@ -36,7 +36,7 @@ export function modalReducer(
         ...state,
         deviceInstructions: {
           open: !state.deviceInstructions.open,
-          device: state.deviceInstructions.device,
+          deviceType: action.deviceType,
         }
       }
     // FIXME: ideally this would require a device attr if showing,

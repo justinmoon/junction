@@ -1,5 +1,5 @@
 import { ModalActionTypes as T } from './types';
-import { Device } from '../../types';
+import { Device, DeviceType } from '../../types';
 import { ThunkAction } from '../types';
 import api from '../../api'
 
@@ -9,8 +9,8 @@ import api from '../../api'
 // if hiding, remove device attribute
 
 // we need API method to "promptAllDevices"
-export function toggleDeviceInstructionsModal() {
-  return { type: T.DEVICE_INSTRUCTIONS_TOGGLE }
+export function toggleDeviceInstructionsModal(deviceType?: DeviceType) {
+  return { type: T.DEVICE_INSTRUCTIONS_TOGGLE, deviceType }
 }
 
 // export function promptDeviceUnlockModal(): ThunkAction {
