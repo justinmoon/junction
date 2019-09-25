@@ -27,6 +27,12 @@ def handle_exception(exception):
 
 ### HWI
 
+def get_device_for_client(client):
+    devices = commands.enumerate()
+    for device in devices:
+        if client.path == device.path:
+            return client
+
 def get_client(device):
     if device['type'] == 'ledger':
         client = ledger.LedgerClient(device['path'])
@@ -48,6 +54,33 @@ def get_client_and_device(path_or_fingerprint):
         if device.get('fingerprint') == path_or_fingerprint:
             return get_client(device), device
     raise JunctionError(f'Device not found')
+
+class ClientGroup:
+    '''single "source of truth" for devices and clients'''
+
+    def __init__(self):
+        self.clients = []
+
+    def send_pin(self, pin):
+        for client in self.clients:
+            success = client.send_pin(pin)['success']
+        if success:
+            self.close()
+        return success
+
+    def prompt_pin(self):
+        devices = commands.enumerate()
+        for device in devices:
+            if device.get('needs_pin_sent'):
+                client = get_client(device)
+                client.prompt_pin()
+                self.clients.append(client)
+
+    def close(self):
+        for client in self.clients:
+            client.close()
+            del client
+        self.clients = []
 
 ###  Currency conversions
 

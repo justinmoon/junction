@@ -16,7 +16,6 @@ const digits = [
 
 interface StateProps {
   open: boolean;
-  device: Device | null;
 }
 
 interface DispatchProps {
@@ -46,7 +45,6 @@ class EnterPinModal extends React.Component<Props, State> {
 
   async enterPin() {
     const { pin, submitting } = this.state;
-    const { device } = this.props;
     if (!submitting) {
       try {
         this.setState({ submitting: true })
@@ -58,14 +56,7 @@ class EnterPinModal extends React.Component<Props, State> {
           pin: '',
           submitting: false,
          });
-        // Prompt another pin so that user can try again  
-        // Annoying that typescript makes me check this ...
-        if (device) {
-          setTimeout(
-            () => api.promptPin({ path: device.path}),
-            1000
-          );
-        }
+        setTimeout(api.promptPin, 1000);
       }
     }
   }
@@ -150,7 +141,6 @@ class EnterPinModal extends React.Component<Props, State> {
   }
 
   render() {
-		// TODO: accept an optional "device" prop and only display that device if present 
     const { open } = this.props;
     return (
 			<Modal isOpen={open} toggle={this.toggle.bind(this)} className="PinModal">
@@ -166,7 +156,6 @@ class EnterPinModal extends React.Component<Props, State> {
 
 export const mapStateToProps = (state: AppState) => {
   return {
-    device: state.modal.deviceUnlock.device,
     open: state.modal.deviceUnlock.open,
   }
 }

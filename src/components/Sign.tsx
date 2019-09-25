@@ -2,8 +2,8 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps } from 'react-router';
 import { Form, FormGroup, Input, Label, Button, Row, Col } from 'reactstrap';
-import { getWallets, selectActiveWallet } from '../store/wallet';
-import { toggleDeviceInstructionsModal } from '../store/modal';
+import { getWallets, selectActiveWallet, signPSBT, broadcastTransaction } from '../store/wallet';
+import { toggleDeviceInstructionsModal, toggleDeviceUnlockModal } from '../store/modal';
 import { AppState } from '../store';
 import api, { CreatePSBTOutput } from '../api';
 import { MyCard, MyTable } from './Toolbox'
@@ -13,6 +13,9 @@ import './Send.css'
 interface DispatchProps {
   getWallets: typeof getWallets;
   toggleDeviceInstructionsModal: typeof toggleDeviceInstructionsModal;
+  signPSBT: typeof signPSBT;
+  toggleDeviceUnlockModal: any;  // FIXME
+  broadcastTransaction: any;
 }
 
 type Props = DispatchProps & StateProps & RouteComponentProps;
@@ -35,7 +38,7 @@ function signedBySigner(signer: Signer, psbt: any) {
       if (!input.partial_signatures) {
         return false;
       }
-      const pubkeyMatch = input.partial_signatures.contains(deriv.pubkey);
+      const pubkeyMatch = deriv.pubkey in input.partial_signatures
       if (fingerprintMatch && pubkeyMatch) {
         signed = true
       }
@@ -66,7 +69,8 @@ class Sign extends React.Component<Props, LocalState> {
 
   renderSigner(signer: Signer, psbt: any, devices: Device[]) {
     const device = deviceAvailable(signer, devices)
-    const { toggleDeviceInstructionsModal } = this.props
+    const { toggleDeviceInstructionsModal, signPSBT, toggleDeviceUnlockModal } = this.props
+    console.log('signer type', signer.type)
     if (signedBySigner(signer, psbt)) {
       return (
         <tr key={signer.fingerprint}>
@@ -74,17 +78,25 @@ class Sign extends React.Component<Props, LocalState> {
           <td className="text-right">Signed</td>
         </tr>
       )
-    } else if (device) {
+    } else if (device && device.fingerprint) {
       return (
         <tr key={signer.name}>
           <td>{ signer.name }</td>
           <td className="text-right">
-            <Button>Sign</Button>
+            <Button onClick={() => signPSBT(device)}>Sign</Button>
+          </td>
+        </tr>
+      )
+    } else if (signer.type == 'trezor') {
+      return (
+        <tr key={signer.name}>
+          <td>{ signer.name }</td>
+          <td className="text-right">
+            <Button onClick={() => toggleDeviceUnlockModal()}>Unlock</Button>
           </td>
         </tr>
       )
     } else {
-      console.log(signer)
       return (
         <tr key={signer.name}>
           <td>{ signer.name }</td>
@@ -93,11 +105,11 @@ class Sign extends React.Component<Props, LocalState> {
           </td>
         </tr>
       )
-      }
+    }
   }
 
   render() {
-    const { activeWallet, devices } = this.props;
+    const { activeWallet, devices, broadcastTransaction } = this.props;
     if (!activeWallet || !devices) {
       return <div>loading</div>
     }
@@ -105,22 +117,30 @@ class Sign extends React.Component<Props, LocalState> {
       return <div>no psbt</div>
     }
     const { psbt, signers } = activeWallet;
+    console.log(activeWallet)
     return (
       <div>
-      <MyTable>
-        <tbody>
-          <h4>Outputs</h4>
-          {psbt.tx.vout.map((vout: any, index: number) => (
-            <tr key={index}>
-              <td>#{ index }</td>
-              <td>{ vout.scriptPubKey.addresses[0] }</td>
-              <td className="text-right">{ vout.value } BTC</td>
-            </tr>
-          ))}
-          <h4>Signatures</h4>
-          {signers.map((signer: Signer) => this.renderSigner(signer, psbt, devices))}
-        </tbody>
-      </MyTable>
+        <MyTable>
+          <tbody>
+            <h4>Outputs</h4>
+            {psbt.tx.vout.map((vout: any, index: number) => (
+              <tr key={index}>
+                <td>#{ index }</td>
+                <td>{ vout.scriptPubKey.addresses[0] }</td>
+                <td className="text-right">{ vout.value } BTC</td>
+              </tr>
+            ))}
+            <h4>Signatures</h4>
+            {signers.map((signer: Signer) => this.renderSigner(signer, psbt, devices))}
+          </tbody>
+        </MyTable>
+        {activeWallet.signing_complete && <Form onSubmit={() => broadcastTransaction()}>
+          <div className="d-flex">
+            <Button color="primary" className="ml-auto">
+              Broadcast
+            </Button>
+          </div>
+        </Form>}
       </div>
     )
   }
@@ -131,7 +151,7 @@ const ConnectedSign = connect<StateProps, DispatchProps, RouteComponentProps, Ap
     activeWallet: selectActiveWallet(state),
     devices: state.device.devices.data,
   }),
-  { getWallets, toggleDeviceInstructionsModal },
+  { getWallets, toggleDeviceInstructionsModal, signPSBT, toggleDeviceUnlockModal, broadcastTransaction },
 )(Sign);
 
 export default withRouter(ConnectedSign)

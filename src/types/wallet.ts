@@ -16,4 +16,5 @@ export interface Wallet {
   balances: any;  // FIXME
   ready: boolean;
   psbt: any;      // FIXME
+  signing_complete: boolean;
 }

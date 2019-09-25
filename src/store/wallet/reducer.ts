@@ -1,5 +1,5 @@
 import { AnyAction } from 'redux';
-import { Wallet, Device } from '../../types';
+import { Wallet, Device, UnlockedDevice } from '../../types';
 import { Loadable, DEFAULT_LOADABLE, handleLoadable } from '../util';
 import { WalletActionTypes as T } from './types';
 
@@ -10,6 +10,11 @@ export interface WalletState {
     isSubmitting: boolean;
     device: Device | null;
   }
+  signPSBT: {
+    device: UnlockedDevice | null;
+    pending: boolean;
+    error: Error | null;
+  }
 }
 
 export const INITIAL_STATE: WalletState = {
@@ -18,6 +23,11 @@ export const INITIAL_STATE: WalletState = {
   addSigner: {
     isSubmitting: false,
     device: null,
+  },
+  signPSBT: {
+    device: null,
+    pending: false,
+    error: null
   }
 };
 
@@ -39,6 +49,32 @@ export function walletReducer(
         ...state,
         activeWalletName: action.payload,
       };
+    
+    case T.SIGN_PSBT:
+      return {
+        ...state,
+        signPSBT: {
+          device: action.device,
+          pending: true,
+          error: null,
+        }
+      }
+
+    case T.SIGN_PSBT_SUCCESS:
+        return {
+          ...state,
+          signPSBT: INITIAL_STATE.signPSBT,
+        }
+
+    case T.SIGN_PSBT_FAILURE:
+        return {
+          ...state,
+          signPSBT: {
+            device: null,
+            pending: false,
+            error: action.error,
+          }
+        }
   }
   return state;
 }

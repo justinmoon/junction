@@ -37,8 +37,8 @@ class API {
     return this.request<any>('POST', '/signers', args);
   }
 
-  promptPin(args: T.PromptPinArguments) {
-    return this.request<any>('POST', '/prompt', args)
+  promptPin() {
+    return this.request<any>('POST', '/prompt')
   }
 
   enterPin(args: T.EnterPinArguments) {
@@ -51,6 +51,14 @@ class API {
 
   createPSBT(args: T.CreatePSBTArguments) {
     return this.request<any>('POST', '/psbt', args);
+  }
+
+  signPSBT(args: T.SignPSBTArguments) {
+    return this.request<any>('POST', '/sign', args);
+  }
+
+  broadcastTransaction(args: T.BroadcastTransactionArguments) {
+    return this.request<any>('POST', '/broadcast', args);
   }
 
   // Internal fetch function

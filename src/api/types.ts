@@ -1,3 +1,5 @@
+import { UnlockedDevice } from "../types";
+
 export interface CreateWalletArguments {
   name: string;
   n: number;
@@ -8,10 +10,6 @@ export interface AddSignerArguments {
   wallet_name: string;
   signer_name: string;
   device_id: string;
-}
-
-export interface PromptPinArguments {
-  path: string;
 }
 
 export interface EnterPinArguments {
@@ -26,4 +24,13 @@ export interface CreatePSBTOutput {
 export interface CreatePSBTArguments {
   wallet_name: string;
   outputs: CreatePSBTOutput[];
+}
+
+export interface SignPSBTArguments {
+  wallet_name: string;
+  device_id: string;
+}
+
+export interface BroadcastTransactionArguments {
+  wallet_name: string;
 }

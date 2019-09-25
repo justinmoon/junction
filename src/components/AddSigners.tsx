@@ -4,7 +4,7 @@ import { Button, Spinner, Row } from 'reactstrap';
 import { Device } from '../types'
 import { MyCard, MyTable } from './Toolbox'
 import { 
-  toggleDeviceInstructionsModal, setDeviceUnlockModalDevice, openDeviceUnlockModal
+  toggleDeviceInstructionsModal, toggleDeviceUnlockModal
 } from '../store/modal'
 import { AppState } from '../store';
 
@@ -16,9 +16,8 @@ interface Props {
 }
 
 interface DispatchProps {
-  setDeviceUnlockModalDevice: typeof setDeviceUnlockModalDevice; 
   toggleDeviceInstructionsModal: typeof toggleDeviceInstructionsModal;
-  openDeviceUnlockModal: typeof openDeviceUnlockModal;
+  toggleDeviceUnlockModal: any;  // FIXME
 }
 
 interface StateProps {
@@ -29,12 +28,8 @@ type AllProps = Props & StateProps & DispatchProps;
 
 class AddSigners extends React.Component<AllProps> {
 
-  handleUnlock(device: Device) {
-    this.props.openDeviceUnlockModal(device);
-  }
-
   renderAddDevice(device: Device) {
-    const { addSigner, deviceBeingAdded, toggleDeviceInstructionsModal } = this.props;
+    const { addSigner, deviceBeingAdded, toggleDeviceInstructionsModal, toggleDeviceUnlockModal } = this.props;
     const showSpinner = device === deviceBeingAdded;
     let rightComponent = null;
     if (showSpinner) {
@@ -42,7 +37,7 @@ class AddSigners extends React.Component<AllProps> {
     } else {
       // TODO: passwords
       if (device.needs_pin_sent) {
-        rightComponent = <Button onClick={() => this.handleUnlock(device)}>Unlock</Button>
+        rightComponent = <Button onClick={() => toggleDeviceUnlockModal()}>Unlock</Button>
       } else if (device.error) {
         rightComponent = <Button color="default" onClick={() => toggleDeviceInstructionsModal(device.type)}>
           Unavailable
@@ -104,6 +99,5 @@ export const mapStateToProps = (state: AppState) => {
 export default connect(
   mapStateToProps,
   { toggleDeviceInstructionsModal, 
-    setDeviceUnlockModalDevice,
-    openDeviceUnlockModal },
+    toggleDeviceUnlockModal },
 )(AddSigners);

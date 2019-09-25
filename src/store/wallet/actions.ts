@@ -1,6 +1,6 @@
 import { WalletActionTypes as T } from './types';
 import { ThunkAction } from '../types';
-import { Wallet, Device } from '../../types';
+import { Wallet, Device, UnlockedDevice } from '../../types';
 import api from '../../api';
 import { selectActiveWallet } from './selectors';
 
@@ -43,9 +43,47 @@ export function addSigner(device: Device): ThunkAction {
   };
 }
 
+export function signPSBT(device: UnlockedDevice): ThunkAction {
+  return async (dispatch, getState) => {
+    dispatch({ type: T.SIGN_PSBT, device });
+    try {
+      const activeWallet = selectActiveWallet(getState())
+      if (!activeWallet) {
+        throw Error('Cannot sign without active wallet')
+      } else {
+        const device_id = device.fingerprint
+        api.signPSBT({ wallet_name: activeWallet.name, device_id });
+      }
+      await getWallets()
+      dispatch({ type: T.SIGN_PSBT_SUCCESS })
+    } catch(error) {
+      dispatch({ type: T.SIGN_PSBT_FAILURE, error })
+    }
+  }
+}
+
 export function changeWallet(wallet: Wallet) {
   return {
     type: T.CHANGE_WALLET,
     payload: wallet.name,
   };
+}
+
+
+export function broadcastTransaction(): ThunkAction {
+  return async (dispatch, getState) => {
+    dispatch({ type: T.BROADCAST_TRANSACTION });
+    try {
+      const activeWallet = selectActiveWallet(getState())
+      if (!activeWallet) {
+        throw Error('Cannot sign without active wallet')
+      } else {
+        api.broadcastTransaction({ wallet_name: activeWallet.name });
+      }
+      await getWallets()
+      dispatch({ type: T.SIGN_PSBT_SUCCESS })
+    } catch(error) {
+      dispatch({ type: T.SIGN_PSBT_FAILURE, error })
+    }
+  }
 }
