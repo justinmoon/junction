@@ -51,16 +51,19 @@ def get_client(device):
 def get_client_and_device(path_or_fingerprint):
     '''automatically closes HWI client upon exit''' 
     client = None
+    matching_device = None
     for device in commands.enumerate():
         # TODO: maybe accept path or fingerprint?
         if device.get('path') == path_or_fingerprint:
             client = get_client(device)
-        if device.get('fingerprint') == path_or_fingerprint:
+            matching_device = device
+        elif device.get('fingerprint') == path_or_fingerprint:
             client = get_client(device)
-    if not client:
+            matching_device = device
+    if not matching_device:
         raise JunctionError('Device not found')
     try:
-        yield client, device
+        yield client, matching_device
     finally:
         client.close()
 

@@ -6,7 +6,7 @@ from hwilib import commands, serializations
 from hwilib.devices import trezor, ledger, coldcard
 
 from junction import MultisigWallet, JunctionError
-from disk import get_wallets, get_settings, update_settings
+from disk import get_wallets, get_settings, update_settings, ensure_datadir
 from utils import RPC, get_client_and_device, ClientGroup
 
 api = Blueprint(__name__, 'api')
@@ -29,6 +29,10 @@ def handle_validation_error(e):
         'error': e.message,
         'errors': [validation_error.message for validation_error  in e.errors],
     }), 400
+
+@api.before_request
+def before_request():
+    ensure_datadir()
 
 @api.route('/devices', methods=['GET'])
 def list_devices():
@@ -109,9 +113,9 @@ def create_wallet():
 def add_signer():
     wallet_name = request.json['wallet_name']
     signer_name = request.json['signer_name']
-    fingerprint = request.json['device_id']
+    device_id = request.json['device_id']
     wallet = MultisigWallet.open(wallet_name)
-    with get_client_and_device(fingerprint) as (client, device):
+    with get_client_and_device(device_id) as (client, device):
         derivation_path = "m/44h/1h/0h"  # FIXME segwit
         # FIXME: validate xpub/tpub?
         xpub = client.get_pubkey_at_path(derivation_path)['xpub']
@@ -208,7 +212,7 @@ def get_settings_route():
                 'user': {'type': 'string'},
                 'password': {'type': 'string'},
                 'host': {'type': 'string'},
-                'port': {'type': 'integer'},
+                'port': {'type': 'number'},
             },
         },
     },

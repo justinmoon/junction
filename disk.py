@@ -23,11 +23,15 @@ def ensure_datadir():
     if not os.path.isdir(DATADIR):
         # make datadir
         os.mkdir(DATADIR)
+
+    wallet_dir = full_path('wallets')
+    if not os.path.isdir(wallet_dir):
         # make wallets directory inside datadir
-        wallets_dir = os.path.join(DATADIR, 'wallets')
-        os.mkdir(wallets_dir)
+        os.mkdir(wallet_dir)
+
+    settings_path = full_path('settings.json')
+    if not os.path.isfile(settings_path):
         # copy settings.json to datadir
-        settings_path = full_path('settings.json')
         copyfile('settings.json.ex', settings_path)
 
 def get_settings():

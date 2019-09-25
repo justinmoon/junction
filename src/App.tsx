@@ -13,26 +13,26 @@ import RequireData from './components/RequireData';
 const App: React.FC = () => {
   return (
     <HashRouter>
-      <Template>
-        <Switch>
-          <Route path="/" exact render={() => (
-            <RequireData rpc activeWallet component={Wallet} />
-          )} />
-          <Route path="/send" render={() => (
-            <RequireData rpc activeWallet component={Send} />
-          )} />
-          <Route path="/sign" render={() => (
-            <RequireData rpc activeWallet component={Sign} />
-          )} />
-          <Route path="/history" render={() => (
-            <RequireData rpc activeWallet component={History} />
-          )} />
-          <Route path="/create" render={() => (
-            <RequireData rpc component={Create} />
-          )} />
-          <Route path="/settings" component={Settings} />
-        </Switch>
-      </Template>
+      <Switch>
+        <Template>
+            <Route path="/" exact render={() => (
+              <RequireData rpc activeWallet component={Wallet} />
+            )} />
+            <Route path="/send" render={() => (
+              <RequireData rpc activeWallet component={Send} />
+            )} />
+            <Route path="/sign" render={() => (
+              <RequireData rpc activeWallet component={Sign} />
+            )} />
+            <Route path="/history" render={() => (
+              <RequireData rpc activeWallet component={History} />
+            )} />
+            <Route path="/create" render={() => (
+              <RequireData rpc component={Create} />
+            )} />
+            <Route path="/settings" component={Settings} />
+        </Template>
+      </Switch>
     </HashRouter>
   );
 }

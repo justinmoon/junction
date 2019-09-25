@@ -1,6 +1,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { Link, NavLink as RRNavLink } from 'react-router-dom';
+import { withRouter, RouteComponentProps } from 'react-router';
 import {
   Navbar,
   NavbarBrand,
@@ -16,17 +17,23 @@ import {
   DropdownItem,
   UncontrolledDropdown,
 } from 'reactstrap';
-import { getWallets, changeWallet, selectActiveWallet } from '../store/wallet';
+import { getWallets, changeWallet, selectActiveWallet, hasWalletsSelector } from '../store/wallet';
 import { startDeviceScan, stopDeviceScan } from '../store/device';
-import { getSettings } from '../store/settings';
+import { getSettings, validSettingsSelector } from '../store/settings';
+import { bootstrap } from '../store/bootstrap'
 import { AppState } from '../store';
 import DeviceInstructionsModal from './DeviceInstructionsModal'
 import EnterPinModal from './EnterPinModal'
 import { Wallet } from '../types';
 
 interface StateProps {
+  state: AppState;
   wallets: AppState['wallet']['wallets'];
   activeWallet: Wallet | null;
+  hasWallets: boolean;
+  hasValidSettings: boolean;
+  ready: boolean;
+  error: Error | null;
 }
 
 interface DispatchProps {
@@ -35,13 +42,14 @@ interface DispatchProps {
   startDeviceScan: typeof startDeviceScan;
   stopDeviceScan: typeof stopDeviceScan;
   getSettings: typeof getSettings;
+  bootstrap: typeof bootstrap;
 }
 
 interface OwnProps {
   children: React.ReactNode;
 }
 
-type Props = StateProps & DispatchProps & OwnProps;
+type Props = StateProps & DispatchProps & OwnProps & RouteComponentProps;
 
 interface State {
   isOpen: boolean;
@@ -53,16 +61,33 @@ class Template extends React.Component<Props, State> {
   };
 
   async componentDidMount() {
-    this.props.getWallets();
+    this.props.bootstrap();
     this.props.startDeviceScan();
-    this.props.getSettings();
   }
 
   componentWillUnmount() {
     this.props.stopDeviceScan();
   }
+
   render() {
-    const { wallets, activeWallet } = this.props;
+
+    const { wallets, activeWallet, ready, hasValidSettings, hasWallets } = this.props;
+
+    if (!ready) {
+      return <div></div>
+    } 
+    
+    // onboarding
+    if (!hasValidSettings) {
+      if (this.props.history.location.pathname !== '/settings') {
+        this.props.history.push('/settings')
+      }
+    } else if (!hasWallets) {
+      if (this.props.history.location.pathname !== '/create') {
+        this.props.history.push('/create')
+      }
+    }
+
     const navLinks = [{
       to: '/send',
       children: 'Send',
@@ -144,12 +169,19 @@ class Template extends React.Component<Props, State> {
 
 const mapStateToProps = (state: AppState) => {
   return {
+    state: state,
     wallets: state.wallet.wallets,
     activeWallet: selectActiveWallet(state),
+    hasWallets: hasWalletsSelector(state),
+    hasValidSettings: validSettingsSelector(state),
+    ready: state.bootstrap.ready,
+    error: state.bootstrap.error,
   }
 }
 
-export default connect(
+const ConnectedTemplate = connect<StateProps, DispatchProps, RouteComponentProps, AppState>(
   mapStateToProps,
-  { getWallets, changeWallet, startDeviceScan, stopDeviceScan, getSettings },
+  { getWallets, changeWallet, startDeviceScan, stopDeviceScan, getSettings, bootstrap },
 )(Template);
+
+export default withRouter(ConnectedTemplate);

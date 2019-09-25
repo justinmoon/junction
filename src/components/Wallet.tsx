@@ -28,6 +28,7 @@ class Wallet extends React.Component<Props, State> {
   state: State = {
     deviceBeingAdded: null,
   }
+  // FIXME not used
   private addSigner = async (device: Device) => {
     if (!this.props.activeWallet || !isUnlockedDevice(device))  {
       return;
@@ -85,7 +86,7 @@ class Wallet extends React.Component<Props, State> {
   }
 }
   
-export const mapStateToProps = (state: AppState) => {
+const mapStateToProps = (state: AppState) => {
   return {
     candidateDevices: selectCandidateDevicesForActiveWallet(state),
     activeWallet: selectActiveWallet(state),

@@ -7,8 +7,8 @@ export function getSettings(): ThunkAction {
   return async (dispatch) => {
     dispatch({ type: T.GET_SETTINGS });
     try {
-      const devices = await api.getSettings();
-      dispatch({ type: T.GET_SETTINGS_SUCCESS, payload: devices });
+      const payload = await api.getSettings();
+      dispatch({ type: T.GET_SETTINGS_SUCCESS, payload });
     } catch(err) {
       dispatch({ type: T.GET_SETTINGS_FAILURE, payload: err });
     }
@@ -19,8 +19,8 @@ export function updateSettings(settings: Settings): ThunkAction {
   return async (dispatch) => {
     dispatch({ type: T.UPDATE_SETTINGS });
     try {
-      const devices = await api.updateSettings(settings);
-      dispatch({ type: T.UPDATE_SETTINGS_SUCCESS, payload: devices });
+      const payload = await api.updateSettings(settings);
+      dispatch({ type: T.UPDATE_SETTINGS_SUCCESS, payload });
     } catch(err) {
       dispatch({ type: T.UPDATE_SETTINGS_FAILURE, payload: err });
     }
