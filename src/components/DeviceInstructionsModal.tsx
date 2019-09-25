@@ -3,7 +3,6 @@ import { Button, Modal, ModalHeader, ModalFooter, ModalBody } from 'reactstrap';
 import { AppState } from '../store';
 import { toggleDeviceInstructionsModal } from '../store/modal'
 import { connect } from 'react-redux';
-import { stripTrailingSlash } from 'history/PathUtils';
 
 interface DispatchProps {
   toggleDeviceInstructionsModal: typeof toggleDeviceInstructionsModal;
@@ -20,9 +19,9 @@ class DeviceInstructionsModal extends React.Component<Props> {
   render() {
 		// TODO: accept an optional "device" prop and only display that device if present 
     const { toggleDeviceInstructionsModal, open, deviceType } = this.props;
-    const showTrezor = !deviceType || deviceType == 'trezor';
-    const showLedger = !deviceType || deviceType == 'ledger';
-    const showColdCard = !deviceType || deviceType == 'coldcard';
+    const showTrezor = !deviceType || deviceType === 'trezor';
+    const showLedger = !deviceType || deviceType === 'ledger';
+    const showColdCard = !deviceType || deviceType === 'coldcard';
     return (
 			<Modal isOpen={open} toggle={() => toggleDeviceInstructionsModal()}>
 				<ModalHeader toggle={() => toggleDeviceInstructionsModal()}>Device Instructions</ModalHeader>

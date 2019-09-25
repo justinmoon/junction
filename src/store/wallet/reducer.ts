@@ -2,7 +2,6 @@ import { AnyAction } from 'redux';
 import { Wallet, Device, UnlockedDevice } from '../../types';
 import { Loadable, DEFAULT_LOADABLE, handleLoadable } from '../util';
 import { WalletActionTypes as T } from './types';
-import { broadcastTransaction } from './actions';
 
 export interface WalletState {
   wallets: Loadable<Wallet[]>;

@@ -1,5 +1,5 @@
 import { AppState } from '..';
-import { Signer, Device, isUnlockedDevice } from '../../types'
+import { Signer, isUnlockedDevice } from '../../types'
 
 export function selectCandidateDevicesForActiveWallet(state: AppState) {
   // FIXME this check sucks

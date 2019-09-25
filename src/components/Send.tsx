@@ -1,7 +1,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps } from 'react-router';
-import { Form, FormGroup, Input, Label, Button, Row, Col } from 'reactstrap';
+import { Form, FormGroup, Input, Label, Button, Row, Col, Alert } from 'reactstrap';
 import { getWallets, selectActiveWallet } from '../store/wallet';
 import { AppState } from '../store';
 import api, { CreatePSBTOutput } from '../api';
@@ -74,51 +74,53 @@ class Create extends React.Component<Props, LocalState> {
       this.props.getWallets();
       this.props.history.push('/sign');
     } catch(error) {
-      this.setState({ error });
+      this.setState({ error: error.message });
     }
     this.setState({ isSubmitting: false });
   };
 
   render() {
-    const { outputs } = this.state;
-
+    const { outputs, error } = this.state;
     return (
       <div className="center-block">
+        {error && (
+          <Alert className="mb-1" color="danger">{error}</Alert>
+        )}
         <Form onSubmit={this.handleSubmit}>
         {outputs.map((output, index) =>
-          <div>
-          <Row>
-            <Col xs="8">
-              <FormGroup>
-                <Label>Recipient Address</Label>
-                <Input
-                  name="address"
-                  value={output.address}
-                  placeholder="Recipient Address"
-                  onChange={e => this.handleChangeRecipient(e, index)}
-                />
-              </FormGroup>
-            </Col>
-            <Col xs="3">
-              <FormGroup>
-                <Label>Amount in BTC</Label>
-                <Input
-                  name="btc"
-                  value={output.btc}
-                  type="number"
-                  step="0.00000001"
-                  placeholder="Amount in BTC"
-                  onChange={e => this.handleChangeAmount(e, index)}
-                />
-              </FormGroup>
-            </Col>
-            <Col xs="1">
-              <Button color="danger" className="remove" onClick={() => this.handleRemoveOutput(index)}>
-                X
-              </Button>
-            </Col>
-          </Row>
-          <hr/>
+          <div key={index}>
+            <Row>
+              <Col xs="8">
+                <FormGroup>
+                  <Label>Recipient Address</Label>
+                  <Input
+                    name="address"
+                    value={output.address}
+                    placeholder="Recipient Address"
+                    onChange={e => this.handleChangeRecipient(e, index)}
+                  />
+                </FormGroup>
+              </Col>
+              <Col xs="3">
+                <FormGroup>
+                  <Label>Amount in BTC</Label>
+                  <Input
+                    name="btc"
+                    value={output.btc}
+                    type="number"
+                    step="0.00000001"
+                    placeholder="Amount in BTC"
+                    onChange={e => this.handleChangeAmount(e, index)}
+                  />
+                </FormGroup>
+              </Col>
+              <Col xs="1">
+                <Button color="danger" className="remove" onClick={() => this.handleRemoveOutput(index)}>
+                  X
+                </Button>
+              </Col>
+            </Row>
+            <hr/>
           </div>
         )}
         <Row>

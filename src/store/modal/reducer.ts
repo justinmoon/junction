@@ -1,6 +1,5 @@
 import { AnyAction } from 'redux';
 import { Device, DeviceType } from '../../types';
-import { Loadable, DEFAULT_LOADABLE, handleLoadable } from '../util';
 import { ModalActionTypes as T } from './types';
 
 // FIXME: "isOpen" would be better than "open"

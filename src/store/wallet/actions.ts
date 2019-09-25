@@ -29,7 +29,7 @@ export function addSigner(device: Device): ThunkAction {
     try {
       // FIXME
       if (activeWallet && 'fingerprint' in device && device.fingerprint !== undefined) {
-        const wallets = await api.addSigner({
+        await api.addSigner({
           wallet_name: activeWallet.name,
           signer_name: device.type,
           device_id: device.fingerprint,

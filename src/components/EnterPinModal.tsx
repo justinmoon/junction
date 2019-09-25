@@ -1,7 +1,6 @@
 import React from 'react';
-import { Button, Modal, ModalHeader, ModalFooter, ModalBody, Row, Spinner } from 'reactstrap';
+import { Button, Modal, ModalHeader, ModalFooter, ModalBody, Spinner } from 'reactstrap';
 import api from '../api'
-import { Device } from '../types';
 import './EnterPinModal.css';
 import { AppState } from '../store';
 import { connect } from 'react-redux';

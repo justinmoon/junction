@@ -1,11 +1,11 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps } from 'react-router';
-import { Button,  Tooltip,  Spinner } from 'reactstrap';
+import { Button,  Tooltip,  Spinner, Table } from 'reactstrap';
 import { getWallets, selectActiveWallet, signPSBT, broadcastTransaction } from '../store/wallet';
 import { toggleDeviceInstructionsModal, toggleDeviceUnlockModal } from '../store/modal';
 import { AppState } from '../store';
-import { MyTable } from './Toolbox'
+import { MyCard } from './Toolbox'
 import { Wallet, Signer, Device } from '../types';
 import './Sign.css'
 
@@ -36,7 +36,7 @@ function signedBySigner(signer: Signer, psbt: any) {
   for (let input of psbt.inputs) {
     let signed = false;
     for (let deriv of input.bip32_derivs) {
-      const fingerprintMatch = deriv.master_fingerprint == signer.fingerprint;
+      const fingerprintMatch = deriv.master_fingerprint === signer.fingerprint;
       if (!input.partial_signatures) {
         return false;
       }
@@ -94,7 +94,7 @@ class Sign extends React.Component<Props, LocalState> {
           <td className="text-right">Didn't sign</td>
         </tr>
       )
-    } else if (device && signPSBTState.device && device.fingerprint == signPSBTState.device.fingerprint) {
+    } else if (device && signPSBTState.device && device.fingerprint === signPSBTState.device.fingerprint) {
       return (
         <tr key={signer.name}>
           <td>{ signer.name }</td>
@@ -112,7 +112,7 @@ class Sign extends React.Component<Props, LocalState> {
           </td>
         </tr>
       )
-    } else if (signer.type == 'trezor') {
+    } else if (signer.type === 'trezor') {
       return (
         <tr key={signer.name}>
           <td>{ signer.name }</td>
@@ -151,10 +151,10 @@ class Sign extends React.Component<Props, LocalState> {
     const { psbt, signers } = activeWallet;
     
     return (
-      <div>
-        <MyTable>
+      <MyCard>
+        <h4>Outputs</h4>
+        <Table borderless>
           <tbody>
-            <h4>Outputs</h4>
             {psbt.tx.vout.map((vout: any, index: number) => (
               <tr key={index}>
                 <td>#{ index }</td>
@@ -162,12 +162,17 @@ class Sign extends React.Component<Props, LocalState> {
                 <td className="text-right">{ vout.value } BTC</td>
               </tr>
             ))}
-            <h4>Signatures</h4>
+            </tbody>
+        </Table>
+
+        <h4>Signatures ({activeWallet.m - activeWallet.signatures_remaining}/{activeWallet.m})</h4>
+        <Table borderless>
+          <tbody>
             {signers.map((signer: Signer) => this.renderSigner(signer, psbt, devices))}
           </tbody>
-        </MyTable>
+        </Table>
+
         <div className="d-flex">
-              
           {!broadcastTransactionState.pending && <Button onClick={() => this.broadcastTransaction()} color="primary" id="broadcast"
                   className="ml-auto">
             Broadcast
@@ -180,7 +185,7 @@ class Sign extends React.Component<Props, LocalState> {
               Add {activeWallet.signatures_remaining} signatures before broadcasting
             </Tooltip>}
         </div>
-      </div>
+      </MyCard>
     )
   }
 }

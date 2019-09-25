@@ -1,5 +1,3 @@
-import { UnlockedDevice } from "../types";
-
 export interface CreateWalletArguments {
   name: string;
   n: number;

@@ -1,6 +1,5 @@
 import { ModalActionTypes as T } from './types';
-import { Device, DeviceType } from '../../types';
-import { ThunkAction } from '../types';
+import { DeviceType } from '../../types';
 import api from '../../api'
 
 // TODO: this should should hit API and prompt pin if necessary ...
@@ -26,7 +25,7 @@ export function toggleDeviceUnlockModal() {
   // return { type: T.DEVICE_UNLOCK_TOGGLE }
   return async (dispatch: any, getState: any) => {
     const state = getState()
-    const { device, open } = state.modal.deviceUnlock
+    const { open } = state.modal.deviceUnlock
     if (open) {
       await api.deletePrompt()
     } else {
