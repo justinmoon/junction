@@ -52,9 +52,9 @@ export function signPSBT(device: UnlockedDevice): ThunkAction {
         throw Error('Cannot sign without active wallet')
       } else {
         const device_id = device.fingerprint
-        api.signPSBT({ wallet_name: activeWallet.name, device_id });
+        await api.signPSBT({ wallet_name: activeWallet.name, device_id });
       }
-      await getWallets()
+      await dispatch(getWallets())
       dispatch({ type: T.SIGN_PSBT_SUCCESS })
     } catch(error) {
       dispatch({ type: T.SIGN_PSBT_FAILURE, error })
@@ -78,12 +78,12 @@ export function broadcastTransaction(): ThunkAction {
       if (!activeWallet) {
         throw Error('Cannot sign without active wallet')
       } else {
-        api.broadcastTransaction({ wallet_name: activeWallet.name });
+        await api.broadcastTransaction({ wallet_name: activeWallet.name });
       }
-      await getWallets()
-      dispatch({ type: T.SIGN_PSBT_SUCCESS })
+      await dispatch(getWallets())
+      dispatch({ type: T.BROADCAST_TRANSACTION_SUCCESS })
     } catch(error) {
-      dispatch({ type: T.SIGN_PSBT_FAILURE, error })
+      dispatch({ type: T.BROADCAST_TRANSACTION_FAILURE, error })
     }
   }
 }

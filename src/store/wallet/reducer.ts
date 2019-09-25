@@ -2,6 +2,7 @@ import { AnyAction } from 'redux';
 import { Wallet, Device, UnlockedDevice } from '../../types';
 import { Loadable, DEFAULT_LOADABLE, handleLoadable } from '../util';
 import { WalletActionTypes as T } from './types';
+import { broadcastTransaction } from './actions';
 
 export interface WalletState {
   wallets: Loadable<Wallet[]>;
@@ -12,6 +13,9 @@ export interface WalletState {
   }
   signPSBT: {
     device: UnlockedDevice | null;
+    error: Error | null;
+  }
+  broadcastTransaction: {
     pending: boolean;
     error: Error | null;
   }
@@ -26,9 +30,12 @@ export const INITIAL_STATE: WalletState = {
   },
   signPSBT: {
     device: null,
-    pending: false,
     error: null
-  }
+  },
+  broadcastTransaction: {
+    pending: false,
+    error: null,
+  },
 };
 
 export function walletReducer(
@@ -55,7 +62,6 @@ export function walletReducer(
         ...state,
         signPSBT: {
           device: action.device,
-          pending: true,
           error: null,
         }
       }
@@ -71,6 +77,29 @@ export function walletReducer(
           ...state,
           signPSBT: {
             device: null,
+            error: action.error,
+          }
+        }
+
+    case T.BROADCAST_TRANSACTION:
+        return {
+          ...state,
+          broadcastTransaction: {
+            pending: true,
+            error: null,
+          }
+        }
+      
+    case T.BROADCAST_TRANSACTION_SUCCESS:
+        return {
+          ...state,
+          broadcastTransaction: INITIAL_STATE.broadcastTransaction,
+        }
+
+    case T.BROADCAST_TRANSACTION_FAILURE:
+        return {
+          ...state,
+          broadcastTransaction: {
             pending: false,
             error: action.error,
           }

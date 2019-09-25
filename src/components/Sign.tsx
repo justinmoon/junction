@@ -1,14 +1,13 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps } from 'react-router';
-import { Form, FormGroup, Input, Label, Button, Row, Col } from 'reactstrap';
+import { Button,  Tooltip,  Spinner } from 'reactstrap';
 import { getWallets, selectActiveWallet, signPSBT, broadcastTransaction } from '../store/wallet';
 import { toggleDeviceInstructionsModal, toggleDeviceUnlockModal } from '../store/modal';
 import { AppState } from '../store';
-import api, { CreatePSBTOutput } from '../api';
-import { MyCard, MyTable } from './Toolbox'
+import { MyTable } from './Toolbox'
 import { Wallet, Signer, Device } from '../types';
-import './Send.css'
+import './Sign.css'
 
 interface DispatchProps {
   getWallets: typeof getWallets;
@@ -23,11 +22,14 @@ type Props = DispatchProps & StateProps & RouteComponentProps;
 interface StateProps {
   activeWallet: Wallet | null;
   devices: AppState['device']['devices']['data'];
+  signPSBTState: AppState['wallet']['signPSBT'];
+  broadcastTransactionState: AppState['wallet']['broadcastTransaction'];
 }
 
 interface LocalState {
   isSubmitting: boolean;
   error: Error | null;
+  tooltipOpen: boolean;
 }
 
 function signedBySigner(signer: Signer, psbt: any) {
@@ -65,17 +67,40 @@ class Sign extends React.Component<Props, LocalState> {
   state: LocalState = {
     isSubmitting: false,
     error: null,
+    tooltipOpen: false,
   };
+
+  toggleTooltip() {
+    this.setState({
+      tooltipOpen: !this.state.tooltipOpen,
+    })
+  }
 
   renderSigner(signer: Signer, psbt: any, devices: Device[]) {
     const device = deviceAvailable(signer, devices)
-    const { toggleDeviceInstructionsModal, signPSBT, toggleDeviceUnlockModal } = this.props
-    console.log('signer type', signer.type)
-    if (signedBySigner(signer, psbt)) {
+    const { activeWallet, toggleDeviceInstructionsModal, signPSBT, toggleDeviceUnlockModal, signPSBTState } = this.props
+    const signed = signedBySigner(signer, psbt)
+    if (signed) {
       return (
         <tr key={signer.fingerprint}>
           <td>{ signer.name }</td>
           <td className="text-right">Signed</td>
+        </tr>
+      )
+    } else if (activeWallet && activeWallet.signatures_remaining === 0 && !signed) {
+      return (
+        <tr key={signer.fingerprint}>
+          <td>{ signer.name }</td>
+          <td className="text-right">Didn't sign</td>
+        </tr>
+      )
+    } else if (device && signPSBTState.device && device.fingerprint == signPSBTState.device.fingerprint) {
+      return (
+        <tr key={signer.name}>
+          <td>{ signer.name }</td>
+          <td className="text-right">
+            <Spinner />
+          </td>
         </tr>
       )
     } else if (device && device.fingerprint) {
@@ -108,8 +133,15 @@ class Sign extends React.Component<Props, LocalState> {
     }
   }
 
+  broadcastTransaction() {
+    const { activeWallet, broadcastTransaction } = this.props
+    if (activeWallet && !activeWallet.signatures_remaining) {
+      broadcastTransaction()
+    }
+  }
+
   render() {
-    const { activeWallet, devices, broadcastTransaction } = this.props;
+    const { activeWallet, devices, broadcastTransactionState } = this.props;
     if (!activeWallet || !devices) {
       return <div>loading</div>
     }
@@ -117,7 +149,7 @@ class Sign extends React.Component<Props, LocalState> {
       return <div>no psbt</div>
     }
     const { psbt, signers } = activeWallet;
-    console.log(activeWallet)
+    
     return (
       <div>
         <MyTable>
@@ -134,13 +166,20 @@ class Sign extends React.Component<Props, LocalState> {
             {signers.map((signer: Signer) => this.renderSigner(signer, psbt, devices))}
           </tbody>
         </MyTable>
-        {activeWallet.signing_complete && <Form onSubmit={() => broadcastTransaction()}>
-          <div className="d-flex">
-            <Button color="primary" className="ml-auto">
-              Broadcast
-            </Button>
-          </div>
-        </Form>}
+        <div className="d-flex">
+              
+          {!broadcastTransactionState.pending && <Button onClick={() => this.broadcastTransaction()} color="primary" id="broadcast"
+                  className="ml-auto">
+            Broadcast
+          </Button>}
+          {broadcastTransactionState.pending && 
+            <Spinner className="ml-auto"/>}
+          {!!activeWallet.signatures_remaining && 
+            <Tooltip placement="left" isOpen={this.state.tooltipOpen} target="broadcast" 
+                toggle={() => this.toggleTooltip()}>
+              Add {activeWallet.signatures_remaining} signatures before broadcasting
+            </Tooltip>}
+        </div>
       </div>
     )
   }
@@ -150,6 +189,8 @@ const ConnectedSign = connect<StateProps, DispatchProps, RouteComponentProps, Ap
   state => ({
     activeWallet: selectActiveWallet(state),
     devices: state.device.devices.data,
+    signPSBTState: state.wallet.signPSBT,
+    broadcastTransactionState: state.wallet.broadcastTransaction,
   }),
   { getWallets, toggleDeviceInstructionsModal, signPSBT, toggleDeviceUnlockModal, broadcastTransaction },
 )(Sign);

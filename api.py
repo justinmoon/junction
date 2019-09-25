@@ -7,7 +7,7 @@ from hwilib.devices import trezor, ledger, coldcard
 
 from junction import MultisigWallet, JunctionError
 from disk import get_wallets, get_settings, update_settings
-from utils import RPC, get_client, get_client_and_device, ClientGroup
+from utils import RPC, get_client_and_device, ClientGroup
 
 api = Blueprint(__name__, 'api')
 schema = JsonSchema()
@@ -111,12 +111,12 @@ def add_signer():
     signer_name = request.json['signer_name']
     fingerprint = request.json['device_id']
     wallet = MultisigWallet.open(wallet_name)
-    client, device = get_client_and_device(fingerprint)
-    derivation_path = "m/44h/1h/0h"  # FIXME segwit
-    # FIXME: validate xpub/tpub?
-    xpub = client.get_pubkey_at_path(derivation_path)['xpub']
-    client.close()
-    wallet.add_signer(name=signer_name, fingerprint=device['fingerprint'], type=device['type'], xpub=xpub, derivation_path=derivation_path)
+    with get_client_and_device(fingerprint) as (client, device):
+        derivation_path = "m/44h/1h/0h"  # FIXME segwit
+        # FIXME: validate xpub/tpub?
+        xpub = client.get_pubkey_at_path(derivation_path)['xpub']
+        client.close()
+        wallet.add_signer(name=signer_name, fingerprint=device['fingerprint'], type=device['type'], xpub=xpub, derivation_path=derivation_path)
     return jsonify(wallet.to_dict())
 
 @api.route('/address', methods=['POST'])
@@ -180,10 +180,8 @@ def sign_psbt():
     wallet_name = request.json['wallet_name']
     wallet = MultisigWallet.open(wallet_name)
     fingerprint = request.json['device_id']
-    client, device = get_client_and_device(fingerprint)
-    raw_signed_psbt = client.sign_tx(wallet.psbt)['psbt']
-    # FIXME: this should be a context manager ...
-    client.close()
+    with get_client_and_device(fingerprint) as (client, device):
+        raw_signed_psbt = client.sign_tx(wallet.psbt)['psbt']
     new_psbt = serializations.PSBT()
     new_psbt.deserialize(raw_signed_psbt)
     wallet.update_psbt(new_psbt)

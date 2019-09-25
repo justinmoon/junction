@@ -145,7 +145,7 @@ class MultisigWallet:
             }
             base['ready'] = self.ready()
             base['psbt'] = self.decode_psbt()
-            base['signing_complete'] = self.signing_complete()
+            base['signatures_remaining'] = self.signatures_remaining()
         return base
 
     def add_signer(self, *, name, fingerprint, xpub, type, derivation_path):
@@ -298,10 +298,13 @@ class MultisigWallet:
         else:
             return None
 
-    def signing_complete(self):
-        '''Check that we have m signatures'''
-        return self.psbt and self.m <= len(self.psbt.inputs[0].partial_sigs)
-
+    def signatures_remaining(self):
+        if self.psbt:
+            # FIXME: check all inputs
+            return max(self.m - len(self.psbt.inputs[0].partial_sigs), 0)
+        else:
+            return 0  # FIXME
+            
     def broadcast(self):
         '''Finalize and broadcast psbt to network'''
         psbt_hex = self.psbt.serialize()

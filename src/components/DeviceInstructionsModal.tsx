@@ -20,7 +20,6 @@ class DeviceInstructionsModal extends React.Component<Props> {
   render() {
 		// TODO: accept an optional "device" prop and only display that device if present 
     const { toggleDeviceInstructionsModal, open, deviceType } = this.props;
-    console.log(deviceType)
     const showTrezor = !deviceType || deviceType == 'trezor';
     const showLedger = !deviceType || deviceType == 'ledger';
     const showColdCard = !deviceType || deviceType == 'coldcard';

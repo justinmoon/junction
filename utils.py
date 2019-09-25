@@ -2,6 +2,7 @@ import json
 import logging
 from os import listdir
 import os.path
+from contextlib import contextmanager
 from decimal import Decimal
 from flask import flash, current_app as app
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
@@ -46,14 +47,22 @@ def get_client(device):
     client.is_testnet = True
     return client
 
+@contextmanager
 def get_client_and_device(path_or_fingerprint):
+    '''automatically closes HWI client upon exit''' 
+    client = None
     for device in commands.enumerate():
         # TODO: maybe accept path or fingerprint?
         if device.get('path') == path_or_fingerprint:
-            return get_client(device), device
+            client = get_client(device)
         if device.get('fingerprint') == path_or_fingerprint:
-            return get_client(device), device
-    raise JunctionError(f'Device not found')
+            client = get_client(device)
+    if not client:
+        raise JunctionError('Device not found')
+    try:
+        yield client, device
+    finally:
+        client.close()
 
 class ClientGroup:
     '''single "source of truth" for devices and clients'''
