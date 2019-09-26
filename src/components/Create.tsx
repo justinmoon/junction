@@ -1,8 +1,9 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps } from 'react-router';
-import { Form, FormGroup, Input, Label, Button } from 'reactstrap';
+import { Form, FormGroup, Input, Label } from 'reactstrap';
 import { getWallets, changeWallet } from '../store/wallet';
+import { LoadingButton } from './Toolbox'
 import api from '../api';
 
 interface DispatchProps {
@@ -30,7 +31,7 @@ class Create extends React.Component<Props, State> {
   };
 
   render() {
-    const { name, m, n } = this.state;
+    const { name, m, n, isSubmitting } = this.state;
 
     return (
       <Form onSubmit={this.handleSubmit}>
@@ -61,9 +62,9 @@ class Create extends React.Component<Props, State> {
             onChange={this.handleChange}
           />
         </FormGroup>
-        <Button color="primary" size="lg" block>
+        <LoadingButton color="primary" size="lg" block loading={isSubmitting}>
           Submit
-        </Button>
+        </LoadingButton>
       </Form>
     );
   }

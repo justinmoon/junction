@@ -4,6 +4,7 @@ import { Form, FormGroup, Input, Label, Button, Alert, Spinner } from 'reactstra
 import { withRouter, RouteComponentProps } from 'react-router';
 import { getSettings, updateSettings, Settings as TSettings } from '../store/settings';
 import { AppState } from '../store';
+import { LoadingButton } from './Toolbox';
 
 interface StateProps {
   settings: AppState['settings'];
@@ -96,9 +97,9 @@ class Settings extends React.Component<Props> {
             />
           </FormGroup>
         ))}
-        <Button color="primary" size="lg" block>
+        <LoadingButton loading={settings.isLoading} color="primary" size="lg" block>
           Save
-        </Button>
+        </LoadingButton>
       </Form>
     )
   }

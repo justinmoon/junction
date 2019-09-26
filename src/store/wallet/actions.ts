@@ -4,7 +4,6 @@ import { Wallet, Device, UnlockedDevice } from '../../types';
 import api from '../../api';
 import { selectActiveWallet } from './selectors';
 
-
 export function getWallets(): ThunkAction {
   return async (dispatch, getState) => {
     dispatch({ type: T.GET_WALLETS });
@@ -23,7 +22,7 @@ export function getWallets(): ThunkAction {
 
 export function addSigner(device: Device): ThunkAction {
   return async (dispatch, getState) => {
-    dispatch({ type: T.ADD_SIGNER });
+    dispatch({ type: T.ADD_SIGNER, device });
     const state = getState()
     const activeWallet = selectActiveWallet(state)
     try {

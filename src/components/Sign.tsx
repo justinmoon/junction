@@ -5,9 +5,10 @@ import { Button,  Tooltip,  Spinner, Table } from 'reactstrap';
 import { getWallets, selectActiveWallet, signPSBT, broadcastTransaction } from '../store/wallet';
 import { toggleDeviceInstructionsModal, toggleDeviceUnlockModal } from '../store/modal';
 import { AppState } from '../store';
-import { MyCard } from './Toolbox'
+import { MyCard, LoadingButton } from './Toolbox'
 import { Wallet, Signer, Device } from '../types';
 import './Sign.css'
+import { isLogicalExpression } from '@babel/types';
 
 interface DispatchProps {
   getWallets: typeof getWallets;
@@ -80,61 +81,43 @@ class Sign extends React.Component<Props, LocalState> {
     const device = deviceAvailable(signer, devices)
     const { activeWallet, toggleDeviceInstructionsModal, signPSBT, toggleDeviceUnlockModal, signPSBTState } = this.props
     const signed = signedBySigner(signer, psbt)
+    const didNotSign = activeWallet && activeWallet.signatures_remaining === 0 && !signed
+    const isSigning = device !== null && signPSBTState.device && device.fingerprint === signPSBTState.device.fingerprint;
+    const canSign = device !== null && device.fingerprint;
+
+    let rightComponent = null
+
     if (signed) {
-      return (
-        <tr key={signer.fingerprint}>
-          <td>{ signer.name }</td>
-          <td className="text-right">Signed</td>
-        </tr>
-      )
-    } else if (activeWallet && activeWallet.signatures_remaining === 0 && !signed) {
-      return (
-        <tr key={signer.fingerprint}>
-          <td>{ signer.name }</td>
-          <td className="text-right">Didn't sign</td>
-        </tr>
-      )
-    } else if (device && signPSBTState.device && device.fingerprint === signPSBTState.device.fingerprint) {
-      return (
-        <tr key={signer.name}>
-          <td>{ signer.name }</td>
-          <td className="text-right">
-            <Spinner />
-          </td>
-        </tr>
-      )
-    } else if (device && device.fingerprint) {
-      return (
-        <tr key={signer.name}>
-          <td>{ signer.name }</td>
-          <td className="text-right">
-            <Button onClick={() => signPSBT(device)}>Sign</Button>
-          </td>
-        </tr>
-      )
+      rightComponent = <td className="text-right">Signed</td>
+    } else if (didNotSign) {
+      rightComponent = <td className="text-right">Didn't sign</td>
+    } else if (isSigning) {
+      rightComponent = <LoadingButton loading={true}>Sign</LoadingButton>
+    } else if (canSign) {
+      // FIXME
+      if (device !== null) {
+        rightComponent = <LoadingButton onClick={canSign ? () => signPSBT(device) : () => {}}>Sign</LoadingButton>
+      } else {
+        rightComponent = <div/>
+      }
     } else if (signer.type === 'trezor') {
-      return (
-        <tr key={signer.name}>
-          <td>{ signer.name }</td>
-          <td className="text-right">
-            <Button onClick={() => toggleDeviceUnlockModal()}>Unlock</Button>
-          </td>
-        </tr>
-      )
+      rightComponent =<Button onClick={() => toggleDeviceUnlockModal()}>Unlock</Button>
     } else {
-      return (
-        <tr key={signer.name}>
-          <td>{ signer.name }</td>
-          <td className="text-right">
-            <Button onClick={() => toggleDeviceInstructionsModal(signer.type)}>Unlock</Button>
-          </td>
-        </tr>
-      )
+      rightComponent = <Button onClick={() => toggleDeviceInstructionsModal(signer.type)}>Unlock</Button>
     }
+    return (
+      <tr key={signer.name}>
+        <td>{ signer.name }</td>
+        <td className="text-right">
+          {rightComponent}
+        </td>
+      </tr>
+    )
   }
 
   broadcastTransaction() {
     const { activeWallet, broadcastTransaction } = this.props
+    
     if (activeWallet && !activeWallet.signatures_remaining) {
       broadcastTransaction()
     }
@@ -173,12 +156,10 @@ class Sign extends React.Component<Props, LocalState> {
         </Table>
 
         <div className="d-flex">
-          {!broadcastTransactionState.pending && <Button onClick={() => this.broadcastTransaction()} color="primary" id="broadcast"
+          <LoadingButton loading={broadcastTransactionState.pending} onClick={() => this.broadcastTransaction()} color="primary" id="broadcast"
                   className="ml-auto">
             Broadcast
-          </Button>}
-          {broadcastTransactionState.pending && 
-            <Spinner className="ml-auto"/>}
+          </LoadingButton>
           {!!activeWallet.signatures_remaining && 
             <Tooltip placement="left" isOpen={this.state.tooltipOpen} target="broadcast" 
                 toggle={() => this.toggleTooltip()}>

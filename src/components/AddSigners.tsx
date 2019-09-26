@@ -1,51 +1,45 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { Button, Spinner, Row } from 'reactstrap';
-import { Device } from '../types'
-import { MyCard, MyTable } from './Toolbox'
+import { Device, UnlockedDevice } from '../types'
+import { MyCard, MyTable, LoadingButton } from './Toolbox'
 import { 
   toggleDeviceInstructionsModal, toggleDeviceUnlockModal
 } from '../store/modal'
 import { AppState } from '../store';
-
-interface Props {
-  devices: Device[];
-  deviceError: Error | null;
-  deviceBeingAdded: Device | null;
-  addSigner: (device: Device) => void;
-}
+import { selectCandidateDevicesForActiveWallet, addSigner } from '../store/wallet';
 
 interface DispatchProps {
   toggleDeviceInstructionsModal: typeof toggleDeviceInstructionsModal;
   toggleDeviceUnlockModal: any;  // FIXME
+  addSigner: typeof addSigner;
 }
 
 interface StateProps {
   modal: AppState['modal'];
+  devices: AppState['device']['devices']['data'];
+  deviceBeingAdded: Device | null;
 }
 
-type AllProps = Props & StateProps & DispatchProps;
+type Props = StateProps & DispatchProps;
 
-class AddSigners extends React.Component<AllProps> {
+class AddSigners extends React.Component<Props> {
 
   renderAddDevice(device: Device) {
     const { addSigner, deviceBeingAdded, toggleDeviceInstructionsModal, toggleDeviceUnlockModal } = this.props;
     const showSpinner = device === deviceBeingAdded;
     let rightComponent = null;
-    if (showSpinner) {
-      rightComponent = <Spinner size="sm"/>;
+    
+    // TODO: passwords
+    if (device.needs_pin_sent) {
+      rightComponent = <Button onClick={() => toggleDeviceUnlockModal()}>Unlock</Button>
+    } else if (device.error) {
+      rightComponent = <Button color="default" onClick={() => toggleDeviceInstructionsModal(device.type)}>Unavailable</Button>
     } else {
-      // TODO: passwords
-      if (device.needs_pin_sent) {
-        rightComponent = <Button onClick={() => toggleDeviceUnlockModal()}>Unlock</Button>
-      } else if (device.error) {
-        rightComponent = <Button color="default" onClick={() => toggleDeviceInstructionsModal(device.type)}>
-          Unavailable
-        </Button>
-      } else {
-        rightComponent = <Button onClick={() => addSigner(device)}>Add Signer</Button>
-      }
+      console.log(showSpinner, device, deviceBeingAdded)
+      rightComponent = <LoadingButton loading={showSpinner} onClick={() => addSigner(device)}>Add Signer</LoadingButton>
     }
+    
     return (
       <tr key={device.path + device.type}>
         <td>{ device.type }</td>
@@ -92,12 +86,15 @@ class AddSigners extends React.Component<AllProps> {
 
 export const mapStateToProps = (state: AppState) => {
   return {
-    modal: state.modal
+    modal: state.modal,
+    devices: selectCandidateDevicesForActiveWallet(state),
+    deviceBeingAdded: state.wallet.addSigner.device,
   }
 }
 
 export default connect(
   mapStateToProps,
   { toggleDeviceInstructionsModal, 
-    toggleDeviceUnlockModal },
+    toggleDeviceUnlockModal,
+    addSigner },
 )(AddSigners);

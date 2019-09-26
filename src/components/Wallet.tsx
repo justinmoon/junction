@@ -8,8 +8,6 @@ import { getWallets, selectCandidateDevicesForActiveWallet, selectActiveWallet, 
 import api from '../api'
 
 interface StateProps {
-  candidateDevices: ReturnType<typeof selectCandidateDevicesForActiveWallet>;
-  deviceError: AppState['device']['devices']['error'];
   activeWallet: ReturnType<typeof selectActiveWallet>;
 }
 
@@ -28,23 +26,9 @@ class Wallet extends React.Component<Props, State> {
   state: State = {
     deviceBeingAdded: null,
   }
-  // FIXME not used
-  private addSigner = async (device: Device) => {
-    if (!this.props.activeWallet || !isUnlockedDevice(device))  {
-      return;
-    }
-    this.setState({ deviceBeingAdded: device })
-    await api.addSigner({
-      wallet_name: this.props.activeWallet.name,
-      signer_name: device.type,
-      device_id: device.fingerprint,
-    })
-    // FIXME: state.wallet.activeWallet goes stale here
-    await this.props.getWallets();
-  }
+
   render() {
-    const { deviceBeingAdded } = this.state;
-    const { candidateDevices, activeWallet, deviceError } = this.props;
+    const { activeWallet } = this.props;
     if (!activeWallet) {
       return <div>no active wallet</div>
     }
@@ -66,8 +50,7 @@ class Wallet extends React.Component<Props, State> {
       addSigners = (
         <div>
           <h3 className='text-center'>Add {activeWallet.n - activeWallet.signers.length} More Signers</h3>
-          <AddSigners devices={candidateDevices} deviceError={deviceError}  
-                      deviceBeingAdded={deviceBeingAdded} addSigner={this.props.addSigner}/>
+          <AddSigners/>
         </div>
       )
     }
@@ -88,13 +71,11 @@ class Wallet extends React.Component<Props, State> {
   
 const mapStateToProps = (state: AppState) => {
   return {
-    candidateDevices: selectCandidateDevicesForActiveWallet(state),
     activeWallet: selectActiveWallet(state),
-    deviceError: state.device.devices.error,
   }
 }
 
 export default connect(
   mapStateToProps,
-  { getWallets, addSigner },
+  { getWallets },
 )(Wallet);

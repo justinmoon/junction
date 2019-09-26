@@ -5,6 +5,7 @@ import './EnterPinModal.css';
 import { AppState } from '../store';
 import { connect } from 'react-redux';
 import { toggleDeviceUnlockModal } from '../store/modal'
+import { LoadingButton } from './Toolbox';
 
 
 const digits = [
@@ -26,7 +27,7 @@ type Props = StateProps & DispatchProps
 
 interface State {
   pin: string;
-  submitting: boolean;
+  pending: boolean;
   error: string | null;
   pressed: number | null;
 }
@@ -34,7 +35,7 @@ interface State {
 // TODO: move to redux?
 const initialState = {
   pin: '',
-  submitting: false,
+  pending: false,
   error: null,
   pressed: null,
 };
@@ -43,17 +44,17 @@ class EnterPinModal extends React.Component<Props, State> {
   state: State = initialState;
 
   async enterPin() {
-    const { pin, submitting } = this.state;
-    if (!submitting) {
+    const { pin, pending } = this.state;
+    if (!pending) {
       try {
-        this.setState({ submitting: true })
+        this.setState({ pending: true })
         await api.enterPin({ pin });
         this.toggle()
       } catch(error) {
         this.setState({ 
           error: error.message,
           pin: '',
-          submitting: false,
+          pending: false,
          });
         setTimeout(api.promptPin, 1000);
       }
@@ -66,13 +67,13 @@ class EnterPinModal extends React.Component<Props, State> {
   // }
 
   handlePinClick(digit: number) {
-    if (!this.state.submitting) {
+    if (!this.state.pending) {
       this.setState({ pin: this.state.pin + String(digit) });
     }
   }
 
   backspace() {
-    if (!this.state.submitting) {
+    if (!this.state.pending) {
       const oldPin = this.state.pin
       if (oldPin.length > 0) {
         const pin = oldPin.substring(0, oldPin.length - 1);
@@ -125,16 +126,16 @@ class EnterPinModal extends React.Component<Props, State> {
   }
 
   renderFooter() {
-    const { submitting } = this.state;
+    const { pending } = this.state;
     return (
       <ModalFooter>
         {this.renderError()}
         <Button color="danger" onClick={this.backspace.bind(this)}>
           Backspace
         </Button>
-        <Button color="secondary" onClick={this.enterPin.bind(this)}>
-          {submitting ? <Spinner/> : "Submit"}
-        </Button>
+        <LoadingButton loading={pending} color="secondary" onClick={this.enterPin.bind(this)}>
+          Submit
+        </LoadingButton>
       </ModalFooter>
     )
   }

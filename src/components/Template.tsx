@@ -92,12 +92,16 @@ class Template extends React.Component<Props, State> {
       to: '/send',
       children: 'Send',
     }, {
-      to: '/sign',
-      children: 'Sign',
-    }, {
       to: '/settings',
       children: 'Settings',
     }];
+
+    if (activeWallet && activeWallet.psbt) {
+      navLinks.splice(1, 0, {
+        to: '/sign',
+        children: 'Sign',
+      });
+    }
 
     let dropdownLabel;
     if (activeWallet) {
@@ -176,6 +180,7 @@ const mapStateToProps = (state: AppState) => {
     hasValidSettings: validSettingsSelector(state),
     ready: state.bootstrap.ready,
     error: state.bootstrap.error,
+
   }
 }
 

@@ -1,12 +1,13 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps } from 'react-router';
-import { Form, FormGroup, Input, Label, Button, Row, Col, Alert } from 'reactstrap';
+import { Form, FormGroup, Input, Label, Row, Col, Alert, Button } from 'reactstrap';
 import { getWallets, selectActiveWallet } from '../store/wallet';
 import { AppState } from '../store';
 import api, { CreatePSBTOutput } from '../api';
 import { Wallet } from '../types';
 import './Send.css'
+import { LoadingButton } from './Toolbox'
 
 interface DispatchProps {
   getWallets: typeof getWallets;
@@ -115,7 +116,8 @@ class Create extends React.Component<Props, LocalState> {
                 </FormGroup>
               </Col>
               <Col xs="1">
-                <Button color="danger" className="remove" onClick={() => this.handleRemoveOutput(index)}>
+                <Button color="danger" className="remove" 
+                  disabled={outputs.length === 1} onClick={() => this.handleRemoveOutput(index)}>
                   X
                 </Button>
               </Col>
@@ -123,18 +125,14 @@ class Create extends React.Component<Props, LocalState> {
             <hr/>
           </div>
         )}
-        <Row>
-          <Col xs="6">
-            <Button color="secondary" size="lg" block onClick={this.handleAddOutput}>
-              Add Output
-            </Button>
-          </Col>
-          <Col xs="6">
-            <Button color="primary" block size="lg" >
-              Submit
-            </Button>
-          </Col>
-        </Row>
+        <div className="d-flex">
+          <Button color="secondary" className="ml-auto m-2" onClick={this.handleAddOutput}>
+            Add Output
+          </Button>
+          <LoadingButton loading={this.state.isSubmitting} color="primary" className="m-2">
+            Submit
+          </LoadingButton>
+        </div>
       </Form>
       </div>
     );

@@ -9,7 +9,6 @@ export interface ModalState {
     open: boolean;
   };
   deviceUnlock: {
-    device: Device | null;
     open: boolean;
   }
 }
@@ -20,7 +19,6 @@ export const INITIAL_STATE: ModalState = {
     open: false,
   },
   deviceUnlock: {
-    device: null,
     open: false,
   }
 };
@@ -38,14 +36,11 @@ export function modalReducer(
           deviceType: action.deviceType,
         }
       }
-    // FIXME: ideally this would require a device attr if showing,
-    // would set device attr to null if hiding.
     case T.DEVICE_UNLOCK_TOGGLE:
       return {
         ...state,
         deviceUnlock: {
           open: !state.deviceUnlock.open,
-          device: state.deviceUnlock.device,
         }
       }
     case T.DEVICE_UNLOCK_SET_DEVICE:
@@ -53,7 +48,6 @@ export function modalReducer(
         ...state,
         deviceUnlock: {
           open: state.deviceUnlock.open,
-          device: action.device,
         }
       }
   }

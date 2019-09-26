@@ -7,8 +7,9 @@ export interface WalletState {
   wallets: Loadable<Wallet[]>;
   activeWalletName: string | null;
   addSigner: {
-    isSubmitting: boolean;
+    pending: boolean;
     device: Device | null;
+    error: Error | null;
   }
   signPSBT: {
     device: UnlockedDevice | null;
@@ -24,8 +25,9 @@ export const INITIAL_STATE: WalletState = {
   wallets: { ...DEFAULT_LOADABLE },
   activeWalletName: null,
   addSigner: {
-    isSubmitting: false,
+    pending: false,
     device: null,
+    error: null,
   },
   signPSBT: {
     device: null,
@@ -103,6 +105,35 @@ export function walletReducer(
             error: action.error,
           }
         }
+
+    case T.ADD_SIGNER:
+      return {
+        ...state,
+        addSigner: {
+          pending: true,
+          error: action.error,
+          device: action.device,
+        }
+      }
+    case T.ADD_SIGNER_SUCCESS:
+      return {
+        ...state,
+        addSigner: {
+          pending: false,
+          error: null,
+          device: null,
+        }
+      }
+    case T.ADD_SIGNER_FAILURE:
+      return {
+        ...state,
+        addSigner: {
+          pending: false,
+          error: action.error,
+          device: null,
+        }
+      }
   }
+
   return state;
 }
