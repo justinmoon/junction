@@ -17,20 +17,18 @@ import {
   DropdownItem,
   UncontrolledDropdown,
 } from 'reactstrap';
-import { getWallets, changeWallet, selectActiveWallet, hasWalletsSelector } from '../store/wallet';
+import { getWallets, changeWallet, selectActiveWallet } from '../store/wallet';
 import { startDeviceScan, stopDeviceScan } from '../store/device';
 import { getSettings, validSettingsSelector } from '../store/settings';
 import { bootstrap } from '../store/bootstrap'
 import { AppState } from '../store';
 import DeviceInstructionsModal from './DeviceInstructionsModal'
 import EnterPinModal from './EnterPinModal'
-import { Wallet } from '../types';
 
 interface StateProps {
   state: AppState;
   wallets: AppState['wallet']['wallets'];
-  activeWallet: Wallet | null;
-  hasWallets: boolean;
+  activeWallet: ReturnType<typeof selectActiveWallet>;
   hasValidSettings: boolean;
   ready: boolean;
   error: Error | null;
@@ -71,8 +69,9 @@ class Template extends React.Component<Props, State> {
 
   render() {
 
-    const { wallets, activeWallet, ready, hasValidSettings, hasWallets } = this.props;
+    const { wallets, activeWallet, ready, hasValidSettings } = this.props;
 
+    // loading
     if (!ready) {
       return <div></div>
     } 
@@ -81,10 +80,12 @@ class Template extends React.Component<Props, State> {
     if (!hasValidSettings) {
       if (this.props.history.location.pathname !== '/settings') {
         this.props.history.push('/settings')
+        return <div></div>
       }
-    } else if (!hasWallets) {
+    } else if (!activeWallet) {
       if (this.props.history.location.pathname !== '/create') {
         this.props.history.push('/create')
+        return <div></div>
       }
     }
 
@@ -176,11 +177,9 @@ const mapStateToProps = (state: AppState) => {
     state: state,
     wallets: state.wallet.wallets,
     activeWallet: selectActiveWallet(state),
-    hasWallets: hasWalletsSelector(state),
     hasValidSettings: validSettingsSelector(state),
     ready: state.bootstrap.ready,
     error: state.bootstrap.error,
-
   }
 }
 

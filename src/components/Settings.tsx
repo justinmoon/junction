@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Form, FormGroup, Input, Label, Button, Alert, Spinner } from 'reactstrap';
+import { Form, FormGroup, Input, Label, Alert } from 'reactstrap';
 import { withRouter, RouteComponentProps } from 'react-router';
 import { getSettings, updateSettings, Settings as TSettings } from '../store/settings';
 import { AppState } from '../store';

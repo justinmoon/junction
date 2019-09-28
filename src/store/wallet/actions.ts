@@ -1,8 +1,9 @@
 import { WalletActionTypes as T } from './types';
 import { ThunkAction } from '../types';
-import { Wallet, Device, UnlockedDevice } from '../../types';
+import { Wallet, UnlockedDevice } from '../../types';
 import api from '../../api';
 import { selectActiveWallet } from './selectors';
+import { notNull } from '..';
 
 export function getWallets(): ThunkAction {
   return async (dispatch, getState) => {
@@ -11,6 +12,7 @@ export function getWallets(): ThunkAction {
       const wallets = await api.getWallets();
       const activeWallet = selectActiveWallet(getState())
       if (!activeWallet) {
+        // FIXME: use the most recently updated wallet ...
         dispatch(changeWallet(wallets[0]));
       }
       dispatch({ type: T.GET_WALLETS_SUCCESS, payload: wallets });
@@ -20,20 +22,17 @@ export function getWallets(): ThunkAction {
   };
 }
 
-export function addSigner(device: Device): ThunkAction {
+export function addSigner(device: UnlockedDevice): ThunkAction {
   return async (dispatch, getState) => {
     dispatch({ type: T.ADD_SIGNER, device });
     const state = getState()
-    const activeWallet = selectActiveWallet(state)
+    const activeWallet = notNull(selectActiveWallet(state))
     try {
-      // FIXME
-      if (activeWallet && 'fingerprint' in device && device.fingerprint !== undefined) {
-        await api.addSigner({
-          wallet_name: activeWallet.name,
-          signer_name: device.type,
-          device_id: device.fingerprint,
-        });
-      }
+      await api.addSigner({
+        wallet_name: activeWallet.name,
+        signer_name: device.type,
+        device_id: device.fingerprint,
+      });
       await dispatch(getWallets())
       dispatch({ type: T.ADD_SIGNER_SUCCESS });
     } catch(err) {
@@ -46,13 +45,9 @@ export function signPSBT(device: UnlockedDevice): ThunkAction {
   return async (dispatch, getState) => {
     dispatch({ type: T.SIGN_PSBT, device });
     try {
-      const activeWallet = selectActiveWallet(getState())
-      if (!activeWallet) {
-        throw Error('Cannot sign without active wallet')
-      } else {
-        const device_id = device.fingerprint
-        await api.signPSBT({ wallet_name: activeWallet.name, device_id });
-      }
+      const activeWallet = notNull(selectActiveWallet(getState()))
+      const device_id = device.fingerprint
+      await api.signPSBT({ wallet_name: activeWallet.name, device_id });
       await dispatch(getWallets())
       dispatch({ type: T.SIGN_PSBT_SUCCESS })
     } catch(error) {
@@ -73,12 +68,8 @@ export function broadcastTransaction(): ThunkAction {
   return async (dispatch, getState) => {
     dispatch({ type: T.BROADCAST_TRANSACTION });
     try {
-      const activeWallet = selectActiveWallet(getState())
-      if (!activeWallet) {
-        throw Error('Cannot sign without active wallet')
-      } else {
-        await api.broadcastTransaction({ wallet_name: activeWallet.name });
-      }
+      const activeWallet = notNull(selectActiveWallet(getState()))
+      await api.broadcastTransaction({ wallet_name: activeWallet.name });
       await dispatch(getWallets())
       dispatch({ type: T.BROADCAST_TRANSACTION_SUCCESS })
     } catch(error) {

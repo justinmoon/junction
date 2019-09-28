@@ -3,7 +3,7 @@ import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps } from 'react-router';
 import { Form, FormGroup, Input, Label, Row, Col, Alert, Button } from 'reactstrap';
 import { getWallets, selectActiveWallet } from '../store/wallet';
-import { AppState } from '../store';
+import { AppState, notNull } from '../store';
 import api, { CreatePSBTOutput } from '../api';
 import { Wallet } from '../types';
 import './Send.css'
@@ -13,17 +13,11 @@ interface DispatchProps {
   getWallets: typeof getWallets;
 }
 
-interface ConnectProps {
-  // FIXME: typescript makes me accept possibility of nullness
-  // How can we just demand that this not be null for the component to even load?
-  activeWallet: Wallet | null;
-}
-
-type Props = DispatchProps & ConnectProps & RouteComponentProps;
-
 interface StateProps {
-  activeWallet: Wallet | null;
+  activeWallet: Wallet;
 }
+
+type Props = DispatchProps & StateProps & RouteComponentProps;
 
 interface LocalState {
   outputs: CreatePSBTOutput[];
@@ -69,7 +63,7 @@ class Create extends React.Component<Props, LocalState> {
       const { outputs } = this.state;
       const { activeWallet } = this.props;
       await api.createPSBT({
-        wallet_name: activeWallet ? activeWallet.name : '',  // FIXME
+        wallet_name: activeWallet.name,
         outputs
       });
       this.props.getWallets();
@@ -141,7 +135,7 @@ class Create extends React.Component<Props, LocalState> {
 
 const ConnectedCreate = connect<StateProps, DispatchProps, RouteComponentProps, AppState>(
   state => ({
-    activeWallet: selectActiveWallet(state),
+    activeWallet: notNull(selectActiveWallet(state)),
   }),
   { getWallets },
 )(Create);

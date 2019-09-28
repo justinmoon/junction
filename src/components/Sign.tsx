@@ -1,14 +1,15 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { withRouter, RouteComponentProps } from 'react-router';
-import { Button,  Tooltip,  Spinner, Table } from 'reactstrap';
+import { Button,  Tooltip, Table } from 'reactstrap';
 import { getWallets, selectActiveWallet, signPSBT, broadcastTransaction } from '../store/wallet';
 import { toggleDeviceInstructionsModal, toggleDeviceUnlockModal } from '../store/modal';
-import { AppState } from '../store';
+import { AppState, notNull } from '../store';
 import { MyCard, LoadingButton } from './Toolbox'
 import { Wallet, Signer, Device } from '../types';
 import './Sign.css'
-import { isLogicalExpression } from '@babel/types';
+import { selectDevices } from '../store/device';
+
 
 interface DispatchProps {
   getWallets: typeof getWallets;
@@ -21,8 +22,8 @@ interface DispatchProps {
 type Props = DispatchProps & StateProps & RouteComponentProps;
 
 interface StateProps {
-  activeWallet: Wallet | null;
-  devices: AppState['device']['devices']['data'];
+  activeWallet: Wallet;
+  devices: Device[];
   signPSBTState: AppState['wallet']['signPSBT'];
   broadcastTransactionState: AppState['wallet']['broadcastTransaction'];
 }
@@ -81,7 +82,7 @@ class Sign extends React.Component<Props, LocalState> {
     const device = deviceAvailable(signer, devices)
     const { activeWallet, toggleDeviceInstructionsModal, signPSBT, toggleDeviceUnlockModal, signPSBTState } = this.props
     const signed = signedBySigner(signer, psbt)
-    const didNotSign = activeWallet && activeWallet.signatures_remaining === 0 && !signed
+    const didNotSign = activeWallet.signatures_remaining === 0 && !signed
     const isSigning = device !== null && signPSBTState.device && device.fingerprint === signPSBTState.device.fingerprint;
     const canSign = device !== null && device.fingerprint;
 
@@ -117,17 +118,13 @@ class Sign extends React.Component<Props, LocalState> {
 
   broadcastTransaction() {
     const { activeWallet, broadcastTransaction } = this.props
-    
-    if (activeWallet && !activeWallet.signatures_remaining) {
+    if (activeWallet.signatures_remaining === 0) {
       broadcastTransaction()
     }
   }
 
   render() {
     const { activeWallet, devices, broadcastTransactionState } = this.props;
-    if (!activeWallet || !devices) {
-      return <div>loading</div>
-    }
     if (!activeWallet.psbt) {
       return <div>no psbt</div>
     }
@@ -173,8 +170,8 @@ class Sign extends React.Component<Props, LocalState> {
 
 const ConnectedSign = connect<StateProps, DispatchProps, RouteComponentProps, AppState>(
   state => ({
-    activeWallet: selectActiveWallet(state),
-    devices: state.device.devices.data,
+    activeWallet: notNull(selectActiveWallet(state)),
+    devices: notNull(selectDevices(state)),
     signPSBTState: state.wallet.signPSBT,
     broadcastTransactionState: state.wallet.broadcastTransaction,
   }),

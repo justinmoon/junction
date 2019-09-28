@@ -30,7 +30,3 @@ export function selectActiveWallet(state: AppState) {
   }
   return null
 }
-
-export function hasWalletsSelector(state: AppState) {
-  return state.wallet.wallets.data !== null && state.wallet.wallets.data.length > 0
-}

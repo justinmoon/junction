@@ -90,8 +90,11 @@ class ClientGroup:
 
     def close(self):
         for client in self.clients:
-            client.close()
-            del client
+            try:
+                client.close()
+                del client
+            except:  # FIXME
+                pass
         self.clients = []
 
 ###  Currency conversions
