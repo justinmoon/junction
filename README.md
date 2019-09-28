@@ -15,11 +15,22 @@ Junction project uses [HWI](https://github.com/bitcoin-core/HWI) to communicate 
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-mkdir wallets
-python ui.py
+npm install
 ```
 
-Open `localhost:5000` in your browser
+Run backend in terminal window with virtual environment active:
+
+```
+python server.py
+```
+
+Run frontend in another terminal window:
+
+```
+npm start
+```
+
+Open `localhost:3000` in your browser
 
 ## Features
 
@@ -45,3 +56,19 @@ _This is buggy, alpha, proof-of-concept software_
     - [No change detection](https://github.com/bitcoin-core/HWI/issues/170#issuecomment-491843963)
     - Cannot display multisig receiving addresses on hardware wallet display
     - Sometimes HWI thinks wallets are locked when they clearly aren't
+
+## Testing
+
+To run tests:
+
+Install `bitcoind` to `test` directory
+
+```
+$ ./test/install_bitcoind.sh
+```
+
+Run tests
+
+```
+python -m unittest test.test_wallet
+```
