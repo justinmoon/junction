@@ -4,6 +4,7 @@ import AddSigners from './AddSigners';
 import Signers from './Signers';
 import { Device, isUnlockedDevice } from '../types'
 import { AppState } from '../store';
+import { LoadingButton } from './Toolbox'
 import { getWallets, selectCandidateDevicesForActiveWallet, selectActiveWallet, addSigner } from '../store/wallet';
 import api from '../api'
 
@@ -17,14 +18,26 @@ interface DispatchProps {
 }
 
 interface State {
-  deviceBeingAdded: Device | null;
+  pending: boolean;
 }
 
 type Props = StateProps & DispatchProps;
 
 class Wallet extends React.Component<Props, State> {
   state: State = {
-    deviceBeingAdded: null,
+    pending: false,  }
+
+  async generateAddress() {
+    if (this.props.activeWallet !== null) {
+      this.setState({ pending: true })
+      try {
+        const response = await api.generateAddress({ wallet_name: this.props.activeWallet.name })
+        alert(response.address)
+      } catch(error) {
+        console.log(error)
+      }
+      this.setState({ pending: false })
+    }
   }
 
   render() {
@@ -57,11 +70,15 @@ class Wallet extends React.Component<Props, State> {
     return (
       <div>
         <h2 className='text-center'>{ activeWallet.name } ({activeWallet.m}/{activeWallet.n})</h2>
-        {activeWallet.ready && 
+        {activeWallet.signatures_remaining == 0 && 
           <div className="text-center">Confirmed Balance: {activeWallet.balances.confirmed} BTC</div>
         }
         {activeWallet.balances.unconfirmed > 0 &&
           <div className="text-center">Unconfirmed Balance: {activeWallet.balances.unconfirmed} BTC</div>}
+        {activeWallet &&
+          <div className="text-center">
+            <LoadingButton loading={this.state.pending} onClick={() => this.generateAddress()}>Generate Address</LoadingButton>
+          </div>}
         {signersComponent}
         {addSigners}
         </div>

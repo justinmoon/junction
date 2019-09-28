@@ -61,6 +61,10 @@ class API {
     return this.request<any>('POST', '/broadcast', args);
   }
 
+  generateAddress(args: T.GenerateAddressArguments) {
+    return this.request<any>('POST', '/address', args);
+  }
+
   // Internal fetch function
   protected request<R extends object>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',

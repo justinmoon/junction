@@ -32,3 +32,7 @@ export interface SignPSBTArguments {
 export interface BroadcastTransactionArguments {
   wallet_name: string;
 }
+
+export interface GenerateAddressArguments {
+  wallet_name: string;
+}
