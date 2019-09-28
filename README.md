@@ -15,11 +15,22 @@ Junction project uses [HWI](https://github.com/bitcoin-core/HWI) to communicate 
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-mkdir wallets
-python ui.py
+npm install
 ```
 
-Open `localhost:5000` in your browser
+Run backend in terminal window with virtual environment active:
+
+```
+python server.py
+```
+
+Run frontend in another terminal window:
+
+```
+npm start
+```
+
+Open `localhost:3000` in your browser
 
 ## Features
 
