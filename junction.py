@@ -146,6 +146,8 @@ class MultisigWallet:
             base['ready'] = self.ready()
             base['psbt'] = self.decode_psbt()
             base['signatures_remaining'] = self.signatures_remaining()
+            base['coins'] = self.coins()
+            base['history'] = self.history()
         return base
 
     def add_signer(self, *, name, fingerprint, xpub, type, derivation_path):
@@ -335,3 +337,11 @@ class MultisigWallet:
                 else:
                     unconfirmed_balance += u['amount']
             return unconfirmed_balance, confirmed_balance
+    
+    def coins(self):
+        # TODO: paginate
+        return self.wallet_rpc.listunspent(0, 9999999, [], True)
+
+    def history(self):
+        # TODO: paginate
+        return self.wallet_rpc.listtransactions("*", 100, 0, True)
