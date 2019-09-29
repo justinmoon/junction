@@ -27,10 +27,12 @@ export interface CreatePSBTArguments {
 export interface SignPSBTArguments {
   wallet_name: string;
   device_id: string;
+  index: number;
 }
 
 export interface BroadcastTransactionArguments {
   wallet_name: string;
+  index: number;
 }
 
 export interface GenerateAddressArguments {

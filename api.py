@@ -168,29 +168,32 @@ def create_psbt():
         outputs.append(output_dict)
     wallet.create_psbt(outputs)
     return jsonify({
-        'psbt': wallet.psbt.serialize(),
+        'psbt': wallet.psbts[-1].serialize(),
     })
 
 @api.route('/sign', methods=['POST'])
 @schema.validate({
-    'required': ['wallet_name', 'device_id'],
+    'required': ['wallet_name', 'device_id', 'index'],
     'properties': {
         # TODO: how to identify a specific psbt? index in wallet.psbts? Do they always have txids?
         'wallet_name': { 'type': 'string' },
         'device_id': { 'type': 'string' },  # FIXME: regex
+        'index': { 'type': 'number' },
     },
 })
 def sign_psbt():
     wallet_name = request.json['wallet_name']
     wallet = MultisigWallet.open(wallet_name)
     fingerprint = request.json['device_id']
+    index = request.json['index']
+    old_psbt = wallet.psbts[index]
     with get_client_and_device(fingerprint) as (client, device):
-        raw_signed_psbt = client.sign_tx(wallet.psbt)['psbt']
+        raw_signed_psbt = client.sign_tx(old_psbt)['psbt']
     new_psbt = serializations.PSBT()
     new_psbt.deserialize(raw_signed_psbt)
-    wallet.update_psbt(new_psbt)
+    wallet.update_psbt(new_psbt, index)
     return jsonify({
-        'psbt': wallet.psbt.serialize(),
+        'psbt': new_psbt.serialize(),
     })
 
 @api.route('/settings', methods=['GET'])
@@ -238,15 +241,17 @@ def list_transactions():
 
 @api.route('/broadcast', methods=['POST'])
 @schema.validate({
-    'required': ['wallet_name'],
+    'required': ['wallet_name', 'index'],
     'properties': {
         'wallet_name': { 'type': 'string' },
+        'index': { 'type': 'number' },
     },
 })
 def broadcast():
     wallet_name = request.json['wallet_name']
+    index = request.json['index']
     wallet = MultisigWallet.open(wallet_name)
-    txid = wallet.broadcast()
+    txid = wallet.broadcast(index)
     return jsonify({
         'txid': txid,
     })

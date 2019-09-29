@@ -13,10 +13,9 @@ interface StateProps {
 
 type Props = StateProps & RouteComponentProps;
 
-class History extends React.Component<Props> {
+class Coins extends React.Component<Props> {
   render() {
     const { activeWallet } = this.props;
-    console.log(activeWallet.coins)
     return (
       <div>
         <Table>
@@ -46,10 +45,10 @@ class History extends React.Component<Props> {
   }
 }
 
-const ConnectedHistory = connect<StateProps, {}, RouteComponentProps, AppState>(
+const ConnectedCoins = connect<StateProps, {}, RouteComponentProps, AppState>(
   state => ({
     activeWallet: notNull(selectActiveWallet(state)),
   }),
-)(History);
+)(Coins);
 
-export default withRouter(ConnectedHistory)
+export default withRouter(ConnectedCoins)

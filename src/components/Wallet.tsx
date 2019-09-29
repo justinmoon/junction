@@ -67,12 +67,12 @@ class Wallet extends React.Component<Props, State> {
     return (
       <div>
         <h2 className='text-center'>{ activeWallet.name } ({activeWallet.m}/{activeWallet.n})</h2>
-        {!activeWallet.ready && 
+        {activeWallet.ready && 
           <div className="text-center">Confirmed Balance: {activeWallet.balances.confirmed} BTC</div>
         }
         {activeWallet.balances.unconfirmed > 0 &&
           <div className="text-center">Unconfirmed Balance: {activeWallet.balances.unconfirmed} BTC</div>}
-        {!activeWallet.ready &&
+        {activeWallet.ready &&
           <div className="text-center">
             <LoadingButton loading={this.state.pending} onClick={() => this.generateAddress()}>Generate Address</LoadingButton>
           </div>}

@@ -65,6 +65,13 @@ function deviceAvailable(signer: Signer, devices: Device[]) {
   return null;
 }
 
+function signaturesRemaining(wallet: Wallet, psbt: any) {
+  const partialSignatures = ('partial_signatures' in psbt.inputs[0]) 
+    ? Object.keys(psbt.inputs[0].partial_signatures).length
+    : 0;
+  return Math.max(wallet.m - partialSignatures, 0)
+}
+
 class Sign extends React.Component<Props, LocalState> {
   state: LocalState = {
     isSubmitting: false,
@@ -78,11 +85,12 @@ class Sign extends React.Component<Props, LocalState> {
     })
   }
 
-  renderSigner(signer: Signer, psbt: any, devices: Device[]) {
+  renderSigner(signer: Signer, psbt: any, devices: Device[], index: number) {
     const device = deviceAvailable(signer, devices)
     const { activeWallet, toggleDeviceInstructionsModal, signPSBT, toggleDeviceUnlockModal, signPSBTState } = this.props
     const signed = signedBySigner(signer, psbt)
-    const didNotSign = activeWallet.signatures_remaining === 0 && !signed
+    const remaining = signaturesRemaining(activeWallet, psbt)
+    const didNotSign = remaining === 0 && !signed
     const isSigning = device !== null && signPSBTState.device && device.fingerprint === signPSBTState.device.fingerprint;
     const canSign = device !== null && device.fingerprint;
 
@@ -97,7 +105,7 @@ class Sign extends React.Component<Props, LocalState> {
     } else if (canSign) {
       // FIXME
       if (device !== null) {
-        rightComponent = <LoadingButton onClick={canSign ? () => signPSBT(device) : () => {}}>Sign</LoadingButton>
+        rightComponent = <LoadingButton onClick={canSign ? () => signPSBT(device, index) : () => {}}>Sign</LoadingButton>
       } else {
         rightComponent = <div/>
       }
@@ -116,22 +124,25 @@ class Sign extends React.Component<Props, LocalState> {
     )
   }
 
-  broadcastTransaction() {
+  broadcastTransaction(index: number) {
     const { activeWallet, broadcastTransaction } = this.props
-    if (activeWallet.signatures_remaining === 0) {
-      broadcastTransaction()
+    const psbt = activeWallet.psbts[index]
+    const remaining = signaturesRemaining(activeWallet, psbt)
+    if (remaining === 0) {
+      broadcastTransaction(index)
     }
   }
 
   render() {
     const { activeWallet, devices, broadcastTransactionState } = this.props;
-    if (!activeWallet.psbt) {
+    if (!activeWallet.psbts) {
       return <div>no psbt</div>
     }
-    const { psbt, signers } = activeWallet;
-    
+    const { psbts, signers } = activeWallet;
     return (
-      <MyCard>
+      <div>
+      {psbts.map((psbt: any, index: number) => (
+        <MyCard>
         <h4>Outputs</h4>
         <Table borderless>
           <tbody>
@@ -145,25 +156,27 @@ class Sign extends React.Component<Props, LocalState> {
             </tbody>
         </Table>
 
-        <h4>Signatures ({activeWallet.m - activeWallet.signatures_remaining}/{activeWallet.m})</h4>
+        <h4>Signatures ({activeWallet.m - signaturesRemaining(activeWallet, psbt)}/{activeWallet.m})</h4>
         <Table borderless>
           <tbody>
-            {signers.map((signer: Signer) => this.renderSigner(signer, psbt, devices))}
+            {signers.map((signer: Signer) => this.renderSigner(signer, psbt, devices, index))}
           </tbody>
         </Table>
 
         <div className="d-flex">
-          <LoadingButton loading={broadcastTransactionState.pending} onClick={() => this.broadcastTransaction()} color="primary" id="broadcast"
+          <LoadingButton loading={broadcastTransactionState.pending} onClick={() => this.broadcastTransaction(index)} color="primary" id="broadcast"
                   className="ml-auto">
             Broadcast
           </LoadingButton>
-          {!!activeWallet.signatures_remaining && 
+          {!!signaturesRemaining(activeWallet, psbt) && 
             <Tooltip placement="left" isOpen={this.state.tooltipOpen} target="broadcast" 
                 toggle={() => this.toggleTooltip()}>
-              Add {activeWallet.signatures_remaining} signatures before broadcasting
+              Add {signaturesRemaining(activeWallet, psbt)} signatures before broadcasting
             </Tooltip>}
         </div>
-      </MyCard>
+      </MyCard>  
+      ))}
+      </div>
     )
   }
 }

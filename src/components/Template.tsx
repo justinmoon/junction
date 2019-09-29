@@ -103,7 +103,7 @@ class Template extends React.Component<Props, State> {
       children: 'Coins',
     }];
 
-    if (activeWallet && activeWallet.psbt) {
+    if (activeWallet && activeWallet.psbts) {
       navLinks.splice(1, 0, {
         to: '/sign',
         children: 'Sign',

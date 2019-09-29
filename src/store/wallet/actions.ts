@@ -41,13 +41,13 @@ export function addSigner(device: UnlockedDevice): ThunkAction {
   };
 }
 
-export function signPSBT(device: UnlockedDevice): ThunkAction {
+export function signPSBT(device: UnlockedDevice, index: number): ThunkAction {
   return async (dispatch, getState) => {
     dispatch({ type: T.SIGN_PSBT, device });
     try {
       const activeWallet = notNull(selectActiveWallet(getState()))
       const device_id = device.fingerprint
-      await api.signPSBT({ wallet_name: activeWallet.name, device_id });
+      await api.signPSBT({ wallet_name: activeWallet.name, device_id, index });
       await dispatch(getWallets())
       dispatch({ type: T.SIGN_PSBT_SUCCESS })
     } catch(error) {
@@ -64,12 +64,12 @@ export function changeWallet(wallet: Wallet) {
 }
 
 
-export function broadcastTransaction(): ThunkAction {
+export function broadcastTransaction(index: number): ThunkAction {
   return async (dispatch, getState) => {
     dispatch({ type: T.BROADCAST_TRANSACTION });
     try {
       const activeWallet = notNull(selectActiveWallet(getState()))
-      await api.broadcastTransaction({ wallet_name: activeWallet.name });
+      await api.broadcastTransaction({ wallet_name: activeWallet.name, index });
       await dispatch(getWallets())
       dispatch({ type: T.BROADCAST_TRANSACTION_SUCCESS })
     } catch(error) {

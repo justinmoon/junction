@@ -15,7 +15,7 @@ multisig_key = "\n{fingerprint}: {xpub}"
 def coldcard_multisig_file(wallet):
     name = wallet.name[:20]  # 20 character max
     contents = multisig_header.format(name=name, m=wallet.m, n=wallet.n, 
-                                      path="m/44'/1'/0'", format='P2SH')
+                                      path="m/44'/1'/0'", format='P2WSH')
     for signer in wallet.signers:
         contents += multisig_key.format(fingerprint=signer.fingerprint,
                                         xpub=signer.xpub)

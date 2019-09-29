@@ -37,7 +37,7 @@ class HardwareSigner:
 
 class MultisigWallet:
 
-    def __init__(self, name, m, n, signers, psbt, address_index, export_index):
+    def __init__(self, name, m, n, signers, psbts, address_index, export_index):
         # Name of the wallet
         self.name = name
         # Signers required for bitcoin tx
@@ -47,7 +47,7 @@ class MultisigWallet:
         # Dictionary
         self.signers = signers
         # Hex string
-        self.psbt = psbt
+        self.psbts = psbts
         # Depth in HD derivation
         self.address_index = address_index
         # Highest exported address index
@@ -117,21 +117,28 @@ class MultisigWallet:
     @classmethod
     def from_dict(cls, d):
         '''Create class instance from dictionary'''
-        if d["psbt"]:
+        psbts = []
+        for raw_psbt in d['psbts']:
             psbt = hwilib.serializations.PSBT()
-            psbt.deserialize(d["psbt"])
-            d["psbt"] = psbt
+            psbt.deserialize(raw_psbt)
+            psbts.append(psbt)
+        d['psbts'] = psbts
         d['signers'] = [HardwareSigner.from_dict(signer) for signer in d['signers']]
         return cls(**d)
         
     def to_dict(self, extras=False):
         '''Represent instance as a dictionary'''
+        psbts = []
+        for psbt in self.psbts:
+            psbt.tx.rehash()
+            serialized = psbt.serialize()
+            psbts.append(serialized)
         base = {
             "name": self.name,
             "m": self.m,
             "n": self.n,
             "signers": [signer.to_dict() for signer in self.signers],
-            "psbt": self.psbt.serialize() if self.psbt is not None else None,
+            "psbts": psbts,
             "address_index": self.address_index,
             "export_index": self.export_index,
         }
@@ -144,8 +151,7 @@ class MultisigWallet:
                 'unconfirmed': unconfirmed,
             }
             base['ready'] = self.ready()
-            base['psbt'] = self.decode_psbt()
-            base['signatures_remaining'] = self.signatures_remaining()
+            base['psbts'] = [self.decode_psbt(psbt) for psbt in self.psbts]
             base['coins'] = self.coins()
             base['history'] = self.history()
         return base
@@ -187,7 +193,7 @@ class MultisigWallet:
         xpubs = [f'[{signer.fingerprint}{path_prefix}]{signer.xpub}{path_suffix}' 
                 for signer in self.signers]
         xpubs = ",".join(xpubs)
-        descriptor = f"sh(multi({self.m},{xpubs}))"
+        descriptor = f"wsh(multi({self.m},{xpubs}))"
         logger.info(f"Exporting descriptor: {descriptor}")
         # validates and appends checksum
         r = self.wallet_rpc.getdescriptorinfo(descriptor)
@@ -229,6 +235,7 @@ class MultisigWallet:
                 logger.info(f"Loaded watch-only Bitcoin Core wallet \"{watch_only_name}\"")
             except JSONRPCException as e:
                 try:
+                    # FIXME: if wallet is "ready" here, we also need an export ...
                     self.default_rpc.createwallet(watch_only_name, True)
                     logger.info(f"Created watch-only Bitcoin Core wallet \"{watch_only_name}\"")
                 except JSONRPCException as e:
@@ -245,7 +252,7 @@ class MultisigWallet:
         self.wallet_rpc.importmulti([{
             "desc": self.descriptor(),
             # 24 hours just in case
-            "timestamp": int(time.time()) - 60*60*24,
+            "timestamp": 'now',
             # FIXME: is this inclusive? if we we're overlapping 1 ever time ...
             "range": [self.export_index, new_export_index],
             "watchonly": True,
@@ -259,8 +266,6 @@ class MultisigWallet:
 
     def create_psbt(self, outputs):
         '''Create a new PSBT paying single recipient'''
-        if self.psbt:
-            raise JunctionError('PSBT already present')
         change_address = self.address()
         raw_psbt = self.wallet_rpc.walletcreatefundedpsbt(
             # let Bitcoin Core choose inputs
@@ -274,46 +279,40 @@ class MultisigWallet:
                 "includeWatching": True,
                 # Provide change address b/c Core can't generate it
                 "changeAddress": change_address,
+                # Reserve UTXOs we're spending
+                "lockUnspents": True,
             },
             # Include BIP32 derivation paths in the PSBT
             True,
         )['psbt']
         # Serialize and save
-        self.psbt = hwilib.serializations.PSBT()
-        self.psbt.deserialize(raw_psbt)
+        psbt = hwilib.serializations.PSBT()
+        psbt.deserialize(raw_psbt)
+        self.psbts.append(psbt)
         self.save()
 
-    def remove_psbt(self):
-        self.psbt = None
+    def remove_psbt(self, index):
+        del self.psbts[index]
         self.save()
 
-    def update_psbt(self, new_psbt):
+    def update_psbt(self, psbt, index):
         # FIXME: make sure this is the same psbt
         # does HWI PSBT class expose any "update" functionality?
-        self.psbt = new_psbt
+        self.psbts[index] = psbt
         self.save()
 
-    def decode_psbt(self):
+    def decode_psbt(self, psbt):
         '''Fetch Bitcoin Core psbt deserialization if it exists'''
-        if self.psbt:
-            return self.wallet_rpc.decodepsbt(self.psbt.serialize())
-        else:
-            return None
-
-    def signatures_remaining(self):
-        if self.psbt:
-            # FIXME: check all inputs
-            return max(self.m - len(self.psbt.inputs[0].partial_sigs), 0)
-        else:
-            return 0  # FIXME
+        return self.wallet_rpc.decodepsbt(psbt.serialize())
             
-    def broadcast(self):
+    def broadcast(self, index):
         '''Finalize and broadcast psbt to network'''
-        psbt_hex = self.psbt.serialize()
+        psbt = self.psbts[index]
+        psbt_hex = psbt.serialize()
         tx_hex = self.wallet_rpc.finalizepsbt(psbt_hex)["hex"]
         txid = self.wallet_rpc.sendrawtransaction(tx_hex)
         # FIXME: can we be sure that tx broadcast succeeded here, that we won't need psbt anymore?
-        self.remove_psbt()
+        self.remove_psbt(index)
         return txid
     
     def balances(self):
@@ -330,7 +329,7 @@ class MultisigWallet:
         except:
             unconfirmed_balance = 0
             confirmed_balance = 0
-            unspent = self.wallet_rpc.listunspent(0, 9999999, [], True)
+            unspent = self.coins()
             for u in unspent:
                 if u['confirmations'] > 0:
                     confirmed_balance += u['amount']
@@ -339,8 +338,20 @@ class MultisigWallet:
             return unconfirmed_balance, confirmed_balance
     
     def coins(self):
-        # TODO: paginate
-        return self.wallet_rpc.listunspent(0, 9999999, [], True)
+        unlocked_unspents = self.wallet_rpc.listunspent(0, 9999999, [], True)
+        locked_outpoints = self.wallet_rpc.listlockunspent()
+        locked_unspents = []
+        for outpoint in locked_outpoints:
+            _unspent = self.wallet_rpc.gettransaction(outpoint['txid'], True)
+            for details in _unspent['details']:
+                unspent = {}
+                unspent['txid'] = _unspent['txid']
+                unspent['confirmations'] = _unspent['confirmations']
+                unspent['address'] = details['address']
+                unspent['vout'] = details['vout']
+                unspent['amount'] = details['amount']
+                locked_unspents.append(unspent)
+        return unlocked_unspents + locked_unspents
 
     def history(self):
         # TODO: paginate
