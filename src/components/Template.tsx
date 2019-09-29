@@ -98,6 +98,9 @@ class Template extends React.Component<Props, State> {
     }, {
       to: '/history',
       children: 'History',
+    }, {
+      to: '/coins',
+      children: 'Coins',
     }];
 
     if (activeWallet && activeWallet.psbt) {

@@ -16,24 +16,25 @@ type Props = StateProps & RouteComponentProps;
 class History extends React.Component<Props> {
   render() {
     const { activeWallet } = this.props;
+    console.log(activeWallet.coins)
     return (
       <div>
         <Table>
           <thead>
             <tr>
               <th>Tx ID</th>
+              <th>Output</th>
               <th>Address</th>
-              <th>Timestamp</th>
               <th>Confirmations</th>
               <th>Amount</th>
             </tr>
           </thead>
           <tbody>
-          {activeWallet.history.map((tx: any, index: number) => (
+          {activeWallet.coins.map((tx: any, index: number) => (
             <tr>
               <td>{tx.txid}</td>
+              <td>{tx.vout}</td>
               <td>{tx.address}</td>
-              <td>{tx.time}</td>
               <td>{tx.confirmations}</td>
               <td>{tx.amount}</td>
             </tr>
