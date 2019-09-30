@@ -78,7 +78,7 @@ class MultisigWallet:
             raise JunctionError(f"\"n\" ({n}) cannot exceed 5")
 
         # MultisigWallet instance
-        wallet = cls(name, m, n, [], None, 0, 0)
+        wallet = cls(name, m, n, [], [], 0, 0)
 
         # Never overwrite existing wallet files
         # FIXME: full_path probably shouldn't appear in this file?
