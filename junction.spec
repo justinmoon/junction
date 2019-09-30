@@ -22,7 +22,7 @@ elif platform.system() == 'Darwin':
 
 a = Analysis(['desktop.py'],
              binaries=binaries,
-             datas=[('build', 'build')],
+             datas=[('build', 'build'), ('settings.json.ex', 'settings.json.ex')],
              hiddenimports=[],
              hookspath=['pyinstaller-hooks'],
              runtime_hooks=[],
