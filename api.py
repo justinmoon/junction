@@ -1,6 +1,6 @@
 import logging
 
-from flask import jsonify, request, redirect, url_for, Blueprint
+from flask import jsonify, request, redirect, url_for, Blueprint, current_app
 from flask_json_schema import JsonSchema, JsonValidationError
 from hwilib import commands, serializations
 from hwilib.devices import trezor, ledger, coldcard
@@ -170,6 +170,17 @@ def create_psbt():
     return jsonify({
         'psbt': wallet.psbts[-1].serialize(),
     })
+
+@api.route('/psbt', methods=['DELETE'])
+@schema.validate({
+    'required': ['wallet_name', 'index'],
+    'properties': {
+        'wallet_name': { 'type': 'string' },
+        'index': { 'type': 'number' },
+    },
+})
+def abandon_psbt():
+    pass
 
 @api.route('/sign', methods=['POST'])
 @schema.validate({

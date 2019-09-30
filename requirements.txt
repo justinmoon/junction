@@ -6,3 +6,10 @@ flask_json_schema
 # with simplejson flask can serialize decimals
 simplejson
 flask-cors
+
+# pyinstaller
+cefpython3
+libusb1
+pywebview[qt]
+pywebview[cef]
+pyinstaller.zip

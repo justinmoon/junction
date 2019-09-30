@@ -8,9 +8,6 @@ import { BootstrapState, bootstrapReducer } from './bootstrap';
 import { WalletState } from './wallet';
 import { walletReducer } from './wallet/reducer';
 
-console.log(settingsReducer)
-console.log(walletReducer)
-
 export interface AppState {
   device: DeviceState;
   wallet: WalletState;

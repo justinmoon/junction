@@ -292,6 +292,7 @@ class MultisigWallet:
         self.save()
 
     def remove_psbt(self, index):
+        # TODO: unlock input utxos
         del self.psbts[index]
         self.save()
 
