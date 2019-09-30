@@ -226,7 +226,7 @@ def get_settings_route():
                 'user': {'type': 'string'},
                 'password': {'type': 'string'},
                 'host': {'type': 'string'},
-                'port': {'type': 'number'},
+                'port': {'type': 'string'},
             },
         },
     },
