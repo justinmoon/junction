@@ -79,6 +79,7 @@ class Wallet extends React.Component<Props, State> {
           <div className="text-center">
             <LoadingButton loading={this.state.pending} onClick={() => this.generateAddress()}>Generate Address</LoadingButton>
           </div>}
+        {pending && (activeWallet as any).fakeprop.fakeprop}
         {signersComponent}
         {addSigners}
         </div>
