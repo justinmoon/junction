@@ -1,6 +1,6 @@
 import { AnyAction } from 'redux';
 import { DeviceType } from '../../types';
-import { ModalActionTypes as T } from './types';
+import { ModalActionTypes as T, ModalNames } from './types';
 
 // FIXME: "isOpen" would be better than "open"
 export interface ModalState {
@@ -23,33 +23,24 @@ export const INITIAL_STATE: ModalState = {
   }
 };
 
+export interface ModalAction extends AnyAction {
+  // Make sure modalName is kosher
+  modalName: ModalNames,
+}
+
 export function modalReducer(
   state: ModalState = INITIAL_STATE,
-  action: AnyAction,
+  action: ModalAction,
 ): ModalState {
   switch(action.type) {
-    case T.DEVICE_INSTRUCTIONS_TOGGLE:
-      return {
-        ...state,
-        deviceInstructions: {
-          open: !state.deviceInstructions.open,
-          deviceType: action.deviceType,
-        }
-      }
-    case T.DEVICE_UNLOCK_TOGGLE:
-      return {
-        ...state,
-        deviceUnlock: {
-          open: !state.deviceUnlock.open,
-        }
-      }
-    case T.DEVICE_UNLOCK_SET_DEVICE:
-      return {
-        ...state,
-        deviceUnlock: {
-          open: state.deviceUnlock.open,
-        }
-      }
+    case T.TOGGLE:
+     return {
+       ...state,
+       [action.modalName]: {
+         open: !state[action.modalName].open,
+         ...action.data,
+       }
+     }
   }
   return state;
 }
