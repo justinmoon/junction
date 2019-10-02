@@ -135,7 +135,7 @@ def address():
     # just not sure how to implement that
     wallet_name = request.json['wallet_name']
     wallet = MultisigWallet.open(wallet_name)
-    address = wallet.address()
+    address = wallet.address(change=False)
     return jsonify({
         'address': address,
     })

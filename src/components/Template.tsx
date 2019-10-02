@@ -164,7 +164,7 @@ class Template extends React.Component<Props, State> {
             </Collapse>
           </Container>
         </Navbar>
-        <Container>
+        <Container className="pt-3">
           {this.props.children}
         </Container>
         <DeviceInstructionsModal/>

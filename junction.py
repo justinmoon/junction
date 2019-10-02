@@ -37,7 +37,8 @@ class HardwareSigner:
 
 class MultisigWallet:
 
-    def __init__(self, name, m, n, signers, psbts, address_index, export_index):
+    def __init__(self, *, name, m, n, signers, psbts, receiving_address_index, receiving_export_index, 
+                 change_address_index, change_export_index):
         # Name of the wallet
         self.name = name
         # Signers required for bitcoin tx
@@ -49,9 +50,13 @@ class MultisigWallet:
         # Hex string
         self.psbts = psbts
         # Depth in HD derivation
-        self.address_index = address_index
+        self.receiving_address_index = receiving_address_index
         # Highest exported address index
-        self.export_index = export_index
+        self.receiving_export_index = receiving_export_index
+        # Depth in HD derivation
+        self.change_address_index = change_address_index
+        # Highest exported address index
+        self.change_export_index = change_export_index
         # RPC connection to corresponding watch-only Bitcoin Core wallet
         settings = get_settings()  # FIXME
         self.wallet_rpc = RPC(settings['rpc'], wallet_name=name, timeout=180)
@@ -78,7 +83,8 @@ class MultisigWallet:
             raise JunctionError(f"\"n\" ({n}) cannot exceed 5")
 
         # MultisigWallet instance
-        wallet = cls(name, m, n, [], [], 0, 0)
+        wallet = cls(name=name, m=m, n=n, signers=[], psbts=[], receiving_address_index=0, receiving_export_index=0,
+                     change_address_index=0, change_export_index=0)
 
         # Never overwrite existing wallet files
         # FIXME: full_path probably shouldn't appear in this file?
@@ -139,8 +145,10 @@ class MultisigWallet:
             "n": self.n,
             "signers": [signer.to_dict() for signer in self.signers],
             "psbts": psbts,
-            "address_index": self.address_index,
-            "export_index": self.export_index,
+            "receiving_address_index": self.receiving_address_index,
+            "receiving_export_index": self.receiving_export_index,
+            "change_address_index": self.change_address_index,
+            "change_export_index": self.change_export_index,
         }
         # FIXME: this sucks, but we need a way to serialize for API
         if extras:
@@ -174,9 +182,10 @@ class MultisigWallet:
         self.signers.append(signer)
         logger.info(f"Registered signer \"{name}\"")
 
-        # Export next chunk watch-only addresses to Bitcoin Core if we're done adding signers
+        # Export first chunk watch-only addresses to Bitcoin Core if we're done adding signers
         if self.ready():
-            self.export_watchonly()
+            self.export_watchonly(change=True)
+            self.export_watchonly(change=False)
 
         self.save()
 
@@ -184,15 +193,12 @@ class MultisigWallet:
         '''Remove signer from multisig wallet'''
         raise NotImplementedError()
 
-    def descriptor(self):
+    def descriptor(self, change):
         '''Descriptor for shared multisig addresses'''
-        # TODO: add change parameter and inject here
-        # TODO: this suffic should be constand on the class ...
-        path_suffix = "/0/*"
         # TODO: signer.prefix would be better than `{signer.fingerprint}{signer.derivation_path[1:]}`
         # this would combine fingerprint & derivation path into one field. nice ...
         # then we could have signer.fingerprint() grab just the fingerprint ...
-        xpubs = [f'[{signer.fingerprint}{signer.derivation_path[1:]}]{signer.xpub}{path_suffix}' 
+        xpubs = [f'[{signer.fingerprint}{signer.derivation_path[1:]}]{signer.xpub}/{int(change)}/*' 
                 for signer in self.signers]
         xpubs = ",".join(xpubs)
         descriptor = f"wsh(multi({self.m},{xpubs}))"
@@ -201,23 +207,30 @@ class MultisigWallet:
         r = self.wallet_rpc.getdescriptorinfo(descriptor)
         return r['descriptor']
 
-    def address(self):
+    def address(self, change):
         '''Derive next BIP67-compliant receiving address'''
+        address_index = self.change_address_index if change else self.receiving_address_index
+        export_index = self.change_export_index if change else self.receiving_export_index
         if not self.ready():
             raise JunctionError(f'{self.n} signers required, {len(self.signers)} registered')
-        if self.address_index > self.export_index:
-            self.export_watchonly()
+        if address_index > export_index:
+            self.export_watchonly(change=change)
         address = self.wallet_rpc.deriveaddresses(
-            self.descriptor(), 
-            [self.address_index, self.address_index + 1])[0]
-        self.address_index += 1
+            self.descriptor(change),
+            [address_index, address_index + 1])[0]
+        
+        # increment indices
+        if change:
+            self.change_address_index += 1
+        else:
+            self.receiving_address_index += 1
 
         # Hackily skip BIP67 (sorted multisig pubkeys) violations
         # (ColdCard demands BIP67 compliance, descriptor language doesn't support)
         ai = self.wallet_rpc.getaddressinfo(address)
         assert ai['iswatchonly'] is True, 'Bitcoin Core gave us non-watch-only address'
         if ai['pubkeys'] != sorted(ai['pubkeys']):
-            return self.address()
+            return self.address(change)
             
         self.save()
         return address
@@ -247,29 +260,33 @@ class MultisigWallet:
         # maybe add a "junction_" prefix or something?
         return self.name
 
-    def export_watchonly(self):
+    def export_watchonly(self, *, change):
         '''Export addresses to Bitcoin Core watch-only wallet'''
         # it would be really nice if we could sanity-check against getwalletinfo here ...
         logger.info("Starting watch-only export")
-        new_export_index = self.export_index + ADDRESS_CHUNK
+        old_export_index = self.change_export_index if change else self.receiving_export_index
+        new_export_index = old_export_index + ADDRESS_CHUNK
         self.wallet_rpc.importmulti([{
-            "desc": self.descriptor(),
+            "desc": self.descriptor(change),
             # 24 hours just in case
             "timestamp": 'now',
             # FIXME: is this inclusive? if we we're overlapping 1 ever time ...
-            "range": [self.export_index, new_export_index],
+            "range": [old_export_index, new_export_index],
             "watchonly": True,
             # Bitcoin Core cannot import P2SH/P2WSH: https://bitcoin.stackexchange.com/a/89118/85335
             "keypool": False,
             "internal": False,
         }])
-        self.export_index = new_export_index
+        if change:
+            self.change_export_index = new_export_index
+        else:
+            self.receiving_export_index = new_export_index
         self.save()
         logger.info("Finished watch-only export")
 
     def create_psbt(self, outputs):
         '''Create a new PSBT paying single recipient'''
-        change_address = self.address()
+        change_address = self.address(True)
         raw_psbt = self.wallet_rpc.walletcreatefundedpsbt(
             # let Bitcoin Core choose inputs
             [],
