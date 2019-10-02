@@ -116,7 +116,7 @@ def add_signer():
     device_id = request.json['device_id']
     wallet = MultisigWallet.open(wallet_name)
     with get_client_and_device(device_id) as (client, device):
-        derivation_path = "m/44h/1h/0h"  # FIXME segwit
+        derivation_path = "m/48'/1'/0'/2'"  # FIXME segwit
         # FIXME: validate xpub/tpub?
         xpub = client.get_pubkey_at_path(derivation_path)['xpub']
         client.close()

@@ -186,11 +186,13 @@ class MultisigWallet:
 
     def descriptor(self):
         '''Descriptor for shared multisig addresses'''
-        # TODO: consider using HWI's Descriptor class
-        path_prefix = "/44h/1h/0h"
         # TODO: add change parameter and inject here
+        # TODO: this suffic should be constand on the class ...
         path_suffix = "/0/*"
-        xpubs = [f'[{signer.fingerprint}{path_prefix}]{signer.xpub}{path_suffix}' 
+        # TODO: signer.prefix would be better than `{signer.fingerprint}{signer.derivation_path[1:]}`
+        # this would combine fingerprint & derivation path into one field. nice ...
+        # then we could have signer.fingerprint() grab just the fingerprint ...
+        xpubs = [f'[{signer.fingerprint}{signer.derivation_path[1:]}]{signer.xpub}{path_suffix}' 
                 for signer in self.signers]
         xpubs = ",".join(xpubs)
         descriptor = f"wsh(multi({self.m},{xpubs}))"
@@ -247,6 +249,7 @@ class MultisigWallet:
 
     def export_watchonly(self):
         '''Export addresses to Bitcoin Core watch-only wallet'''
+        # it would be really nice if we could sanity-check against getwalletinfo here ...
         logger.info("Starting watch-only export")
         new_export_index = self.export_index + ADDRESS_CHUNK
         self.wallet_rpc.importmulti([{
@@ -357,3 +360,6 @@ class MultisigWallet:
     def history(self):
         # TODO: paginate
         return self.wallet_rpc.listtransactions("*", 100, 0, True)
+    
+    def addresses(self):
+        pass
