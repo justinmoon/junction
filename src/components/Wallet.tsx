@@ -7,6 +7,8 @@ import { AppState, notNull } from '../store';
 import { LoadingButton } from './Toolbox'
 import { getWallets, selectActiveWallet, addSigner } from '../store/wallet';
 import api from '../api'
+import DisplayAddressModal from './DisplayAddressModal';
+import { toggleDisplayAddressModal } from '../store/modal';
 
 interface StateProps {
   activeWallet: WalletType;
@@ -15,6 +17,7 @@ interface StateProps {
 interface DispatchProps {
   getWallets: typeof getWallets;
   addSigner: typeof addSigner;
+  toggleDisplayAddressModal: typeof toggleDisplayAddressModal;
 }
 
 interface State {
@@ -32,7 +35,7 @@ class Wallet extends React.Component<Props, State> {
     this.setState({ pending: true })
     try {
       const response = await api.generateAddress({ wallet_name: this.props.activeWallet.name })
-      alert(response.address)
+      this.props.toggleDisplayAddressModal(response.address)
     } catch(error) {
       console.log(error)
     }
@@ -91,5 +94,5 @@ const mapStateToProps = (state: AppState) => {
 
 export default connect(
   mapStateToProps,
-  { getWallets },
+  { getWallets, toggleDisplayAddressModal },
 )(Wallet);

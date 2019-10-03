@@ -8,4 +8,5 @@ export enum ModalActionTypes {
 export enum ModalNames {
   deviceInstructions = 'deviceInstructions',
   deviceUnlock = 'deviceUnlock',
+  displayAddress = 'displayAddress',
 }

@@ -65,6 +65,10 @@ class API {
     return this.request<any>('POST', '/address', args);
   }
 
+  displayAddress(args: T.DisplayAddressArguments) {
+    return this.request<any>('POST', '/display-address', args);
+  }
+
   // Internal fetch function
   protected request<R extends object>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',

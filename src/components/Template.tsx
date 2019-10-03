@@ -24,6 +24,7 @@ import { bootstrap } from '../store/bootstrap'
 import { AppState } from '../store';
 import DeviceInstructionsModal from './DeviceInstructionsModal'
 import EnterPinModal from './EnterPinModal'
+import DisplayAddressModal from './DisplayAddressModal'
 
 interface StateProps {
   state: AppState;
@@ -167,6 +168,7 @@ class Template extends React.Component<Props, State> {
         <Container className="pt-3">
           {this.props.children}
         </Container>
+        <DisplayAddressModal/>
         <DeviceInstructionsModal/>
         <EnterPinModal/>
       </div>

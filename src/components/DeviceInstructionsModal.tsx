@@ -17,7 +17,6 @@ type Props = DispatchProps & StateProps
 
 class DeviceInstructionsModal extends React.Component<Props> {
   render() {
-		// TODO: accept an optional "device" prop and only display that device if present 
     const { toggleDeviceInstructionsModal, open, deviceType } = this.props;
     const showTrezor = !deviceType || deviceType === 'trezor';
     const showLedger = !deviceType || deviceType === 'ledger';

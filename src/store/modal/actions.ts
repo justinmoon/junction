@@ -23,3 +23,8 @@ export function toggleDeviceUnlockModal() {
     dispatch(toggle(ModalNames.deviceUnlock))
   }
 }
+
+export function toggleDisplayAddressModal(address?: any) {
+  const data = { address }
+  return toggle(ModalNames.displayAddress, data)
+}

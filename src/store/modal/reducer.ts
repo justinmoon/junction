@@ -10,7 +10,11 @@ export interface ModalState {
   };
   deviceUnlock: {
     open: boolean;
-  }
+  };
+  displayAddress: {
+    address: string | null;
+    open: boolean;
+  };
 }
 
 export const INITIAL_STATE: ModalState = {
@@ -20,7 +24,11 @@ export const INITIAL_STATE: ModalState = {
   },
   deviceUnlock: {
     open: false,
-  }
+  },
+  displayAddress: {
+    open: false,
+    address: null,
+  },
 };
 
 export interface ModalAction extends AnyAction {

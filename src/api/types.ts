@@ -38,3 +38,9 @@ export interface BroadcastTransactionArguments {
 export interface GenerateAddressArguments {
   wallet_name: string;
 }
+
+export interface DisplayAddressArguments {
+  wallet_name: string;
+  device_id: string;
+  address: string;
+}
