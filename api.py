@@ -313,3 +313,29 @@ def display_address():
     return jsonify({
         'ok': True
     })
+
+@api.route('/register-device', methods=['POST'])
+@schema.validate({
+    'required': ['wallet_name', 'device_id'],
+    'properties': {
+        'wallet_name': { 'type': 'string' },
+        'device_id': { 'type': 'string' },
+    },
+})
+def register_device():
+    wallet_name = request.json['wallet_name']
+    device_id = request.json['device_id']
+    wallet = MultisigWallet.open(wallet_name)
+
+    device = get_device(device_id)
+
+    fingerprints = [signer.fingerprint for signer in wallet.signers]
+    if device['fingerprint'] not in fingerprints:
+        raise JunctionError(f'No device with fingerprint {device["fingerprint"]} present in wallet {wallet_name}')
+
+    if device['type'] != 'coldcard':
+        raise JunctionError(f'Devices of type {device["type"]} do not support multisig wallet registration')
+
+    custom_coldcard.enroll(wallet)
+
+    return jsonify({'ok': True})

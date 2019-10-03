@@ -2,16 +2,17 @@ import React from 'react';
 import { connect } from 'react-redux';
 import AddSigners from './AddSigners';
 import Signers from './Signers';
-import { Wallet as WalletType } from '../types'
+import { Wallet as WalletType, Signer } from '../types'
 import { AppState, notNull } from '../store';
 import { LoadingButton } from './Toolbox'
-import { getWallets, selectActiveWallet, addSigner } from '../store/wallet';
+import { getWallets, selectActiveWallet, addSigner, selectUnregisteredSigners } from '../store/wallet';
 import api from '../api'
-import DisplayAddressModal from './DisplayAddressModal';
 import { toggleDisplayAddressModal } from '../store/modal';
+import RegisterSigners from './RegisterSigners';
 
 interface StateProps {
   activeWallet: WalletType;
+  unregisteredSigners: Signer[];
 }
 
 interface DispatchProps {
@@ -43,7 +44,7 @@ class Wallet extends React.Component<Props, State> {
   }
 
   render() {
-    const { activeWallet } = this.props;
+    const { activeWallet, unregisteredSigners } = this.props;
     const { signers } = activeWallet;
 
     let signersComponent = null;
@@ -67,6 +68,16 @@ class Wallet extends React.Component<Props, State> {
       )
     }
 
+    let registerSigners = null;
+    if (activeWallet.ready && unregisteredSigners.length > 0) {
+      registerSigners = (
+        <div>
+          <h3 className='text-center'>Register Wallet On-Device</h3>
+          <RegisterSigners/>
+        </div>
+      )
+    }
+
     return (
       <div>
         <h2 className='text-center'>{ activeWallet.name } ({activeWallet.m}/{activeWallet.n})</h2>
@@ -81,6 +92,7 @@ class Wallet extends React.Component<Props, State> {
           </div>}
         {signersComponent}
         {addSigners}
+        {registerSigners}
         </div>
     )
   }
@@ -89,6 +101,7 @@ class Wallet extends React.Component<Props, State> {
 const mapStateToProps = (state: AppState) => {
   return {
     activeWallet: notNull(selectActiveWallet(state)),
+    unregisteredSigners: selectUnregisteredSigners(state),
   }
 }
 

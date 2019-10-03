@@ -37,6 +37,10 @@ class API {
     return this.request<any>('POST', '/signers', args);
   }
 
+  registerSigner(args: T.RegisterSignerArguments) {
+    return this.request<any>('POST', '/register-device', args);
+  }
+
   promptPin() {
     return this.request<any>('POST', '/prompt')
   }

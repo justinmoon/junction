@@ -10,6 +10,11 @@ export interface AddSignerArguments {
   device_id: string;
 }
 
+export interface RegisterSignerArguments {
+  wallet_name: string;
+  device_id: string;
+}
+
 export interface EnterPinArguments {
   pin: string;
 }

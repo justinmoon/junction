@@ -18,8 +18,8 @@ interface DispatchProps {
 interface StateProps {
   open: AppState['modal']['displayAddress']['open'];
   address: string | null;
-  devices: Device[];
-  activeWallet: Wallet;
+  devices: Device[] | null;
+  activeWallet: Wallet | null;
 }
 
 type Props = DispatchProps & StateProps
@@ -35,8 +35,8 @@ class DisplayAddressModal extends React.Component<Props> {
     message: null,
   };
 
-  displayAddress(address: string, device: UnlockedDevice, signer: Signer) {
-    const { activeWallet } = this.props
+  displayAddress(address: string, device: UnlockedDevice, signer: Signer, activeWallet: Wallet) {
+    // FIXME: all these parameters b/c typescript won't let me read from props ...
     this.setState({ 
       displayAddressDevice: device,
       message: `Verify address on your "${signer.name}" ${device.type} device`
@@ -48,14 +48,11 @@ class DisplayAddressModal extends React.Component<Props> {
     })
   }
 
-  renderSigner(signer: Signer) {
+  renderSigner(address: string, devices: Device[], signer: Signer, activeWallet: Wallet) {
+    // FIXME: all these parameters b/c typescript won't let me read from props ...
     const {
-      toggleDeviceInstructionsModal, toggleDeviceUnlockModal, devices, address
+      toggleDeviceInstructionsModal, toggleDeviceUnlockModal
     } = this.props;
-
-    if (!address) {
-      return <div>no address</div>
-    }
 
     let rightComponent = null;
     const device = deviceAvailable(signer, devices)
@@ -65,7 +62,7 @@ class DisplayAddressModal extends React.Component<Props> {
     if (signer.type !== 'trezor' && signer.type !== 'coldcard') {
       rightComponent =<div>Not supported by {signer.type} devices</div>
     } else if (device) {
-      rightComponent = <LoadingButton loading={loading} onClick={() => this.displayAddress(address, device, signer)}>Display</LoadingButton>
+      rightComponent = <LoadingButton loading={loading} onClick={() => this.displayAddress(address, device, signer, activeWallet)}>Display</LoadingButton>
     } else if (signer.type == 'trezor') {
       rightComponent =<Button onClick={() => toggleDeviceUnlockModal()}>Unlock</Button>
     } else if (device === null) {
@@ -85,7 +82,12 @@ class DisplayAddressModal extends React.Component<Props> {
   }
 
   render() {
-    const { toggleDisplayAddressModal, open, address, activeWallet } = this.props;
+    const { toggleDisplayAddressModal, open, address, activeWallet, devices } = this.props;
+
+    if (!address || devices === null || activeWallet === null) {
+      return <div></div>
+    }
+
     return (
 			<Modal isOpen={open} toggle={() => toggleDisplayAddressModal()} size="lg"  style={{maxWidth: '1000px', width: '80%'}}>
 				<ModalHeader toggle={() => toggleDisplayAddressModal()}>Display Address</ModalHeader>
@@ -94,7 +96,7 @@ class DisplayAddressModal extends React.Component<Props> {
           <h6>Display on Device</h6>
           <Table borderless>
             <tbody>
-              {activeWallet.signers.map((signer: Signer) => this.renderSigner(signer))}
+              {activeWallet.signers.map((signer: Signer) => this.renderSigner(address, devices, signer, activeWallet))}
             </tbody>
           </Table>
 				</ModalBody>
@@ -110,8 +112,8 @@ export const mapStateToProps = (state: AppState) => {
 	return {
     open: state.modal.displayAddress.open,
     address: state.modal.displayAddress.address,
-    devices: selectDevices(state),
-    activeWallet: notNull(selectActiveWallet(state)),
+    devices: state.device.devices.data,
+    activeWallet: selectActiveWallet(state),
 	}
 }
   

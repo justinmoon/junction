@@ -27,7 +27,7 @@ class AddSigners extends React.Component<Props> {
 
   renderAddDevice(device: Device) {
     const { addSigner, deviceBeingAdded, toggleDeviceInstructionsModal, toggleDeviceUnlockModal } = this.props;
-    const showSpinner = device === deviceBeingAdded;
+    const loading = device === deviceBeingAdded;
     let rightComponent = null;
     
     // TODO: passwords
@@ -36,7 +36,7 @@ class AddSigners extends React.Component<Props> {
     } else if (device.error) {
       rightComponent = <Button color="default" onClick={() => toggleDeviceInstructionsModal(device.type)}>Unavailable</Button>
     } else if (isUnlockedDevice(device)) {
-      rightComponent = <LoadingButton loading={showSpinner} onClick={() => addSigner(device)}>Add Signer</LoadingButton>
+      rightComponent = <LoadingButton loading={loading} onClick={() => addSigner(device)}>Add Signer</LoadingButton>
     } else {
       return <div></div> // FIXME
     }

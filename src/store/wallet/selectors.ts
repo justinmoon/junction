@@ -18,6 +18,21 @@ export function selectCandidateDevicesForActiveWallet(state: AppState) {
   });
 }
 
+export function selectUnregisteredSigners(state: AppState) {
+  const activeWallet = selectActiveWallet(state)
+  const devices = state.device.devices.data;
+  if (!devices || !activeWallet) {
+    return [];
+  }
+  const unregistered = []
+  for (let signer of activeWallet.signers) {
+    if (signer.type === 'coldcard') {
+      unregistered.push(signer)
+    }
+  }
+  return unregistered
+}
+
 // This is hard to use 
 export function selectActiveWallet(state: AppState) {
   const { activeWalletName } = state.wallet;

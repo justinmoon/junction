@@ -1,6 +1,6 @@
 import { WalletActionTypes as T } from './types';
 import { ThunkAction } from '../types';
-import { Wallet, UnlockedDevice } from '../../types';
+import { Wallet, UnlockedDevice, Signer } from '../../types';
 import api from '../../api';
 import { selectActiveWallet } from './selectors';
 import { notNull } from '..';
@@ -35,8 +35,26 @@ export function addSigner(device: UnlockedDevice): ThunkAction {
       });
       await dispatch(getWallets())
       dispatch({ type: T.ADD_SIGNER_SUCCESS });
-    } catch(err) {
-      dispatch({ type: T.ADD_SIGNER_FAILURE, payload: err });
+    } catch(error) {
+      dispatch({ type: T.ADD_SIGNER_FAILURE, error });
+    }
+  };
+}
+
+export function registerSigner(signer: Signer): ThunkAction {
+  return async (dispatch, getState) => {
+    dispatch({ type: T.REGISTER_SIGNER, signer });
+    const state = getState()
+    const activeWallet = notNull(selectActiveWallet(state))
+    try {
+      await api.registerSigner({
+        wallet_name: activeWallet.name,
+        device_id: signer.fingerprint,
+      });
+      await dispatch(getWallets())
+      dispatch({ type: T.REGISTER_SIGNER_SUCCESS });
+    } catch(error) {
+      dispatch({ type: T.REGISTER_SIGNER_FAILURE, error });
     }
   };
 }
