@@ -37,6 +37,9 @@ class HardwareSigner:
 
 class MultisigWallet:
 
+    testnet = True
+    native_segwit = True
+
     def __init__(self, *, name, m, n, signers, psbts, receiving_address_index, receiving_export_index, 
                  change_address_index, change_export_index):
         # Name of the wallet
