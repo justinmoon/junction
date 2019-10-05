@@ -1,4 +1,5 @@
 import unittest
+import warnings
 import tempfile
 import os
 import logging
@@ -84,6 +85,7 @@ class WalletTests(unittest.TestCase):
         }
         disk.ensure_datadir()
         disk.write_json_file(settings, 'settings.json')
+        warnings.simplefilter("ignore", ResourceWarning)
 
     def test_create_wallet_wrong_parameters(self):
         # m > n
