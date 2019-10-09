@@ -72,3 +72,14 @@ Run tests
 ```
 python -m unittest test.test_wallet
 ```
+
+## Windows libusb dependencies:
+
+(following [these instructions](https://nfcpy.readthedocs.io/en/latest/topics/get-started.html#installationS))
+- search "command prompt"
+- right click and select "run as administrator"
+
+```
+copy C:\Users\justin\Downloads\MS64\dll\libusb-1.0.dll C:\Windows\System32
+copy C:\Users\justin\Downloads\MS32\dll\libusb-1.0.dll C:\Windows\SysWOW64
+```

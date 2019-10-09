@@ -8,6 +8,7 @@ import Sign from './components/Sign';
 import History from './components/History';
 import Create from './components/Create';
 import Settings from './components/Settings';
+import Coins from './components/Coins';
 
 const App: React.FC = () => {
   return (
@@ -20,6 +21,7 @@ const App: React.FC = () => {
             <Route path="/history" component={History}/>
             <Route path="/create" component={Create}/>
             <Route path="/settings" component={Settings} />
+            <Route path="/coins" component={Coins} />
         </Template>
       </Switch>
     </HashRouter>

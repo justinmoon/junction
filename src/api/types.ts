@@ -10,6 +10,11 @@ export interface AddSignerArguments {
   device_id: string;
 }
 
+export interface RegisterSignerArguments {
+  wallet_name: string;
+  device_id: string;
+}
+
 export interface EnterPinArguments {
   pin: string;
 }
@@ -27,12 +32,20 @@ export interface CreatePSBTArguments {
 export interface SignPSBTArguments {
   wallet_name: string;
   device_id: string;
+  index: number;
 }
 
 export interface BroadcastTransactionArguments {
   wallet_name: string;
+  index: number;
 }
 
 export interface GenerateAddressArguments {
   wallet_name: string;
+}
+
+export interface DisplayAddressArguments {
+  wallet_name: string;
+  device_id: string;
+  address: string;
 }

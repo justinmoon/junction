@@ -1,13 +1,17 @@
 import logging
+import re
 
-from flask import jsonify, request, redirect, url_for, Blueprint
+from flask import jsonify, request, redirect, url_for, Blueprint, current_app
 from flask_json_schema import JsonSchema, JsonValidationError
 from hwilib import commands, serializations
 from hwilib.devices import trezor, ledger, coldcard
 
 from junction import MultisigWallet, JunctionError
 from disk import get_wallets, get_settings, update_settings, ensure_datadir
-from utils import RPC, get_client_and_device, ClientGroup
+from utils import RPC, get_client_and_device, ClientGroup, get_device
+
+import custom_coldcard
+import custom_trezor
 
 api = Blueprint(__name__, 'api')
 schema = JsonSchema()
@@ -116,7 +120,7 @@ def add_signer():
     device_id = request.json['device_id']
     wallet = MultisigWallet.open(wallet_name)
     with get_client_and_device(device_id) as (client, device):
-        derivation_path = "m/44h/1h/0h"  # FIXME segwit
+        derivation_path = "m/48'/1'/0'/2'"  # FIXME segwit
         # FIXME: validate xpub/tpub?
         xpub = client.get_pubkey_at_path(derivation_path)['xpub']
         client.close()
@@ -135,7 +139,7 @@ def address():
     # just not sure how to implement that
     wallet_name = request.json['wallet_name']
     wallet = MultisigWallet.open(wallet_name)
-    address = wallet.address()
+    address = wallet.address(change=False)
     return jsonify({
         'address': address,
     })
@@ -168,29 +172,43 @@ def create_psbt():
         outputs.append(output_dict)
     wallet.create_psbt(outputs)
     return jsonify({
-        'psbt': wallet.psbt.serialize(),
+        'psbt': wallet.psbts[-1].serialize(),
     })
+
+@api.route('/psbt', methods=['DELETE'])
+@schema.validate({
+    'required': ['wallet_name', 'index'],
+    'properties': {
+        'wallet_name': { 'type': 'string' },
+        'index': { 'type': 'number' },
+    },
+})
+def abandon_psbt():
+    pass
 
 @api.route('/sign', methods=['POST'])
 @schema.validate({
-    'required': ['wallet_name', 'device_id'],
+    'required': ['wallet_name', 'device_id', 'index'],
     'properties': {
         # TODO: how to identify a specific psbt? index in wallet.psbts? Do they always have txids?
         'wallet_name': { 'type': 'string' },
         'device_id': { 'type': 'string' },  # FIXME: regex
+        'index': { 'type': 'number' },
     },
 })
 def sign_psbt():
     wallet_name = request.json['wallet_name']
     wallet = MultisigWallet.open(wallet_name)
     fingerprint = request.json['device_id']
+    index = request.json['index']
+    old_psbt = wallet.psbts[index]
     with get_client_and_device(fingerprint) as (client, device):
-        raw_signed_psbt = client.sign_tx(wallet.psbt)['psbt']
+        raw_signed_psbt = client.sign_tx(old_psbt)['psbt']
     new_psbt = serializations.PSBT()
     new_psbt.deserialize(raw_signed_psbt)
-    wallet.update_psbt(new_psbt)
+    wallet.update_psbt(new_psbt, index)
     return jsonify({
-        'psbt': wallet.psbt.serialize(),
+        'psbt': new_psbt.serialize(),
     })
 
 @api.route('/settings', methods=['GET'])
@@ -212,7 +230,7 @@ def get_settings_route():
                 'user': {'type': 'string'},
                 'password': {'type': 'string'},
                 'host': {'type': 'string'},
-                'port': {'type': 'number'},
+                'port': {'type': 'string'},
             },
         },
     },
@@ -238,15 +256,86 @@ def list_transactions():
 
 @api.route('/broadcast', methods=['POST'])
 @schema.validate({
-    'required': ['wallet_name'],
+    'required': ['wallet_name', 'index'],
     'properties': {
         'wallet_name': { 'type': 'string' },
+        'index': { 'type': 'number' },
     },
 })
 def broadcast():
     wallet_name = request.json['wallet_name']
+    index = request.json['index']
     wallet = MultisigWallet.open(wallet_name)
-    txid = wallet.broadcast()
+    txid = wallet.broadcast(index)
     return jsonify({
         'txid': txid,
     })
+
+@api.route('/display-address', methods=['POST'])
+@schema.validate({
+    'required': ['wallet_name', 'address', 'device_id'],
+    'properties': {
+        'wallet_name': { 'type': 'string' },
+        'address': { 'type': 'string' },
+        'device_id': { 'type': 'string' },
+    },
+})
+def display_address():
+    wallet_name = request.json['wallet_name']
+    address = request.json['address']
+    device_id = request.json['device_id']
+    wallet = MultisigWallet.open(wallet_name)
+
+    device = get_device(device_id)
+
+    # Get redeem script & derivation paths from RPC
+    address_info = wallet.wallet_rpc.getaddressinfo(address)
+    redeem_script = address_info.get('hex')
+    descriptor = address_info.get('desc')
+    if not redeem_script or not descriptor:
+        raise JunctionError('Unknown address')
+    derivation_paths = re.findall(r'\[(.*?)\]', descriptor)
+
+    if device['type'] == 'trezor':
+        derivation_path = ''
+        for path in derivation_paths:
+            slash_index = path.index('/')
+            path = 'm' + path[slash_index:]
+            if derivation_path:
+                assert derivation_path == path
+            else:
+                derivation_path = path
+        custom_trezor.display_multisig_address(redeem_script, derivation_path, wallet.testnet, device)
+    elif device['type'] == 'coldcard':
+        custom_coldcard.display_multisig_address(redeem_script, derivation_paths, wallet.native_segwit)
+    else:
+        raise JunctionError(f'Devices of type "{device["type"]}" do not support multisig address display')
+    return jsonify({
+        'ok': True
+    })
+
+@api.route('/register-device', methods=['POST'])
+@schema.validate({
+    'required': ['wallet_name', 'device_id'],
+    'properties': {
+        'wallet_name': { 'type': 'string' },
+        'device_id': { 'type': 'string' },
+    },
+})
+def register_device():
+    wallet_name = request.json['wallet_name']
+    device_id = request.json['device_id']
+    wallet = MultisigWallet.open(wallet_name)
+
+    device = get_device(device_id)
+
+    fingerprints = [signer.fingerprint for signer in wallet.signers]
+    if device['fingerprint'] not in fingerprints:
+        raise JunctionError(f'No device with fingerprint {device["fingerprint"]} present in wallet {wallet_name}')
+
+    if device['type'] != 'coldcard':
+        raise JunctionError(f'Devices of type {device["type"]} do not support multisig wallet registration')
+
+    custom_coldcard.enroll(wallet)
+
+    return jsonify({'ok': True})

@@ -34,6 +34,17 @@ def get_device_for_client(client):
         if client.path == device.path:
             return client
 
+def get_device(device_id):
+    matching_device = None
+    for device in commands.enumerate():
+        if device.get('path') == device_id:
+            matching_device = device
+        elif device.get('fingerprint') == device_id:
+            matching_device = device
+    if not matching_device:
+        raise JunctionError('Device not found')
+    return matching_device
+
 def get_client(device):
     if device['type'] == 'ledger':
         client = ledger.LedgerClient(device['path'])
@@ -48,22 +59,12 @@ def get_client(device):
     return client
 
 @contextmanager
-def get_client_and_device(path_or_fingerprint):
+def get_client_and_device(device_id):
     '''automatically closes HWI client upon exit''' 
-    client = None
-    matching_device = None
-    for device in commands.enumerate():
-        # TODO: maybe accept path or fingerprint?
-        if device.get('path') == path_or_fingerprint:
-            client = get_client(device)
-            matching_device = device
-        elif device.get('fingerprint') == path_or_fingerprint:
-            client = get_client(device)
-            matching_device = device
-    if not matching_device:
-        raise JunctionError('Device not found')
+    device = get_device(device_id)
+    client = get_client(device)
     try:
-        yield client, matching_device
+        yield client, device
     finally:
         client.close()
 
@@ -90,8 +91,11 @@ class ClientGroup:
 
     def close(self):
         for client in self.clients:
-            client.close()
-            del client
+            try:
+                client.close()
+                del client
+            except:  # FIXME
+                pass
         self.clients = []
 
 ###  Currency conversions

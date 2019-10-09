@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Modal, ModalHeader, ModalFooter, ModalBody, Spinner } from 'reactstrap';
+import { Button, Modal, ModalHeader, ModalFooter, ModalBody } from 'reactstrap';
 import api from '../api'
 import './EnterPinModal.css';
 import { AppState } from '../store';
@@ -56,7 +56,8 @@ class EnterPinModal extends React.Component<Props, State> {
           pin: '',
           pending: false,
          });
-        setTimeout(api.promptPin, 1000);
+        // setTimeout(api.promptPin, 1000);
+        api.promptPin()
       }
     }
   }
@@ -107,13 +108,9 @@ class EnterPinModal extends React.Component<Props, State> {
     this.props.toggleDeviceUnlockModal();
   }
 
-  // handleClosed() {
-  //   api.deletePrompt();
-  // }
-
-  // componentWillUnmount() {
-  //   this.handleClosed();
-  // }
+  componentWillUnmount() {
+    api.deletePrompt();
+  }
 
   renderError() {
     const style = {

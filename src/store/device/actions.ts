@@ -2,6 +2,7 @@ import { DeviceActionTypes as T } from './types';
 import { ThunkAction } from '../types';
 import { sleep } from '../../util';
 import api from '../../api';
+import { getWallets } from '../wallet';
 
 export function getDevices(): ThunkAction {
   return async (dispatch) => {
@@ -20,6 +21,7 @@ export function startDeviceScan(): ThunkAction {
     dispatch({ type: T.SCAN_DEVICES_START });
     while (getState().device.isScanning) {
       await dispatch(getDevices());
+      await dispatch(getWallets());  // FIXME
       await sleep(3000);
     }
   };

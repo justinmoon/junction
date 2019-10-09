@@ -2,19 +2,23 @@ import React from 'react';
 import { connect } from 'react-redux';
 import AddSigners from './AddSigners';
 import Signers from './Signers';
-import { Device, isUnlockedDevice } from '../types'
-import { AppState } from '../store';
+import { Wallet as WalletType, Signer } from '../types'
+import { AppState, notNull } from '../store';
 import { LoadingButton } from './Toolbox'
-import { getWallets, selectCandidateDevicesForActiveWallet, selectActiveWallet, addSigner } from '../store/wallet';
+import { getWallets, selectActiveWallet, addSigner, selectUnregisteredSigners } from '../store/wallet';
 import api from '../api'
+import { toggleDisplayAddressModal } from '../store/modal';
+import RegisterSigners from './RegisterSigners';
 
 interface StateProps {
-  activeWallet: ReturnType<typeof selectActiveWallet>;
+  activeWallet: WalletType;
+  unregisteredSigners: Signer[];
 }
 
 interface DispatchProps {
   getWallets: typeof getWallets;
   addSigner: typeof addSigner;
+  toggleDisplayAddressModal: typeof toggleDisplayAddressModal;
 }
 
 interface State {
@@ -25,26 +29,22 @@ type Props = StateProps & DispatchProps;
 
 class Wallet extends React.Component<Props, State> {
   state: State = {
-    pending: false,  }
+    pending: false,
+  }
 
   async generateAddress() {
-    if (this.props.activeWallet !== null) {
-      this.setState({ pending: true })
-      try {
-        const response = await api.generateAddress({ wallet_name: this.props.activeWallet.name })
-        alert(response.address)
-      } catch(error) {
-        console.log(error)
-      }
-      this.setState({ pending: false })
+    this.setState({ pending: true })
+    try {
+      const response = await api.generateAddress({ wallet_name: this.props.activeWallet.name })
+      this.props.toggleDisplayAddressModal(response.address)
+    } catch(error) {
+      console.log(error)
     }
+    this.setState({ pending: false })
   }
 
   render() {
-    const { activeWallet } = this.props;
-    if (!activeWallet) {
-      return <div>no active wallet</div>
-    }
+    const { activeWallet, unregisteredSigners } = this.props;
     const { signers } = activeWallet;
 
     let signersComponent = null;
@@ -67,20 +67,32 @@ class Wallet extends React.Component<Props, State> {
         </div>
       )
     }
+
+    let registerSigners = null;
+    if (activeWallet.ready && unregisteredSigners.length > 0) {
+      registerSigners = (
+        <div>
+          <h3 className='text-center'>Register Wallet On-Device</h3>
+          <RegisterSigners/>
+        </div>
+      )
+    }
+
     return (
       <div>
         <h2 className='text-center'>{ activeWallet.name } ({activeWallet.m}/{activeWallet.n})</h2>
-        {activeWallet.signatures_remaining == 0 && 
+        {activeWallet.ready && 
           <div className="text-center">Confirmed Balance: {activeWallet.balances.confirmed} BTC</div>
         }
         {activeWallet.balances.unconfirmed > 0 &&
           <div className="text-center">Unconfirmed Balance: {activeWallet.balances.unconfirmed} BTC</div>}
-        {activeWallet &&
+        {activeWallet.ready &&
           <div className="text-center">
             <LoadingButton loading={this.state.pending} onClick={() => this.generateAddress()}>Generate Address</LoadingButton>
           </div>}
         {signersComponent}
         {addSigners}
+        {registerSigners}
         </div>
     )
   }
@@ -88,11 +100,12 @@ class Wallet extends React.Component<Props, State> {
   
 const mapStateToProps = (state: AppState) => {
   return {
-    activeWallet: selectActiveWallet(state),
+    activeWallet: notNull(selectActiveWallet(state)),
+    unregisteredSigners: selectUnregisteredSigners(state),
   }
 }
 
 export default connect(
   mapStateToProps,
-  { getWallets },
+  { getWallets, toggleDisplayAddressModal },
 )(Wallet);

@@ -15,6 +15,7 @@ export interface Wallet {
   signers: Signer[];
   balances: any;  // FIXME
   ready: boolean;
-  psbt: any;      // FIXME
-  signatures_remaining: number;
+  psbts: any;      // FIXME
+  history: any;
+  coins: any;
 }

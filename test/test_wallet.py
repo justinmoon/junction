@@ -47,9 +47,11 @@ def make_wallet_file(wallet_name):
         'm': 2,
         'n': 3,
         'signers': signers,
-        'psbt': None,
-        'address_index': 0,
-        'export_index': 100,
+        'psbts': [],
+        'receiving_address_index': 0,
+        'receiving_export_index': 100,
+        'change_address_index': 0,
+        'change_export_index': 100,
     }
     disk.write_json_file(wallet_file, f'wallets/{wallet_name}.json')
 
@@ -121,8 +123,9 @@ class WalletTests(unittest.TestCase):
         wallet.add_signer(**signers[2])
         self.assertTrue(wallet.ready())
         # check that we can derive addresses
-        self.assertIsNotNone(wallet.address())
-
+        self.assertIsNotNone(wallet.address(True))
+        self.assertIsNotNone(wallet.address(False))
+        
         # can't add more signers once wallet "ready"
         with self.assertRaises(JunctionError):
             wallet.add_signer(name='x', fingerprint='x', xpub='x', type='x', derivation_path='x')
@@ -172,15 +175,15 @@ class WalletTests(unittest.TestCase):
 
     def test_descriptor(self):
         wallet = make_wallet(self._testMethodName)
-        want = "sh(multi(2,[ecbc6bc1/44'/1'/0']tpubDDsVS9pwqzLB92RZ6uTiixhDLPcoL1JESsYUCGootaTYu4JVh1aCu5t9oY3RRC1ic2dAbt7AqsE8uXLeq1p2DC5SP27ntmx4dUUPnvWhNhW/0/*,[6bb3d403/44'/1'/0']tpubDCpR7Xjiho9KdidtHf3gJ1ZRbzu64HAiYTG9vR6JE5jJrPZbqJYBVXT33rFboKG8PBh4rJudjpBjFjD4ADwdwKUdMYZGJr2bBvLNBZLPMyF/0/*,[5b98d98d/44'/1'/0']tpubDDSFSPwTa8AnvogHXTsJ29745CDLrSmn9Jsi5LN9ks1T6szBk7xmkNAjZ1gXfQHdfuD1rae939z93rXE7he3QkLxNmaLh1XuvyzZoTAAWYm/0/*))#ef6uqs3s"
-        self.assertEqual(want, wallet.descriptor())
+        want = "wsh(multi(2,[ecbc6bc1/44'/1'/0']tpubDDsVS9pwqzLB92RZ6uTiixhDLPcoL1JESsYUCGootaTYu4JVh1aCu5t9oY3RRC1ic2dAbt7AqsE8uXLeq1p2DC5SP27ntmx4dUUPnvWhNhW/0/*,[6bb3d403/44'/1'/0']tpubDCpR7Xjiho9KdidtHf3gJ1ZRbzu64HAiYTG9vR6JE5jJrPZbqJYBVXT33rFboKG8PBh4rJudjpBjFjD4ADwdwKUdMYZGJr2bBvLNBZLPMyF/0/*,[5b98d98d/44'/1'/0']tpubDDSFSPwTa8AnvogHXTsJ29745CDLrSmn9Jsi5LN9ks1T6szBk7xmkNAjZ1gXfQHdfuD1rae939z93rXE7he3QkLxNmaLh1XuvyzZoTAAWYm/0/*))#qhjc39jj"
+        self.assertEqual(want, wallet.descriptor(False))
 
     def test_export(self):
         self.rpc.generatetoaddress(1, self.rpc.getnewaddress())
         wallet = make_wallet(self._testMethodName)
         count = len(wallet.wallet_rpc.listtransactions())
-        while wallet.address_index < 201 :  # cross address export boundary
-            address = wallet.address()
+        while wallet.receiving_address_index < 201 :  # cross address export boundary
+            address = wallet.address(False)
             ai = wallet.wallet_rpc.getaddressinfo(address)
             # Check BIP67
             self.assertEqual(ai['pubkeys'], sorted(ai['pubkeys']))
@@ -195,25 +198,25 @@ class WalletTests(unittest.TestCase):
         # check that bitcoin core funds the psbt
         wallet = make_wallet(self._testMethodName)
         # fund out wallet
-        self.rpc.sendtoaddress(wallet.address(), 1)
+        self.rpc.sendtoaddress(wallet.address(False), 1)
         self.rpc.generatetoaddress(1, self.rpc.getnewaddress())
         # create psbt
         receiving_address = self.rpc.getnewaddress()
         outputs = [{receiving_address: Decimal('0.0001')}]
         wallet.create_psbt(outputs)
-        self.assertTrue(bool(wallet.psbt))  # FIXME
-        psbt = wallet.decode_psbt()
+        self.assertTrue(len(wallet.psbts) > 0)  # FIXME
+        psbt = wallet.decode_psbt(wallet.psbts[0])
 
         # receiving address is in the outputs
         output_addrs = [vout['scriptPubKey']['addresses'][0] for vout in psbt['tx']['vout']]
         self.assertIn(receiving_address, output_addrs)
         output_addrs.remove(receiving_address)
-        wallet_addrs = wallet.wallet_rpc.deriveaddresses(
-            wallet.descriptor(), 
+        change_addrs = wallet.wallet_rpc.deriveaddresses(
+            wallet.descriptor(True), 
             [0, wallet.export_index + 1])  # FIXME: +1 just to be safe
 
         # the remaining output address (change) belongs to wallet
-        self.assertIn(output_addrs[0], wallet_addrs)
+        self.assertIn(output_addrs[0], change_addrs)
 
     def test_signing_complete(self):
         # test with finished and unfinished psbts
