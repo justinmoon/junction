@@ -1,0 +1,41 @@
+.ErrorScreen {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.ErrorScreen-content {
+  max-width: 720px;
+  margin: auto;
+}
+
+.ErrorScreen-content h1,
+.ErrorScreen-content p {
+  margin-bottom: 20px;
+}
+
+.ErrorScreen-content pre {
+  padding: 10px;
+  max-height: 50vh;
+  border: 1px solid rgba(220, 53, 69, 0.25);
+  background: rgba(220, 53, 69, 0.1);
+  font-family: monospace;
+  font-size: 16px;
+  overflow: auto;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.ErrorScreen-content-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.ErrorScreen-content-actions .btn {
+  flex: 1;
+  margin: 0 10px;
+}
+
