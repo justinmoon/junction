@@ -78,46 +78,58 @@ class Template extends React.Component<Props, State> {
     } 
     
     // onboarding
-    if (!hasValidSettings) {
-      if (this.props.history.location.pathname !== '/settings') {
-        this.props.history.push('/settings')
-        return <div></div>
-      }
-    } else if (!activeWallet) {
+    // if (!hasValidSettings) {
+    //   if (this.props.history.location.pathname !== '/settings') {
+    //     this.props.history.push('/settings')
+    //     return <div></div>
+    //   }
+    // }
+    if (!wallets.data) {
       if (this.props.history.location.pathname !== '/create') {
         this.props.history.push('/create')
         return <div></div>
       }
     }
 
-    const navLinks = [{
-      to: '/send',
-      children: 'Send',
-    }, {
-      to: '/settings',
-      children: 'Settings',
-    }, {
-      to: '/history',
-      children: 'History',
-    }, {
-      to: '/coins',
-      children: 'Coins',
-    }];
-
-    if (activeWallet && activeWallet.psbts) {
-      navLinks.splice(1, 0, {
-        to: '/sign',
-        children: 'Sign',
-      });
+    // conditionally render nav links
+    const navLinks = [];
+    // FIXME: remove this check if we keep onboarding ...
+    if (activeWallet) {
+      navLinks.push({
+        to: '/send',
+        children: 'Send',
+      })
+      if (activeWallet.psbts.length > 0) {
+        navLinks.push( {
+          to: '/sign',
+          children: 'Sign',
+        });
+      }
+      if (activeWallet.history.length > 0) {
+        navLinks.push({
+          to: '/history',
+          children: 'History',
+        })
+      }
+      if (activeWallet.coins.length > 0) {
+        navLinks.push({
+          to: '/coins',
+          children: 'Coins',
+        })
+      }
+      navLinks.push({
+        to: '/settings',
+        children: 'Settings',
+      })
     }
 
     let dropdownLabel;
     if (activeWallet) {
       dropdownLabel = activeWallet.name;
     } else if (wallets.data) {
-      dropdownLabel = 'Select a Wallet';
+      dropdownLabel = 'Select Wallet';
     } else {
-      dropdownLabel = <Spinner size="sm" />;
+      dropdownLabel = '';
     }
 
     return (
@@ -140,26 +152,27 @@ class Template extends React.Component<Props, State> {
                     />
                   </NavItem>
                 ))}
+
+                {wallets.data && (
                 <UncontrolledDropdown nav inNavbar>
                   <DropdownToggle nav caret={!!wallets.data}>
                     {dropdownLabel}
                   </DropdownToggle>
-                  {wallets.data && (
-                    <DropdownMenu>
-                      {wallets.data.map(w => (
-                        <DropdownItem
-                          key={w.name}
-                          onClick={() => this.props.changeWallet(w)}
-                        >
-                          <Link to="/">{w.name} ({w.m} of {w.n})</Link>
-                        </DropdownItem>
-                      ))}
-                      <DropdownItem>
-                        <Link to="/create">Create a New Wallet</Link>
+                  <DropdownMenu>
+                    {wallets.data.map(w => (
+                      <DropdownItem
+                        key={w.name}
+                        onClick={() => this.props.changeWallet(w)}
+                      >
+                        <Link to="/">{w.name} ({w.m} of {w.n})</Link>
                       </DropdownItem>
-                    </DropdownMenu>
-                  )}
-                </UncontrolledDropdown>
+                    ))}
+                    <DropdownItem>
+                      <Link to="/create">Create a New Wallet</Link>
+                    </DropdownItem>
+                  </DropdownMenu>
+                  </UncontrolledDropdown>
+                )}
 
               </Nav>
             </Collapse>

@@ -1,0 +1,5 @@
+export enum SettingsActionTypes {
+  GET_NODES = 'GET_NODES',
+  GET_NODES_SUCCESS = 'GET_NODES_SUCCESS',
+  GET_NODES_FAILURE = 'GET_NODES_FAILURE',
+}

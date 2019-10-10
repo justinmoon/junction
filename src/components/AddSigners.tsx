@@ -90,6 +90,7 @@ export const mapStateToProps = (state: AppState) => {
     modal: state.modal,
     devices: selectCandidateDevicesForActiveWallet(state),
     deviceBeingAdded: state.wallet.addSigner.device,
+    error: state.wallet.addSigner.error,
   }
 }
 

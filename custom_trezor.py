@@ -2,19 +2,22 @@ from hwilib import commands
 from hwilib.devices import trezorlib
 from hwilib.devices.trezor import parse_multisig, proto
 
-def display_multisig_address(redeem_script_hex, derivation_path_str, testnet, device):
+def display_multisig_address(redeem_script_hex, derivation_path_str, testnet, device, script_type):
     # translate to formats required by Trezor
     derivation_path = trezorlib.tools.parse_path(derivation_path_str)
     redeem_script = bytes.fromhex(redeem_script_hex)
     
     # get multisig object required by Trezor's get_address
     multisig = parse_multisig(redeem_script)
-    assert testnet
+
     assert multisig[0]
     multisig = multisig[1]
 
     # script type (native segwit for now)
-    script_type = proto.InputScriptType.SPENDWITNESS
+    if script_type == 'native':
+        script_type = proto.InputScriptType.SPENDWITNESS
+    else:
+        script_type = proto.InputScriptType.SPENDP2SHWITNESS
 
     # create client and send request
     client = commands.get_client('trezor', device['path'])

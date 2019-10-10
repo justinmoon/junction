@@ -2,6 +2,13 @@ export interface CreateWalletArguments {
   name: string;
   n: number;
   m: number;
+  network: string;
+  node: {
+    user: string;
+    password: string;
+    host: string;
+    port: string;
+  }
 }
 
 export interface AddSignerArguments {
@@ -17,6 +24,10 @@ export interface RegisterSignerArguments {
 
 export interface EnterPinArguments {
   pin: string;
+}
+
+export interface PromptPinArguments {
+  wallet_name: string;
 }
 
 export interface CreatePSBTOutput {

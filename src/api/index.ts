@@ -29,6 +29,10 @@ class API {
     return this.request<any>('GET', '/wallets');
   }
 
+  getNodes() {
+    return this.request<any>('GET', '/nodes');
+  }
+
   createWallet(args: T.CreateWalletArguments) {
     return this.request<any>('POST', '/wallets', args);
   }
@@ -41,8 +45,8 @@ class API {
     return this.request<any>('POST', '/register-device', args);
   }
 
-  promptPin() {
-    return this.request<any>('POST', '/prompt')
+  promptPin(args: T.PromptPinArguments) {
+    return this.request<any>('POST', '/prompt', args)
   }
 
   enterPin(args: T.EnterPinArguments) {

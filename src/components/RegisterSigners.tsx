@@ -26,6 +26,10 @@ type Props = StateProps & DispatchProps;
 
 class RegisterSigners extends React.Component<Props> {
 
+  async registerSigner(signer: Signer) {
+    await this.props.registerSigner(signer)
+    alert("Confirm multisig wallet on your Device")
+  }
   renderAddSigner(signer: Signer) {
     const { registerSigner, signerBeingRegistered, toggleDeviceInstructionsModal, devices } = this.props;
     const loading = signer === signerBeingRegistered;
@@ -35,7 +39,7 @@ class RegisterSigners extends React.Component<Props> {
     if (device === null) {
       rightComponent = <Button color="default" onClick={() => toggleDeviceInstructionsModal(DeviceType.coldcard)}>Unavailable</Button>
     } else if (isUnlockedDevice(device)) {
-      rightComponent = <LoadingButton loading={loading} onClick={() => registerSigner(signer)}>Register</LoadingButton>
+      rightComponent = <LoadingButton loading={loading} onClick={() => this.registerSigner(signer)}>Register</LoadingButton>
     } else {
       return <div></div> // FIXME
     }

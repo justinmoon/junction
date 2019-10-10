@@ -54,7 +54,7 @@ def get_wallets():
     wallets = []
     wallet_names = get_wallet_names()
     for wallet_name in wallet_names:
-        wallet = MultisigWallet.open(wallet_name)
+        wallet = MultisigWallet.open(wallet_name, ensure_watchonly=False)
         wallets.append(wallet)
     return wallets
 

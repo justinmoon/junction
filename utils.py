@@ -1,4 +1,5 @@
 import json
+import sys
 import logging
 from os import listdir
 import os.path
@@ -45,7 +46,7 @@ def get_device(device_id):
         raise JunctionError('Device not found')
     return matching_device
 
-def get_client(device):
+def get_client(device, network):
     if device['type'] == 'ledger':
         client = ledger.LedgerClient(device['path'])
     elif device['type'] == 'coldcard':
@@ -55,14 +56,14 @@ def get_client(device):
     else:
         raise JunctionError(f'Devices of type "{device["type"]}" not yet supported')
     # FIXME: junction needs mainnet / testnet flag somewhere ...
-    client.is_testnet = True
+    client.is_testnet = network != "mainnet"
     return client
 
 @contextmanager
-def get_client_and_device(device_id):
+def get_client_and_device(device_id, network):
     '''automatically closes HWI client upon exit''' 
     device = get_device(device_id)
-    client = get_client(device)
+    client = get_client(device, network)
     try:
         yield client, device
     finally:
@@ -81,11 +82,11 @@ class ClientGroup:
             self.close()
         return success
 
-    def prompt_pin(self):
+    def prompt_pin(self, network):
         devices = commands.enumerate()
         for device in devices:
             if device.get('needs_pin_sent'):
-                client = get_client(device)
+                client = get_client(device, network)
                 client.prompt_pin()
                 self.clients.append(client)
 
@@ -109,14 +110,12 @@ def btc_to_sat(btc):
 def sat_to_btc(sat):
     return Decimal(sat/100_000_000).quantize(COIN_PER_SAT)
 
-### RPC
+### Bitcoin Nodes
 
 class RPC:
 
-    uri_template = "http://{user}:{password}@{host}:{port}/wallet/{wallet_name}"
-
-    def __init__(self, rpc_settings, wallet_name='', timeout=10):
-        self.uri = self.uri_template.format(**rpc_settings, wallet_name=wallet_name)
+    def __init__(self, uri, timeout=10):
+        self.uri = uri
         self.timeout = timeout
 
     def __getattr__(self, name):
@@ -128,8 +127,8 @@ class RPC:
         '''raises JunctionErrors if RPC-connection doesn't work'''
         try:
             self.getblockchaininfo()
-            if int(self.getnetworkinfo()['version']) < 170000:
-               raise JunctionWarning("Update your Bitcoin Node to at least version > 0.17 otherwise this won't work.") 
+            if int(self.getnetworkinfo()['version']) < 180000:
+               raise JunctionWarning("Update your Bitcoin node to at least version 0.18") 
         except ConnectionRefusedError as e:
             raise JunctionError("ConnectionRefusedError: check https://bitcoin.stackexchange.com/questions/74337/testnet-bitcoin-connection-refused-111")
         except JSONRPCException as e:
@@ -143,3 +142,117 @@ class RPC:
         except Exception as e:
             logger.error("rpc-settings: {}".format(self.uri))
             raise JunctionError(e)
+
+def default_bitcoin_datadir():
+    datadir = None
+    if sys.platform == 'darwin':
+        datadir = os.path.join(os.environ['HOME'], "Library/Application Support/Bitcoin/")
+    elif sys.platform == 'win32':
+        datadir = os.path.join(os.environ['APPDATA'], "Bitcoin")
+    else:
+        datadir = os.path.join(os.environ['HOME'], ".bitcoin")
+    return datadir
+
+def default_bitcoin_conf():
+    datadir = default_bitcoin_datadir()
+    return os.path.join(datadir, 'bitcoin.conf')
+
+def get_network_dir(datadir, network):
+    network_to_folder_name = {
+        "mainnet": "", 
+        "testnet": "testnet3",
+        "regtest": "regtest",
+        "signet": "signet",
+    }
+    folder_name = network_to_folder_name[network]
+    return os.path.join(datadir, folder_name)
+
+def read_cookie(datadir, network):
+    if datadir is None:
+        datadir = default_bitcoin_datadir()
+    network_dir = get_network_dir(datadir, network)
+    cookie_path = os.path.join(network_dir, '.cookie')
+    try:
+        with open(cookie_path) as f:
+            return f.read().split(':')
+    except FileNotFoundError as e:
+        logger.info("Could not read {} auto cookie".format(network))
+        return None, None
+
+def get_default_port(network):
+    return {
+        'mainnet': 8332,
+        'testnet': 18332,
+        'regtest': 18443,
+    }[network]
+
+def set_bitcoin_conf_default(config, network):
+    config['rpcconnect'] = config.get('rpcconnect', 'localhost')
+    config['rpcport'] = get_default_port(network)
+    if 'rpcuser' not in config and 'rpcpassword' not in config:
+        config['rpcuser'], config['rpcpassword'] = read_cookie(None, network)
+
+def get_nodes():
+    from junction import Node
+
+    datadir = default_bitcoin_datadir()
+    # Figure out the path to the bitcoin.conf file
+    btc_conf_file = default_bitcoin_conf()
+
+    # Bitcoin Core accepts empty rpcuser, not specified in btc_conf_file
+    # default = {'rpcuser': ""}
+    default = {}
+    mainnet = {}
+    testnet = {}
+    regtest = {}
+    current = default
+
+    # Extract contents of bitcoin.conf to build service_url
+    try:
+        with open(btc_conf_file, 'r') as fd:
+            for line in fd.readlines():
+                if '#' in line:
+                    line = line[:line.index('#')]
+                if '[main]' in line:
+                    current = mainnet
+                    continue
+                if '[test]' in line:
+                    current = testnet
+                    continue
+                if '[regtest]' in line:
+                    current = regtest
+                    continue
+                if '=' not in line:
+                    continue
+                k, v = line.split('=', 1)
+                current[k.strip()] = v.strip()
+
+    # Treat a missing bitcoin.conf as though it were empty
+    except FileNotFoundError:
+        pass
+
+    # update network-specific configs with default config
+    mainnet.update(default)
+    testnet.update(default)
+    regtest.update(default)
+
+    # Return all nodes that are online
+    nodes = []
+    for config, network in [(mainnet, 'mainnet'), (regtest, 'regtest'), (testnet, 'testnet')]:
+        set_bitcoin_conf_default(config, network)
+        node = Node(
+            host=config['rpcconnect'],
+            port=config['rpcport'],
+            user=config['rpcuser'],
+            password=config['rpcpassword'],
+            network=network,
+            wallet_name=None,  # FIXME
+        )
+        try:
+            node.default_rpc.test()
+            node.running = True  # FIXME
+            nodes.append(node)
+        except:
+            node.running = False
+            pass
+    return nodes

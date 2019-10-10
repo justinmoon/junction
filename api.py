@@ -6,9 +6,9 @@ from flask_json_schema import JsonSchema, JsonValidationError
 from hwilib import commands, serializations
 from hwilib.devices import trezor, ledger, coldcard
 
-from junction import MultisigWallet, JunctionError
+from junction import MultisigWallet, JunctionError, Node
 from disk import get_wallets, get_settings, update_settings, ensure_datadir
-from utils import RPC, get_client_and_device, ClientGroup, get_device
+from utils import RPC, get_client_and_device, ClientGroup, get_device, get_nodes
 
 import custom_coldcard
 import custom_trezor
@@ -43,9 +43,16 @@ def list_devices():
     return jsonify(commands.enumerate())
 
 @api.route('/prompt', methods=['POST'])
+@schema.validate({
+    'properties': {
+        'wallet_name': { 'type': 'string' },
+    },
+})
 def prompt_device():
     client_group.close()
-    client_group.prompt_pin()
+    wallet_name = request.json['wallet_name']
+    wallet = MultisigWallet.open(wallet_name)
+    client_group.prompt_pin(wallet.network)
     return jsonify({})  # FIXME: what to do here when there's nothing to return
 
 @api.route('/prompt', methods=['DELETE'])
@@ -93,15 +100,30 @@ def list_wallets():
 
 @api.route('/wallets', methods=['POST'])
 @schema.validate({
-    'required': ['name', 'm', 'n'],
+    'required': ['name', 'm', 'n', 'network', 'node'],
     'properties': {
         'name': { 'type': 'string' },
         'm': { 'type': 'integer' },
         'n': { 'type': 'integer' },
+        'network': { 'type': 'string' },
+        'node': {
+            'required': ['user', 'password', 'host', 'port'],
+            'properties': {
+                'user': { 'type': 'string' },
+                'password': { 'type': 'string' },
+                'host': { 'type': 'string' },
+                'port': { 'type': 'string' },
+            }
+        }
     },
 })
 def create_wallet():
-    wallet = MultisigWallet.create(**request.json)
+    node_args = request.json.pop('node')
+    node = Node(**node_args, wallet_name=request.json['name'], 
+                network=request.json['network'])
+    # check that node is reachable
+    node.default_rpc.test()
+    wallet = MultisigWallet.create(**request.json, node=node)
     return jsonify(wallet.to_dict(True))
 
 @api.route('/signers', methods=['POST'])
@@ -110,8 +132,7 @@ def create_wallet():
     'properties': {
         'wallet_name': { 'type': 'string' },
         'signer_name': { 'type': 'string' },
-        # device_id is fingerprint or path
-        'device_id': { 'type': 'string' },  # FIXME: regex
+        'device_id': { 'type': 'string' },
     },
 })
 def add_signer():
@@ -119,10 +140,14 @@ def add_signer():
     signer_name = request.json['signer_name']
     device_id = request.json['device_id']
     wallet = MultisigWallet.open(wallet_name)
-    with get_client_and_device(device_id) as (client, device):
-        derivation_path = "m/48'/1'/0'/2'"  # FIXME segwit
-        # FIXME: validate xpub/tpub?
+    with get_client_and_device(device_id, wallet.network) as (client, device):
+        derivation_path = wallet.account_derivation_path()
+        # Get XPUB and validate against wallet.network 
         xpub = client.get_pubkey_at_path(derivation_path)['xpub']
+        if 'xpub' == xpub[:4] and wallet.network != 'mainnet':
+            raise JunctionError('Invalid xpub. Make sure your device is set to the correct chain.')
+        if 'tpub' == xpub[:4] and wallet.network == 'mainnet':
+            raise JunctionError('Invalid xpub. Make sure your device is set to the correct chain.')
         client.close()
         wallet.add_signer(name=signer_name, fingerprint=device['fingerprint'], type=device['type'], xpub=xpub, derivation_path=derivation_path)
     return jsonify(wallet.to_dict())
@@ -202,7 +227,7 @@ def sign_psbt():
     fingerprint = request.json['device_id']
     index = request.json['index']
     old_psbt = wallet.psbts[index]
-    with get_client_and_device(fingerprint) as (client, device):
+    with get_client_and_device(fingerprint, wallet.network) as (client, device):
         raw_signed_psbt = client.sign_tx(old_psbt)['psbt']
     new_psbt = serializations.PSBT()
     new_psbt.deserialize(raw_signed_psbt)
@@ -211,32 +236,31 @@ def sign_psbt():
         'psbt': new_psbt.serialize(),
     })
 
-@api.route('/settings', methods=['GET'])
-def get_settings_route():
-    settings = get_settings()
-    try:
-        RPC(settings['rpc'], timeout=5).test()
-    except Exception as e:
-        settings['rpc']['error'] = str(e)
-    return jsonify(settings)
+@api.route('/nodes')
+def list_nodes():
+    nodes = get_nodes()
+    return jsonify({
+        "bitcoin": [node.to_dict(True) for node in nodes],
+        "lightning": [],
+    })
 
-@api.route('/settings', methods=['PUT'])
+
+@api.route('/nodes', methods=['PUT'])
 @schema.validate({
-    'required': ['rpc'],
+    'required': ['wallet_name', 'user', 'password', 'host', 'port'],
     'properties': {
-        'rpc': {
-            'required': ['user', 'password', 'host', 'port'],
-            'properties': {
-                'user': {'type': 'string'},
-                'password': {'type': 'string'},
-                'host': {'type': 'string'},
-                'port': {'type': 'string'},
-            },
-        },
+        'wallet_name': {'type': 'string'},
+        'user': {'type': 'string'},
+        'password': {'type': 'string'},
+        'host': {'type': 'string'},
+        'port': {'type': 'string'},
     },
 })
-def update_settings_route():
-    settings = request.json
+def update_node():
+    wallet_name = request.json['wallet_name']
+    wallet = MultisigWallet.open(wallet_name)
+    node_params = request.json
+    node = Node(**node_params, wallet_name=wallet.name, network=wallet.network)
     try:
         RPC(settings['rpc'], timeout=5).test()
     except Exception as e:
@@ -288,28 +312,48 @@ def display_address():
 
     device = get_device(device_id)
 
-    # Get redeem script & derivation paths from RPC
-    address_info = wallet.wallet_rpc.getaddressinfo(address)
-    redeem_script = address_info.get('hex')
+    address_info = wallet.node.wallet_rpc.getaddressinfo(address)
     descriptor = address_info.get('desc')
-    if not redeem_script or not descriptor:
-        raise JunctionError('Unknown address')
-    derivation_paths = re.findall(r'\[(.*?)\]', descriptor)
 
-    if device['type'] == 'trezor':
-        derivation_path = ''
-        for path in derivation_paths:
-            slash_index = path.index('/')
-            path = 'm' + path[slash_index:]
-            if derivation_path:
-                assert derivation_path == path
-            else:
-                derivation_path = path
-        custom_trezor.display_multisig_address(redeem_script, derivation_path, wallet.testnet, device)
-    elif device['type'] == 'coldcard':
-        custom_coldcard.display_multisig_address(redeem_script, derivation_paths, wallet.native_segwit)
+    # HWI doesn't cover multisig, so we have to cover separately
+    if wallet.wallet_type == 'multi':
+        # Get redeem script
+        if wallet.script_type == 'native':
+            redeem_script = address_info.get('hex')
+        else:
+            redeem_script = address_info.get('embedded', {}).get('hex')
+        
+        # Make sure we have redeem_script and descriptor
+        if not redeem_script or not descriptor:
+            raise JunctionError('Unknown address')
+
+        # Grab derivation path portions of descriptor
+        derivation_paths = re.findall(r'\[(.*?)\]', descriptor)
+
+        # Handle Trezors
+        if device['type'] == 'trezor':
+            # FIXME: give descriptor to custom_trezor.display_multisig_address and have it do this ...
+            derivation_path = ''
+            for path in derivation_paths:
+                slash_index = path.index('/')
+                path = 'm' + path[slash_index:]
+                if derivation_path:
+                    assert derivation_path == path
+                else:
+                    derivation_path = path
+           
+            custom_trezor.display_multisig_address(redeem_script, derivation_path, wallet.network != 'mainnet', device, wallet.script_type)
+        # Handle ColdCards
+        elif device['type'] == 'coldcard':
+            custom_coldcard.display_multisig_address(redeem_script, derivation_paths, wallet.script_type == 'native')
+        # Reject everything else
+        else:
+            raise JunctionError(f'Devices of type "{device["type"]}" do not support multisig address display')
+    # HWI covers single-sig
     else:
-        raise JunctionError(f'Devices of type "{device["type"]}" do not support multisig address display')
+        with get_client_and_device(device_id, wallet.network) as (client, device):
+            commands.displayaddress(client, desc=descriptor)
+    
     return jsonify({
         'ok': True
     })
@@ -337,5 +381,7 @@ def register_device():
         raise JunctionError(f'Devices of type {device["type"]} do not support multisig wallet registration')
 
     custom_coldcard.enroll(wallet)
+
+    # TODO: How to keep track of whether or not this multisig wallet is registered on the coldcard?
 
     return jsonify({'ok': True})
