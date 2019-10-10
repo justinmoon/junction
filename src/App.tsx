@@ -44,8 +44,9 @@ export default class App extends React.Component<{}, State> {
             <Route path="/create" component={Create}/>
             <Route path="/settings" component={Settings} />
             <Route path="/coins" component={Coins} />
-        </Template>
-      </Switch>
-    </HashRouter>
-  );
+          </Template>
+        </Switch>
+      </HashRouter>
+    );
+  }
 }
