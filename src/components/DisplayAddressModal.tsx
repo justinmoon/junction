@@ -35,14 +35,14 @@ class DisplayAddressModal extends React.Component<Props> {
     message: null,
   };
 
-  displayAddress(address: string, device: UnlockedDevice, signer: Signer, activeWallet: Wallet) {
+  async displayAddress(address: string, device: UnlockedDevice, signer: Signer, activeWallet: Wallet) {
     // FIXME: all these parameters b/c typescript won't let me read from props ...
     this.setState({ 
       displayAddressDevice: device,
       message: `Verify address on your "${signer.name}" ${device.type} device`
     })
     // FIXME: handle errors
-    api.displayAddress({address, device_id: device.fingerprint, wallet_name: activeWallet.name})
+    await api.displayAddress({address, device_id: device.fingerprint, wallet_name: activeWallet.name})
     this.setState({
       displayAddressDevice: null,
     })
@@ -56,8 +56,6 @@ class DisplayAddressModal extends React.Component<Props> {
 
     let rightComponent = null;
     const device = deviceAvailable(signer, devices)
-    console.log(signer)
-    console.log(device)
     const loading = this.state.displayAddressDevice && this.state.displayAddressDevice == device;
     if (signer.type !== 'trezor' && signer.type !== 'coldcard') {
       rightComponent =<div>Not supported by {signer.type} devices</div>
