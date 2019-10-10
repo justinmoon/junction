@@ -29,6 +29,10 @@ class API {
     return this.request<any>('GET', '/wallets');
   }
 
+  getNodes() {
+    return this.request<any>('GET', '/nodes');
+  }
+
   createWallet(args: T.CreateWalletArguments) {
     return this.request<any>('POST', '/wallets', args);
   }
@@ -37,8 +41,12 @@ class API {
     return this.request<any>('POST', '/signers', args);
   }
 
-  promptPin() {
-    return this.request<any>('POST', '/prompt')
+  registerSigner(args: T.RegisterSignerArguments) {
+    return this.request<any>('POST', '/register-device', args);
+  }
+
+  promptPin(args: T.PromptPinArguments) {
+    return this.request<any>('POST', '/prompt', args)
   }
 
   enterPin(args: T.EnterPinArguments) {
@@ -63,6 +71,10 @@ class API {
 
   generateAddress(args: T.GenerateAddressArguments) {
     return this.request<any>('POST', '/address', args);
+  }
+
+  displayAddress(args: T.DisplayAddressArguments) {
+    return this.request<any>('POST', '/display-address', args);
   }
 
   // Internal fetch function

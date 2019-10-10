@@ -1,11 +1,13 @@
 import React from 'react';
-import { Button, Modal, ModalHeader, ModalFooter, ModalBody, Spinner } from 'reactstrap';
+import { Button, Modal, ModalHeader, ModalFooter, ModalBody } from 'reactstrap';
 import api from '../api'
 import './EnterPinModal.css';
-import { AppState } from '../store';
+import { AppState, notNull } from '../store';
 import { connect } from 'react-redux';
 import { toggleDeviceUnlockModal } from '../store/modal'
 import { LoadingButton } from './Toolbox';
+import { selectActiveWallet } from '../store/wallet';
+import { Wallet } from '../types';
 
 
 const digits = [
@@ -16,6 +18,7 @@ const digits = [
 
 interface StateProps {
   open: boolean;
+  activeWallet: Wallet | null;
 }
 
 interface DispatchProps {
@@ -45,7 +48,7 @@ class EnterPinModal extends React.Component<Props, State> {
 
   async enterPin() {
     const { pin, pending } = this.state;
-    if (!pending) {
+    if (this.props.activeWallet && !pending) {
       try {
         this.setState({ pending: true })
         await api.enterPin({ pin });
@@ -56,7 +59,8 @@ class EnterPinModal extends React.Component<Props, State> {
           pin: '',
           pending: false,
          });
-        setTimeout(api.promptPin, 1000);
+        // setTimeout(api.promptPin, 1000);
+        api.promptPin({ wallet_name: this.props.activeWallet.name })
       }
     }
   }
@@ -107,13 +111,9 @@ class EnterPinModal extends React.Component<Props, State> {
     this.props.toggleDeviceUnlockModal();
   }
 
-  // handleClosed() {
-  //   api.deletePrompt();
-  // }
-
-  // componentWillUnmount() {
-  //   this.handleClosed();
-  // }
+  componentWillUnmount() {
+    api.deletePrompt();
+  }
 
   renderError() {
     const style = {
@@ -141,7 +141,12 @@ class EnterPinModal extends React.Component<Props, State> {
   }
 
   render() {
-    const { open } = this.props;
+    const { open, activeWallet } = this.props;
+
+    if (!activeWallet) {
+      return <div></div>
+    }
+
     return (
 			<Modal isOpen={open} toggle={this.toggle.bind(this)} className="PinModal">
 				<ModalHeader toggle={this.toggle.bind(this)}>EnterPin</ModalHeader>
@@ -156,6 +161,8 @@ class EnterPinModal extends React.Component<Props, State> {
 
 export const mapStateToProps = (state: AppState) => {
   return {
+    // FIXME: this can't assume active wallet isn't null b/c always mounts
+    activeWallet: selectActiveWallet(state),
     open: state.modal.deviceUnlock.open,
   }
 }

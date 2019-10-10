@@ -9,6 +9,7 @@ import History from './components/History';
 import Create from './components/Create';
 import Settings from './components/Settings';
 import ErrorScreen from './components/ErrorScreen';
+import Coins from './components/Coins';
 
 interface State {
   error: Error | null;
@@ -42,9 +43,9 @@ export default class App extends React.Component<{}, State> {
             <Route path="/history" component={History}/>
             <Route path="/create" component={Create}/>
             <Route path="/settings" component={Settings} />
-          </Template>
-        </Switch>
-      </HashRouter>
-    );
-  }
+            <Route path="/coins" component={Coins} />
+        </Template>
+      </Switch>
+    </HashRouter>
+  );
 }

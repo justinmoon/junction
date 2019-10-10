@@ -1,4 +1,5 @@
 import { AnyAction } from 'redux';
+import { ThunkAction } from './types';
 
 // Reusable loadable type for data that needs to be fetched
 export interface Loadable<T> {
@@ -44,3 +45,15 @@ export const handleLoadable = <T>(l: Loadable<T>, action: AnyAction): Loadable<T
     return loadableLoading(l);
   }
 };
+
+export function loadAction(func: any, start: string, success: string, failure: string): ThunkAction {
+  return async (dispatch) => {
+    dispatch({ type: start });
+    try {
+      const payload = await func();
+      dispatch({ type: success, payload });
+    } catch(err) {
+      dispatch({ type: failure, payload: err });
+    }
+  };
+}

@@ -3,7 +3,8 @@ import { ThunkAction } from '../types';
 
 import { getWallets } from '../wallet'
 import { getDevices } from '../device'
-import { getSettings } from '../settings'
+import { getNodes } from '../node'
+
 
 export function bootstrap(): ThunkAction {
   return async (dispatch) => {
@@ -11,7 +12,7 @@ export function bootstrap(): ThunkAction {
     try { 
       await dispatch(getDevices())
       await dispatch(getWallets())
-      await dispatch(getSettings())
+      await dispatch(getNodes())
       dispatch({ type: T.BOOTSTRAP_SUCCESS })
     } catch(error) {
       dispatch({ type: T.BOOTSTRAP_SUCCESS, error })

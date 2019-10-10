@@ -1,7 +1,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Button, Spinner, Row } from 'reactstrap';
-import { Device, UnlockedDevice } from '../types'
+import { Button, Row } from 'reactstrap';
+import { Device, isUnlockedDevice } from '../types'
 import { MyCard, MyTable, LoadingButton } from './Toolbox'
 import { 
   toggleDeviceInstructionsModal, toggleDeviceUnlockModal
@@ -27,7 +27,7 @@ class AddSigners extends React.Component<Props> {
 
   renderAddDevice(device: Device) {
     const { addSigner, deviceBeingAdded, toggleDeviceInstructionsModal, toggleDeviceUnlockModal } = this.props;
-    const showSpinner = device === deviceBeingAdded;
+    const loading = device === deviceBeingAdded;
     let rightComponent = null;
     
     // TODO: passwords
@@ -35,9 +35,10 @@ class AddSigners extends React.Component<Props> {
       rightComponent = <Button onClick={() => toggleDeviceUnlockModal()}>Unlock</Button>
     } else if (device.error) {
       rightComponent = <Button color="default" onClick={() => toggleDeviceInstructionsModal(device.type)}>Unavailable</Button>
+    } else if (isUnlockedDevice(device)) {
+      rightComponent = <LoadingButton loading={loading} onClick={() => addSigner(device)}>Add Signer</LoadingButton>
     } else {
-      console.log(showSpinner, device, deviceBeingAdded)
-      rightComponent = <LoadingButton loading={showSpinner} onClick={() => addSigner(device)}>Add Signer</LoadingButton>
+      return <div></div> // FIXME
     }
     
     return (
@@ -55,7 +56,7 @@ class AddSigners extends React.Component<Props> {
     const { devices, toggleDeviceInstructionsModal } = this.props;
     
     // FIXME: two instances of <DeviceInstructionsModal/>
-    if (!devices || !devices.length) {
+    if (!devices) {
       return (
         <MyCard>
           <h5 className='text-center'>No devices available</h5>
@@ -89,6 +90,7 @@ export const mapStateToProps = (state: AppState) => {
     modal: state.modal,
     devices: selectCandidateDevicesForActiveWallet(state),
     deviceBeingAdded: state.wallet.addSigner.device,
+    error: state.wallet.addSigner.error,
   }
 }
 
