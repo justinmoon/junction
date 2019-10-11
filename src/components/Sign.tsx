@@ -59,9 +59,9 @@ class Sign extends React.Component<Props, LocalState> {
     let rightComponent = null
 
     if (signed) {
-      rightComponent = <td className="text-right">Signed</td>
+      rightComponent = <div>Signed</div>
     } else if (didNotSign) {
-      rightComponent = <td className="text-right">Didn't sign</td>
+      rightComponent = <div>Didn't sign</div>
     } else if (isSigning) {
       rightComponent = <LoadingButton loading={true}>Sign</LoadingButton>
     } else if (canSign) {
@@ -86,12 +86,17 @@ class Sign extends React.Component<Props, LocalState> {
     )
   }
 
-  broadcastTransaction(index: number) {
+  async broadcastTransaction(index: number) {
     const { activeWallet, broadcastTransaction } = this.props
     const psbt = activeWallet.psbts[index]
     const remaining = signaturesRemaining(activeWallet, psbt)
     if (remaining === 0) {
-      broadcastTransaction(index)
+      await broadcastTransaction(index)
+      // Redirect if there's nothing left to sign
+      // FIXME: this observastion of state is now stale, so check for 1 PSBT before broadcast ...
+      if (activeWallet.psbts.length === 1) {
+        this.props.history.push('/')
+      }
     }
   }
 
