@@ -25,6 +25,7 @@ import { AppState } from '../store';
 import DeviceInstructionsModal from './DeviceInstructionsModal'
 import EnterPinModal from './EnterPinModal'
 import DisplayAddressModal from './DisplayAddressModal'
+import ConnectRPC from './ConnectRPC';
 
 interface StateProps {
   state: AppState;
@@ -184,6 +185,7 @@ class Template extends React.Component<Props, State> {
         <DisplayAddressModal/>
         <DeviceInstructionsModal/>
         <EnterPinModal/>
+        <ConnectRPC/>
       </div>
     );
   }

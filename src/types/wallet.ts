@@ -23,6 +23,7 @@ export interface Node {
   password: string;
   wallet_name: string;
   network: Network;
+  rpc_error: string;
 }
 
 export interface Signer {
@@ -46,4 +47,5 @@ export interface Wallet {
   node: Node;
   wallet_type: WalletType;
   script_type: ScriptType;
+  network: string;
 }

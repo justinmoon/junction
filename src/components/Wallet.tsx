@@ -90,6 +90,7 @@ class Wallet extends React.Component<Props, State> {
           <div className="text-center">
             <LoadingButton loading={this.state.pending} onClick={() => this.generateAddress()}>Generate Address</LoadingButton>
           </div>}
+        {activeWallet.node.rpc_error && <div>rpc error: {activeWallet.node.rpc_error}</div>}
         {signersComponent}
         {addSigners}
         {activeWallet.wallet_type === WalletTypeType.multi && registerSigners}

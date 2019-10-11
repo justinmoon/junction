@@ -125,23 +125,35 @@ class RPC:
 
     def test(self):
         '''raises JunctionErrors if RPC-connection doesn't work'''
+        # Test RPC connection works
         try:
             self.getblockchaininfo()
-            if int(self.getnetworkinfo()['version']) < 180000:
-               raise JunctionWarning("Update your Bitcoin node to at least version 0.18") 
         except ConnectionRefusedError as e:
             raise JunctionError("ConnectionRefusedError: check https://bitcoin.stackexchange.com/questions/74337/testnet-bitcoin-connection-refused-111")
         except JSONRPCException as e:
             if "Unauthorized" in str(e):
                 raise JunctionError("Please double-check your credentials!")
-            elif "Method not found" in str(e):
-                raise JunctionError("Make sure to have 'disablewallet=0' in your bitcoin.conf otherwise this won't work")
-            else:
-                raise JunctionError(e)
-            return False 
-        except Exception as e:
-            logger.error("rpc-settings: {}".format(self.uri))
-            raise JunctionError(e)
+
+        # Check node version requirements are met
+        version = self.getnetworkinfo()['version']
+        if int(version) < 180000:
+            raise JunctionError("Update your Bitcoin node to at least version 0.18")
+
+        # Check wallet enabled
+        try:
+            self.getwalletinfo()
+        except JSONRPCException as e:
+            if "Method not found" in str(e):
+                raise JunctionError("Junction requires 'disablewallet=0' in your bitcoin.conf")
+
+        # Can't detect any problems
+        return None
+
+    def error(self):
+        try:
+            return self.test()
+        except JunctionError as e:
+            return str(e)
 
 def default_bitcoin_datadir():
     datadir = None

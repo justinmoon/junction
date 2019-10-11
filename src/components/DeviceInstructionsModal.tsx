@@ -4,14 +4,14 @@ import { AppState, notNull } from '../store';
 import { toggleDeviceInstructionsModal } from '../store/modal'
 import { connect } from 'react-redux';
 import { selectActiveWallet } from '../store/wallet';
-import { Network } from '../types';
+import { Network, Wallet } from '../types';
 
 interface DispatchProps {
   toggleDeviceInstructionsModal: typeof toggleDeviceInstructionsModal;
 }
 
 interface StateProps {
-  network: Network;
+  activeWallet: Wallet | null;
   open: AppState['modal']['deviceInstructions']['open'];
   deviceType: AppState['modal']['deviceInstructions']['deviceType'];
 }
@@ -20,11 +20,14 @@ type Props = DispatchProps & StateProps
 
 class DeviceInstructionsModal extends React.Component<Props> {
   render() {
-    const { network, toggleDeviceInstructionsModal, open, deviceType } = this.props;
+    const { activeWallet, toggleDeviceInstructionsModal, open, deviceType } = this.props;
+    if (!activeWallet) {
+      return <div></div>
+    }
     const showTrezor = !deviceType || deviceType === 'trezor';
     const showLedger = !deviceType || deviceType === 'ledger';
     const showColdCard = !deviceType || deviceType === 'coldcard';
-    const onMainnet = network === Network.mainnet;
+    const onMainnet = activeWallet.network === Network.mainnet;
     return (
 			<Modal isOpen={open} toggle={() => toggleDeviceInstructionsModal()}>
 				<ModalHeader toggle={() => toggleDeviceInstructionsModal()}>Device Instructions</ModalHeader>
@@ -75,7 +78,7 @@ class DeviceInstructionsModal extends React.Component<Props> {
 
 export const mapStateToProps = (state: AppState) => {
 	return {
-    network: notNull(selectActiveWallet(state)).node.network,
+    activeWallet: selectActiveWallet(state),
     open: state.modal.deviceInstructions.open,
     deviceType: state.modal.deviceInstructions.deviceType,
 	}

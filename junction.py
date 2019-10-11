@@ -56,7 +56,6 @@ class Node:
         base_uri = "http://{user}:{password}@{host}:{port}/wallet/".format(
             host=host, port=port, user=user, password=password
         )
-
         if wallet_name:
             self.wallet_rpc = RPC(base_uri + wallet_name, timeout=180)
         self.default_rpc = RPC(base_uri, timeout=180)
@@ -71,8 +70,8 @@ class Node:
             'wallet_name': self.wallet_name,
         }
         # FIXME
-        if extras and hasattr(self, 'running'):
-            base['running'] = self.running
+        if extras:
+            base['rpc_error'] = self.default_rpc.error()
         return base
 
     @classmethod
@@ -80,7 +79,9 @@ class Node:
         return cls(**d)
 
     def read_cookie(self):
-        self.user, self.password = read_cookie(None, self.network)
+        user, password = read_cookie(None, self.network)
+        if user and password:
+            self.user, self.password, self.cookie_auth = user, password, True
     
 class MultisigWallet:
 
@@ -161,10 +162,13 @@ class MultisigWallet:
         relative_path = f'wallets/{wallet_name}.json'
         wallet_dict = read_json_file(relative_path)
         wallet = cls.from_dict(wallet_dict)
-        # FIXME: this probably isn't right. people should be able to use wallet w/o bitcoind running
-        # decorating methods that require bitcoind might be a better approach
-        if ensure_watchonly:
+
+        # From here we can assume that either Bitcoin Core wallet is loaded or we can't connect to node
+        try:
             wallet.ensure_watchonly()
+        except Exception as e:
+            logger.info('Could not load Bitcoin Core "{}" wallet: {}'.format(wallet.name, str(e)))
+        
         logger.info(f"Opened wallet from {relative_path}")
         return wallet
 
@@ -216,16 +220,26 @@ class MultisigWallet:
         }
         # FIXME: this sucks, but we need a way to serialize for API
         if extras:
-            # TODO: consider adding some metadata to psbt -- e.g. # signatures remaining
-            base['ready'] = self.ready()
-            unconfirmed, confirmed = self.balances()
-            base['balances'] = {
-                'confirmed': confirmed,
-                'unconfirmed': unconfirmed,
-            }
-            base['psbts'] = [self.decode_psbt(psbt) for psbt in self.psbts]
-            base['coins'] = self.coins()
-            base['history'] = self.history()
+            # FIXME: hack so that rpc calls don't blow up when we don't have a node available ...
+            if self.node.default_rpc.error():
+                base['balances'] = {
+                    # FIXME: this is bad. Shouldn't present incorrect balances, ever.
+                    'confirmed': 'unavailable',
+                    'unconfirmed': 'unavailable',
+                }
+                base['psbts'] = []
+                base['coins'] = []
+                base['history'] = []             
+            else:
+                base['ready'] = self.ready()
+                unconfirmed, confirmed = self.balances()
+                base['balances'] = {
+                    'confirmed': confirmed,
+                    'unconfirmed': unconfirmed,
+                }
+                base['psbts'] = [self.decode_psbt(psbt) for psbt in self.psbts]
+                base['coins'] = self.coins()
+                base['history'] = self.history()
         return base
 
     def add_signer(self, *, name, fingerprint, xpub, type, derivation_path):
