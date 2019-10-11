@@ -374,7 +374,7 @@ class MultisigWallet:
         self.save()
         logger.info("Finished watch-only export")
 
-    def create_psbt(self, outputs):
+    def create_psbt(self, outputs, subtract_fees=None):
         '''Create a new PSBT paying single recipient'''
         change_address = self.address(True)
         raw_psbt = self.node.wallet_rpc.walletcreatefundedpsbt(
@@ -391,6 +391,7 @@ class MultisigWallet:
                 "changeAddress": change_address,
                 # Reserve UTXOs we're spending
                 "lockUnspents": True,
+                "subtractFeeFromOutputs": subtract_fees if subtract_fees is not None else [],
             },
             # Include BIP32 derivation paths in the PSBT
             True,

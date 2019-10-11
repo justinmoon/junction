@@ -21,14 +21,17 @@ type Props = DispatchProps & StateProps & RouteComponentProps;
 
 interface LocalState {
   outputs: CreatePSBTOutput[];
+  options: any,
   isSubmitting: boolean;
   error: Error | null;
 }
 
 class Create extends React.Component<Props, LocalState> {
+  emptyOutput: CreatePSBTOutput = {'address': undefined, 'btc': undefined, 'subtract_fees': false }
   state: LocalState = {
-    outputs: [{'address': undefined, 'btc': undefined}],
+    outputs: [Object.assign({}, this.emptyOutput)],
     isSubmitting: false,
+    options: {},
     error: null,
   };
 
@@ -46,8 +49,20 @@ class Create extends React.Component<Props, LocalState> {
 
   private handleAddOutput = (ev: React.FormEvent<HTMLInputElement>) => {
     let { outputs } = this.state;
-    outputs.push({ address: undefined, btc: undefined });
+    outputs.push(Object.assign({}, this.emptyOutput));
     this.setState({ [ev.currentTarget.name]: ev.currentTarget.value } as any);
+  };
+
+  private handleMaxAmount = (index: number) => {
+    // TODO: max amount should be confirmed - sum(other outputs)
+    // Not doing now b/c I don't know how to safely do math in javascript!
+    const { activeWallet } = this.props;
+    let state = this.state
+    let output = this.state.outputs[index];
+    output.btc = activeWallet.balances.confirmed
+    output.subtract_fees = true
+    state.outputs = [output]
+    this.setState(state);
   };
 
   private handleRemoveOutput = (index: number) => {
@@ -85,7 +100,7 @@ class Create extends React.Component<Props, LocalState> {
         {outputs.map((output, index) =>
           <div key={index}>
             <Row>
-              <Col xs="8">
+              <Col xs="7">
                 <FormGroup>
                   <Label>Recipient Address</Label>
                   <Input
@@ -98,7 +113,7 @@ class Create extends React.Component<Props, LocalState> {
               </Col>
               <Col xs="3">
                 <FormGroup>
-                  <Label>Amount in BTC</Label>
+                  <Label>Amount (BTC)</Label>
                   <Input
                     name="btc"
                     value={output.btc}
@@ -108,6 +123,12 @@ class Create extends React.Component<Props, LocalState> {
                     onChange={e => this.handleChangeAmount(e, index)}
                   />
                 </FormGroup>
+              </Col>
+              <Col xs="1">
+                <Button color="secondary" className="remove" 
+                  onClick={() => this.handleMaxAmount(index)}>
+                  Max
+                </Button>
               </Col>
               <Col xs="1">
                 <Button color="danger" className="remove" 

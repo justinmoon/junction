@@ -33,6 +33,7 @@ export interface PromptPinArguments {
 export interface CreatePSBTOutput {
   address: string | undefined;
   btc: number | undefined;
+  subtract_fees: boolean;
 }
 
 export interface CreatePSBTArguments {

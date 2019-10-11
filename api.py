@@ -178,11 +178,12 @@ def address():
         'outputs': {
             'type': 'array',
             'items': {
-                'required': ['address', 'btc'],
+                'required': ['address', 'btc', 'subtract_fees'],
                 'properties': {
                     'address': {'type': 'string'},   # FIXME: regex
                     'btc': {'type': 'number'},      # FIXME: regex
                     # 'satoshis': {'type': 'integer'},      # FIXME: regex
+                    'subtract_fees': { 'type': 'boolean' }
                 },
             },
         },
@@ -191,11 +192,14 @@ def address():
 def create_psbt():
     wallet_name = request.json['wallet_name']
     wallet = MultisigWallet.open(wallet_name)
+    api_outputs = request.json['outputs']
     outputs = []
-    for output in request.json['outputs']:
+    for output in api_outputs:
         output_dict = {output['address']: output['btc']}
         outputs.append(output_dict)
-    wallet.create_psbt(outputs)
+    subtract_fees = [index for index, output in enumerate(api_outputs) 
+                     if output['subtract_fees']]
+    wallet.create_psbt(outputs, subtract_fees=subtract_fees)
     return jsonify({
         'psbt': wallet.psbts[-1].serialize(),
     })
