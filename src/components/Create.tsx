@@ -170,11 +170,11 @@ class Create extends React.Component<Props, State> {
                 <br/>
                 <Input name="mainnet" addon type="radio" 
                   checked={this.state.form.network == "mainnet"}
-                  onChange={() => this.setKey({'network': 'mainnet'})}/> Mainnet (real bitcoins)
+                  onChange={() => this.setKey({'network': 'mainnet', 'node': { ...this.state.form.node, port: '8332' }})}/> Mainnet (real bitcoins)
                 <br/>
                 <Input name="testnet" addon type="radio"
                   checked={this.state.form.network == "testnet"}
-                  onChange={() => this.setKey({'network': 'testnet'})}/> Testnet (for testing)
+                  onChange={() => this.setKey({'network': 'testnet', 'node': { ...this.state.form.node, port: '18332' }})}/> Testnet (for testing)
               </FormGroup>
             </Col>
           </Row>
@@ -221,13 +221,13 @@ class Create extends React.Component<Props, State> {
               <FormGroup>
                 <p><i>Or Connect to Another Node via RPC</i></p>
                 <Label>RPC Hostname</Label>
-                <Input name="host" type="text" onChange={this.handleNodeChange}/>
+                <Input name="host" type="text" value={form.node.host} onChange={this.handleNodeChange}/>
                 <Label>RPC Port</Label>
-                <Input name="port" type="text" onChange={this.handleNodeChange}/>
+                <Input name="port" type="text" value={form.node.port} onChange={this.handleNodeChange}/>
                 <Label>RPC User</Label>
-                <Input name="user" type="text" onChange={this.handleNodeChange}/>
+                <Input name="user" type="text" value={form.node.user} onChange={this.handleNodeChange}/>
                 <Label>RPC Password</Label>
-                <Input name="password" type="text" onChange={this.handleNodeChange}/>
+                <Input name="password" type="text" value={form.node.password} onChange={this.handleNodeChange}/>
               </FormGroup>
             </Col>
           </Row>
