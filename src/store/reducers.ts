@@ -1,6 +1,5 @@
 import { combineReducers } from 'redux';
 import { DeviceState, deviceReducer } from './device';
-import { SettingsState, settingsReducer } from './settings';
 import { ModalState, modalReducer } from './modal';
 import { BootstrapState, bootstrapReducer } from './bootstrap';
 import { NodeState, nodeReducer } from './node';
@@ -14,7 +13,6 @@ export interface AppState {
   device: DeviceState;
   wallet: WalletState;
   node: NodeState;
-  settings: SettingsState;
   modal: ModalState;
   bootstrap: BootstrapState;
 }
@@ -22,7 +20,6 @@ export interface AppState {
 export const rootReducer = combineReducers<AppState>({
   device: deviceReducer,
   wallet: walletReducer,
-  settings: settingsReducer,
   modal: modalReducer,
   node: nodeReducer,
   bootstrap: bootstrapReducer,

@@ -1,4 +1,4 @@
-import { SettingsActionTypes as T } from './types';
+import { NodeActionTypes as T } from './types';
 import api from '../../api';
 import { loadAction } from '../util';
 

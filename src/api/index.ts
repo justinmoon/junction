@@ -1,7 +1,6 @@
 import { stringify } from 'query-string';
 import * as T from '../api/types';
 import { Device } from '../types';
-import { Settings } from '../store/settings';
 export * from '../api/types';
 
 class API {
@@ -16,13 +15,8 @@ class API {
     return this.request<Device[]>('GET', '/devices');
   }
 
-  getSettings() {
-    return this.request<Settings>('GET', '/settings');
-  }
-
-  updateSettings(settings: Settings) {
-    delete settings.rpc.error;
-    return this.request<Settings>('PUT', '/settings', settings);
+  updateNode(args: T.UpdateNodeArguments) {
+    return this.request<any>('PUT', '/nodes', args);
   }
 
   getWallets() {

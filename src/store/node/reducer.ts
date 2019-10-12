@@ -1,6 +1,6 @@
 import { AnyAction } from 'redux';
-import { SettingsActionTypes as T } from './types';
 import { Loadable, DEFAULT_LOADABLE, handleLoadable } from '../util';
+import { NodeActionTypes as T } from './types';
 
 export interface Nodes {
   bitcoin: any[];    // FIXME

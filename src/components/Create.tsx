@@ -81,48 +81,6 @@ class Create extends React.Component<Props, State> {
     clearInterval(this.state.interval);
   }
 
-  renderNodeForm() {
-    const fields: {
-      label: React.ReactNode;
-      name: keyof State["form"]["node"];
-      type: string;
-      placeholder: string;
-    }[] = [{
-      label: 'RPC Username (Optional)',
-      name: 'user',
-      type: 'text',
-      placeholder: 'satoshi',
-    }, {
-      label: 'RPC Password (Optional)',
-      name: 'password',
-      type: 'password',
-      placeholder: '**********',
-    }, {
-      label: 'RPC Hostname',
-      name: 'host',
-      type: 'text',
-      placeholder: '127.0.0.1',
-    }, {
-      label: 'RPC Port',
-      name: 'port',
-      type: 'text',
-      placeholder: '18332',
-    }];
-
-    return fields.map(f => (
-      <FormGroup key={f.name}>
-        <Label>{f.label}</Label>
-        <Input
-          name={f.name}
-          // type={f.type}  // FIXME
-          value={this.state.form.node[f.name]}
-          placeholder={f.placeholder}
-          onChange={this.handleChange}
-        />
-      </FormGroup>
-    ))
-  }
-
   render() {
     const { bitcoinNodes } = this.props;
     const { form, isSubmitting } = this.state;
@@ -227,7 +185,7 @@ class Create extends React.Component<Props, State> {
                 <Label>RPC User</Label>
                 <Input name="user" type="text" value={form.node.user} onChange={this.handleNodeChange}/>
                 <Label>RPC Password</Label>
-                <Input name="password" type="text" value={form.node.password} onChange={this.handleNodeChange}/>
+                <Input name="password" type="password" value={form.node.password} onChange={this.handleNodeChange}/>
               </FormGroup>
             </Col>
           </Row>

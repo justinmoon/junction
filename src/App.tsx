@@ -7,7 +7,6 @@ import Send from './components/Send';
 import Sign from './components/Sign';
 import History from './components/History';
 import Create from './components/Create';
-import Settings from './components/Settings';
 import ErrorScreen from './components/ErrorScreen';
 import Coins from './components/Coins';
 
@@ -42,7 +41,6 @@ export default class App extends React.Component<{}, State> {
             <Route path="/sign" component={Sign}/>
             <Route path="/history" component={History}/>
             <Route path="/create" component={Create}/>
-            <Route path="/settings" component={Settings} />
             <Route path="/coins" component={Coins} />
           </Template>
         </Switch>

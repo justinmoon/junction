@@ -202,12 +202,11 @@ class MultisigWallet:
         # sort signers lexigraphically by their xpub, this way any permutation of signers
         # with same keys will always generate the same wallet
         signers = [signer.to_dict() for signer in self.signers]
-        ordered_signers = sorted(signers, key=lambda signer: signer['xpub'])
         base = {
             "name": self.name,
             "m": self.m,
             "n": self.n,
-            "signers": ordered_signers,
+            "signers": signers,
             "psbts": psbts,
             "receiving_address_index": self.receiving_address_index,
             "receiving_export_index": self.receiving_export_index,
@@ -221,6 +220,7 @@ class MultisigWallet:
         # FIXME: this sucks, but we need a way to serialize for API
         if extras:
             # FIXME: hack so that rpc calls don't blow up when we don't have a node available ...
+            base['ready'] = self.ready()
             if self.node.default_rpc.error():
                 base['balances'] = {
                     # FIXME: this is bad. Shouldn't present incorrect balances, ever.
@@ -231,7 +231,6 @@ class MultisigWallet:
                 base['coins'] = []
                 base['history'] = []             
             else:
-                base['ready'] = self.ready()
                 unconfirmed, confirmed = self.balances()
                 base['balances'] = {
                     'confirmed': confirmed,
@@ -257,7 +256,10 @@ class MultisigWallet:
 
         signer = HardwareSigner(name=name, fingerprint=fingerprint, xpub=xpub,
                 type=type, derivation_path=derivation_path)
-        self.signers.append(signer)
+        
+        # sort lexigraphically by xpubs
+        signers = self.signers + [signer]
+        self.signers = sorted(signers, key=lambda signer: signer.xpub)
         logger.info(f"Registered signer \"{name}\"")
 
         # Export first chunk watch-only addresses to Bitcoin Core if we're done adding signers
@@ -289,7 +291,6 @@ class MultisigWallet:
             descriptor = f"sh(wpkh({xpubs}))"
         else:
             raise Exception('Cannot construct descriptor')
-        logger.info(f"Exporting descriptor: {descriptor}")
         # validates and appends checksum
         r = self.node.wallet_rpc.getdescriptorinfo(descriptor)
         return r['descriptor']
@@ -302,9 +303,9 @@ class MultisigWallet:
             raise JunctionError(f'{self.n} signers required, {len(self.signers)} registered')
         if address_index > export_index:
             self.export_watchonly(change=change)
-        address = self.node.wallet_rpc.deriveaddresses(
-            self.descriptor(change),
-            [address_index, address_index + 1])[0]
+        descriptor = self.descriptor(change)
+        logger.info(f'Deriving address: descriptor={descriptor} index={address_index}')
+        address = self.node.wallet_rpc.deriveaddresses(descriptor, [address_index, address_index + 1])[0]
         
         # increment indices
         if change:
@@ -367,15 +368,17 @@ class MultisigWallet:
     def export_watchonly(self, *, change):
         '''Export addresses to Bitcoin Core watch-only wallet'''
         # it would be really nice if we could sanity-check against getwalletinfo here ...
-        logger.info("Starting watch-only export")
         old_export_index = self.change_export_index if change else self.receiving_export_index
         new_export_index = old_export_index + ADDRESS_CHUNK
+        descriptor = self.descriptor(change)
+        descriptor_range = [old_export_index, new_export_index]
+        logger.info(f"Exporting: descriptor={descriptor} range={descriptor_range}")
         self.node.wallet_rpc.importmulti([{
-            "desc": self.descriptor(change),
+            "desc": descriptor,
             # 24 hours just in case
             "timestamp": 'now',
             # FIXME: is this inclusive? if we we're overlapping 1 ever time ...
-            "range": [old_export_index, new_export_index],
+            "range": descriptor_range,
             "watchonly": True,
             # Bitcoin Core cannot import P2SH/P2WSH: https://bitcoin.stackexchange.com/a/89118/85335
             "keypool": False,

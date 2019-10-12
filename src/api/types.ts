@@ -11,6 +11,14 @@ export interface CreateWalletArguments {
   }
 }
 
+export interface UpdateNodeArguments {
+  wallet_name: string;
+  user: string;
+  password: string;
+  host: string;
+  port: string;
+}
+
 export interface AddSignerArguments {
   wallet_name: string;
   signer_name: string;

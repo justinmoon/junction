@@ -261,16 +261,15 @@ def list_nodes():
     },
 })
 def update_node():
-    wallet_name = request.json['wallet_name']
+    wallet_name = request.json.pop('wallet_name')
     wallet = MultisigWallet.open(wallet_name)
     node_params = request.json
+
     node = Node(**node_params, wallet_name=wallet.name, network=wallet.network)
-    try:
-        RPC(settings['rpc'], timeout=5).test()
-    except Exception as e:
-        settings['rpc']['error'] = str(e)
-    update_settings(settings)
-    return jsonify(settings)
+    node.default_rpc.test()
+    wallet.node = node
+    wallet.save()
+    return jsonify({})
 
 @api.route('/utxos', methods=['GET'])
 def list_utxos():

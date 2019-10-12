@@ -56,7 +56,7 @@ class AddSigners extends React.Component<Props> {
     const { devices, toggleDeviceInstructionsModal } = this.props;
     
     // FIXME: two instances of <DeviceInstructionsModal/>
-    if (!devices) {
+    if (!devices || !devices.length) {
       return (
         <MyCard>
           <h5 className='text-center'>No devices available</h5>

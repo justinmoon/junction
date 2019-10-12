@@ -81,7 +81,6 @@ export function changeWallet(wallet: Wallet) {
   };
 }
 
-
 export function broadcastTransaction(index: number): ThunkAction {
   return async (dispatch, getState) => {
     dispatch({ type: T.BROADCAST_TRANSACTION });

@@ -19,7 +19,6 @@ import {
 } from 'reactstrap';
 import { getWallets, changeWallet, selectActiveWallet } from '../store/wallet';
 import { startDeviceScan, stopDeviceScan } from '../store/device';
-import { getSettings, validSettingsSelector } from '../store/settings';
 import { bootstrap } from '../store/bootstrap'
 import { AppState } from '../store';
 import DeviceInstructionsModal from './DeviceInstructionsModal'
@@ -31,7 +30,6 @@ interface StateProps {
   state: AppState;
   wallets: AppState['wallet']['wallets'];
   activeWallet: ReturnType<typeof selectActiveWallet>;
-  hasValidSettings: boolean;
   ready: boolean;
   error: Error | null;
 }
@@ -41,7 +39,6 @@ interface DispatchProps {
   changeWallet: typeof changeWallet;
   startDeviceScan: typeof startDeviceScan;
   stopDeviceScan: typeof stopDeviceScan;
-  getSettings: typeof getSettings;
   bootstrap: typeof bootstrap;
 }
 
@@ -71,20 +68,13 @@ class Template extends React.Component<Props, State> {
 
   render() {
 
-    const { wallets, activeWallet, ready, hasValidSettings } = this.props;
+    const { wallets, activeWallet, ready } = this.props;
 
     // loading
     if (!ready) {
       return <div></div>
     } 
     
-    // onboarding
-    // if (!hasValidSettings) {
-    //   if (this.props.history.location.pathname !== '/settings') {
-    //     this.props.history.push('/settings')
-    //     return <div></div>
-    //   }
-    // }
     if (!wallets.data) {
       if (this.props.history.location.pathname !== '/create') {
         this.props.history.push('/create')
@@ -96,6 +86,10 @@ class Template extends React.Component<Props, State> {
     const navLinks = [];
     // FIXME: remove this check if we keep onboarding ...
     if (activeWallet) {
+      navLinks.push({
+        to: '/',
+        children: 'Wallet',
+      })
       navLinks.push({
         to: '/send',
         children: 'Send',
@@ -118,10 +112,6 @@ class Template extends React.Component<Props, State> {
           children: 'Coins',
         })
       }
-      navLinks.push({
-        to: '/settings',
-        children: 'Settings',
-      })
     }
 
     let dropdownLabel;
@@ -200,7 +190,6 @@ const mapStateToProps = (state: AppState) => {
     state: state,
     wallets: state.wallet.wallets,
     activeWallet: selectActiveWallet(state),
-    hasValidSettings: validSettingsSelector(state),
     ready: state.bootstrap.ready,
     error: state.bootstrap.error,
   }
@@ -208,7 +197,7 @@ const mapStateToProps = (state: AppState) => {
 
 const ConnectedTemplate = connect<StateProps, DispatchProps, RouteComponentProps, AppState>(
   mapStateToProps,
-  { getWallets, changeWallet, startDeviceScan, stopDeviceScan, getSettings, bootstrap },
+  { getWallets, changeWallet, startDeviceScan, stopDeviceScan, bootstrap },
 )(Template);
 
 export default withRouter(ConnectedTemplate);
