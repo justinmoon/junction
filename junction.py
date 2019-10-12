@@ -229,7 +229,8 @@ class MultisigWallet:
                 }
                 base['psbts'] = []
                 base['coins'] = []
-                base['history'] = []             
+                base['history'] = []
+                base['synced'] = None        
             else:
                 unconfirmed, confirmed = self.balances()
                 base['balances'] = {
@@ -239,6 +240,7 @@ class MultisigWallet:
                 base['psbts'] = [self.decode_psbt(psbt) for psbt in self.psbts]
                 base['coins'] = self.coins()
                 base['history'] = self.history()
+                base['synced'] = self.synced()
         return base
 
     def add_signer(self, *, name, fingerprint, xpub, type, derivation_path):
@@ -366,7 +368,7 @@ class MultisigWallet:
         return f"{self.name}"
 
     def export_watchonly(self, *, change):
-        '''Export addresses to Bitcoin Core watch-only wallet'''
+        '''Export next chunk of addresses to Bitcoin Core watch-only wallet'''
         # it would be really nice if we could sanity-check against getwalletinfo here ...
         old_export_index = self.change_export_index if change else self.receiving_export_index
         new_export_index = old_export_index + ADDRESS_CHUNK
@@ -388,6 +390,44 @@ class MultisigWallet:
             self.change_export_index = new_export_index
         else:
             self.receiving_export_index = new_export_index
+        self.save()
+        logger.info("Finished watch-only export")
+
+    def export_everything(self):
+        '''Export all addresses to Bitcoin Core watch-only wallet'''
+        # FIXME: the timestamps here aren't right ...
+        # Receiving addresses
+        receiving_descriptor = self.descriptor(False)
+        receiving_descriptor_range = [0, self.receiving_export_index]
+        logger.info(f"Exporting: descriptor={receiving_descriptor} range={receiving_descriptor_range}")
+        self.node.wallet_rpc.importmulti([{
+            "desc": receiving_descriptor,
+            # 24 hours just in case
+            "timestamp": 'now',
+            # FIXME: is this inclusive? if we we're overlapping 1 ever time ...
+            "range": receiving_descriptor_range,
+            "watchonly": True,
+            # Bitcoin Core cannot import P2SH/P2WSH: https://bitcoin.stackexchange.com/a/89118/85335
+            "keypool": False,
+            "internal": False,
+        }])
+
+        # Change addresses
+        change_descriptor = self.descriptor(True)
+        change_descriptor_range = [0, self.change_export_index]
+        logger.info(f"Exporting: descriptor={change_descriptor} range={change_descriptor_range}")
+        self.node.wallet_rpc.importmulti([{
+            "desc": change_descriptor,
+            # 24 hours just in case
+            "timestamp": 'now',
+            # FIXME: is this inclusive? if we we're overlapping 1 ever time ...
+            "range": change_descriptor_range,
+            "watchonly": True,
+            # Bitcoin Core cannot import P2SH/P2WSH: https://bitcoin.stackexchange.com/a/89118/85335
+            "keypool": False,
+            "internal": False,
+        }])
+
         self.save()
         logger.info("Finished watch-only export")
 
@@ -488,3 +528,28 @@ class MultisigWallet:
     
     def addresses(self):
         pass
+
+    def synced(self):
+        """Watch-only Bitcoin Core wallet exists and is fully synced. Only call if there aren't RPC errors."""
+        # TODO: check a random index from every "chunk" 
+        
+        # Change addresses synced
+        address = self.node.wallet_rpc.deriveaddresses(
+            self.descriptor(True),
+            [self.change_export_index-1, self.change_export_index])[0]
+
+        address_info = self.node.wallet_rpc.getaddressinfo(address)
+        if not address_info['iswatchonly']:
+            return False
+        
+        # Receiving addresses synced
+        address = self.node.wallet_rpc.deriveaddresses(
+            self.descriptor(False),
+            [self.receiving_export_index-1, self.receiving_export_index])[0]
+
+        address_info = self.node.wallet_rpc.getaddressinfo(address)
+        if not address_info['iswatchonly']:
+            return False
+
+        # Everything is synced
+        return True

@@ -24,7 +24,8 @@ type State = {
   port: string;
   user: string;
   password: string;
-  isLoading: boolean;
+  authenticating: boolean;
+  syncing: boolean;
   error: string;
   dirty: boolean;
 }
@@ -35,7 +36,8 @@ class DeviceInstructionsModal extends React.Component<Props> {
     port: '',
     user: '',
     password: '',
-    isLoading: false,
+    authenticating: false,
+    syncing: false,
     error: '',
     dirty: false,
   }
@@ -44,10 +46,10 @@ class DeviceInstructionsModal extends React.Component<Props> {
     this.setState({ [ev.currentTarget.name]: ev.currentTarget.value, dirty: true });
   };
 
-  private handleSubmit = async (ev: React.FormEvent<HTMLFormElement>) => {
+  private handleUpdateNode = async (ev: React.FormEvent<HTMLFormElement>) => {
     ev.preventDefault();
     if (this.props.activeWallet) {
-      this.setState({ isLoading: true })
+      this.setState({ authenticating: true })
       try {
         await api.updateNode({
           wallet_name: this.props.activeWallet.name,
@@ -57,14 +59,31 @@ class DeviceInstructionsModal extends React.Component<Props> {
           password: this.state.password,
         });
       } catch(error) {
-        this.setState({ isLoading: false, error: error.message })
+        this.setState({ authenticating: false, error: error.message })
         return
       }
       await this.props.getWallets()
-      this.setState({ isLoading: false, host: '', port: '', user: '', password: '', dirty: false })
+      this.setState({ authenticating: false, host: '', port: '', user: '', password: '', dirty: false })
     }
   };
   
+  private handleSync = async (ev: React.FormEvent<HTMLFormElement>) => {
+    if (this.props.activeWallet) {
+      this.setState({ syncing: true })
+      try {
+        await api.sync({
+          wallet_name: this.props.activeWallet.name,
+        });
+      } catch(error) {
+        this.setState({ syncing: false, error: error.message })
+        return
+      }
+      await this.props.getWallets()
+      this.setState({ syncing: false })
+    }
+  };
+  
+
   static getDerivedStateFromProps(props: any, state: State) {
     if (props.activeWallet && !state.dirty) {
       const node = props.activeWallet.node
@@ -80,19 +99,22 @@ class DeviceInstructionsModal extends React.Component<Props> {
   }
 
   render() {
-    const { activeWallet, toggleDeviceInstructionsModal } = this.props;
+    const { activeWallet } = this.props;
     if (!activeWallet) {
       return <div></div>
     }
     const rpcError = activeWallet.node.rpc_error
     const hasRpcError = !!rpcError
     const authError = rpcError && rpcError.includes('credentials')
+    const notSynced = activeWallet.synced === false
+    const showModal = hasRpcError || notSynced
     return (
-			<Modal isOpen={hasRpcError}>
+			<Modal isOpen={showModal}>
 				<ModalHeader>Node Connection Problem</ModalHeader>
 				<ModalBody>
-          <Alert className="mb-1" color="danger">{this.state.error || rpcError}</Alert>
-          <Form onSubmit={this.handleSubmit}>
+          {hasRpcError && <div>
+            <Alert className="mb-1" color="danger">{this.state.error || rpcError}</Alert>
+          <Form onSubmit={this.handleUpdateNode}>
             {authError && <div>
               <FormGroup>
                 <Label>RPC Hostname</Label>
@@ -104,11 +126,18 @@ class DeviceInstructionsModal extends React.Component<Props> {
                 <Label>RPC Password</Label>
                 <Input name="password" type="password" value={this.state.password} onChange={this.handleChange}/>
               </FormGroup>
-              <LoadingButton loading={this.state.isLoading} color="primary" size="lg" block>
+              <LoadingButton loading={this.state.authenticating} color="primary" size="lg" block>
                 Connect
               </LoadingButton>
             </div>}
-          </Form>
+            </Form>            
+          </div>}
+          {!hasRpcError && notSynced && <div>
+            Your Bitcoin node is out-of-sync with Junction<br/>
+            <LoadingButton loading={this.state.syncing} onClick={this.handleSync} color="primary" size="lg" block>
+                Sync Node
+            </LoadingButton>
+          </div>}
 				</ModalBody>
 			</Modal>
 		)

@@ -64,6 +64,10 @@ export interface GenerateAddressArguments {
   wallet_name: string;
 }
 
+export interface SyncArguments {
+  wallet_name: string;
+}
+
 export interface DisplayAddressArguments {
   wallet_name: string;
   device_id: string;

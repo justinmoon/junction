@@ -31,6 +31,10 @@ class API {
     return this.request<any>('POST', '/wallets', args);
   }
 
+  sync(args: T.SyncArguments) {
+    return this.request<any>('POST', '/sync', args);
+  }
+
   addSigner(args: T.AddSignerArguments) {
     return this.request<any>('POST', '/signers', args);
   }

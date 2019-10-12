@@ -48,4 +48,5 @@ export interface Wallet {
   wallet_type: WalletType;
   script_type: ScriptType;
   network: string;
+  synced: boolean;
 }

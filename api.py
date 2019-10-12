@@ -271,6 +271,19 @@ def update_node():
     wallet.save()
     return jsonify({})
 
+@api.route('/sync', methods=['POST'])
+@schema.validate({
+    'required': ['wallet_name'],
+    'properties': {
+        'wallet_name': {'type': 'string'},
+    },
+})
+def sync():
+    wallet_name = request.json['wallet_name']
+    wallet = MultisigWallet.open(wallet_name)
+    wallet.export_everything()
+    return jsonify({})
+
 @api.route('/utxos', methods=['GET'])
 def list_utxos():
     # FIXME: display utxos across all wallets, or per-wallet?
