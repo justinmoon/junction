@@ -23,7 +23,7 @@ export function getWallets(): ThunkAction {
   };
 }
 
-export function addSigner(device: UnlockedDevice): ThunkAction {
+export function addSigner(device: UnlockedDevice, nickname: string): ThunkAction {
   return async (dispatch, getState) => {
     dispatch({ type: T.ADD_SIGNER, device });
     const state = getState()
@@ -31,7 +31,7 @@ export function addSigner(device: UnlockedDevice): ThunkAction {
     try {
       await api.addSigner({
         wallet_name: activeWallet.name,
-        signer_name: device.type,
+        signer_name: nickname,
         device_id: device.fingerprint,
       });
       await dispatch(getWallets())

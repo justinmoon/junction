@@ -194,14 +194,19 @@ class Wallet:
         
     def to_dict(self, extras=False):
         '''Represent instance as a dictionary'''
-        # sort signers lexigraphically by their xpub, this way any permutation of signers
-        # with same keys will always generate the same wallet
+        # psbts are serialized if extras=False, otherwise dictionary ...
+        psbts = []
+        for psbt in self.psbts:
+            psbt.tx.rehash()
+            serialized = psbt.serialize()
+            psbts.append(serialized)
         signers = [signer.to_dict() for signer in self.signers]
         base = {
             "name": self.name,
             "m": self.m,
             "n": self.n,
             "signers": signers,
+            "psbts": psbts,
             "receiving_address_index": self.receiving_address_index,
             "change_address_index": self.change_address_index,
             "node": self.node.to_dict(extras),

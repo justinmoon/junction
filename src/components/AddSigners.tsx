@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Button, Row } from 'reactstrap';
+import { Button, Row, Input } from 'reactstrap';
 import { Device, isUnlockedDevice } from '../types'
 import { MyCard, MyTable, LoadingButton } from './Toolbox'
 import { 
@@ -23,27 +23,57 @@ interface StateProps {
 
 type Props = StateProps & DispatchProps;
 
-class AddSigners extends React.Component<Props> {
+interface LocalState {
+  nicknames: {
+    [key: string]: string;
+  }
+}
+
+class AddSigners extends React.Component<Props,LocalState> {
+  state: LocalState = {
+    nicknames: {}
+  }
+
+  private setNickname = (ev: React.ChangeEvent<HTMLInputElement>, device: Device) => {
+    this.setState({ 
+      nicknames: {
+        ...this.state.nicknames,
+        [device.path]: ev.target.value
+      }
+    });
+  };
+
+  private addSigner = (device: Device, nickname: string) => {
+    if (nickname.length === 0) {
+      alert('Give your device a nickname')
+    } else if (isUnlockedDevice(device)) {  // FIXME: typescript sucks
+      this.props.addSigner(device, nickname)
+    }
+  };
 
   renderAddDevice(device: Device) {
-    const { addSigner, deviceBeingAdded, toggleDeviceInstructionsModal, toggleDeviceUnlockModal } = this.props;
+    const { deviceBeingAdded, toggleDeviceInstructionsModal, toggleDeviceUnlockModal } = this.props;
     const loading = device === deviceBeingAdded;
     let rightComponent = null;
-    
+    let nickname = this.state.nicknames[device.path]
+
     // TODO: passwords
     if (device.needs_pin_sent) {
       rightComponent = <Button onClick={() => toggleDeviceUnlockModal()}>Unlock</Button>
     } else if (device.error) {
       rightComponent = <Button color="default" onClick={() => toggleDeviceInstructionsModal(device.type)}>Unavailable</Button>
     } else if (isUnlockedDevice(device)) {
-      rightComponent = <LoadingButton loading={loading} onClick={() => addSigner(device)}>Add Signer</LoadingButton>
+      rightComponent = <LoadingButton loading={loading} onClick={() => this.addSigner(device, nickname)}>Add Signer</LoadingButton>
     } else {
       return <div></div> // FIXME
     }
-    
+
     return (
       <tr key={device.path + device.type}>
         <td>{ device.type }</td>
+        <td>
+          {device.path && <Input name="host" type="text" value={nickname} onChange={e => this.setNickname(e, device)}/>}   
+        </td>
         <td className="text-right">
           {rightComponent}
         </td>
@@ -74,6 +104,7 @@ class AddSigners extends React.Component<Props> {
         <thead>
           <tr>
             <th scope="col">Device</th>
+            <th scope="col">Nickname</th>
             <th scope="col" className="text-right">Action</th>
           </tr>
         </thead>
