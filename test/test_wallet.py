@@ -3,7 +3,7 @@ import tempfile
 import os
 import logging
 from decimal import Decimal
-from junction import MultisigWallet, JunctionError, Node
+from junction import Wallet, JunctionError, Node
 
 from .utils import start_bitcoind
 
@@ -79,7 +79,7 @@ def make_wallet_file(testcase):
 def make_wallet(testcase):
     wallet_name = testcase._testMethodName
     node = make_node(testcase)
-    wallet = MultisigWallet.create(
+    wallet = Wallet.create(
         name=wallet_name,
         m=2,
         n=3,
@@ -121,7 +121,7 @@ class WalletTests(unittest.TestCase):
         node = make_node(self)
         # m > n
         with self.assertRaises(JunctionError):
-            MultisigWallet.create(
+            Wallet.create(
                 name=wallet_name,
                 m=3,
                 n=2,
@@ -132,7 +132,7 @@ class WalletTests(unittest.TestCase):
             )
         # n must be positive
         with self.assertRaises(JunctionError):
-            MultisigWallet.create(
+            Wallet.create(
                 name=wallet_name,
                 m=0,
                 n=1,
@@ -143,7 +143,7 @@ class WalletTests(unittest.TestCase):
             )
         # m capped at 5
         with self.assertRaises(JunctionError):
-            MultisigWallet.create(
+            Wallet.create(
                 name=wallet_name,
                 m=3,
                 n=21,
@@ -155,7 +155,7 @@ class WalletTests(unittest.TestCase):
 
     def test_add_signers(self):
         node = make_node(self)
-        wallet = MultisigWallet.create(name=self._testMethodName, m=2, n=3, node=node,
+        wallet = Wallet.create(name=self._testMethodName, m=2, n=3, node=node,
             script_type='native', wallet_type='multi', network='regtest')
 
         # Wallet file created
@@ -206,14 +206,14 @@ class WalletTests(unittest.TestCase):
 
     def test_open_wallet_file_doesnt_exist(self):
         with self.assertRaises(FileNotFoundError):
-            MultisigWallet.open('test_open_wallet_doesnt_exist')
+            Wallet.open('test_open_wallet_doesnt_exist')
 
     def test_open_wallet_watchonly_doesnt_exist(self):
         make_wallet_file(self)
         # watch-only wallet doesn't exist
         self.assertNotIn(self._testMethodName, self.rpc.listwallets())
         # load wallet
-        wallet = MultisigWallet.open(self._testMethodName)
+        wallet = Wallet.open(self._testMethodName)
         # watch-only wallet was created
         self.assertIn(self._testMethodName, self.rpc.listwallets())
 
@@ -225,7 +225,7 @@ class WalletTests(unittest.TestCase):
         wallet_file_path = os.path.join(self.wallet_dir, f'{wallet_name}.json')
         with open(wallet_file_path, 'r') as f:
             initial_contents = f.read()
-        wallet = MultisigWallet.open(wallet_name)
+        wallet = Wallet.open(wallet_name)
         wallet.save()
         with open(wallet_file_path, 'r') as f:
             final_contents = f.read()

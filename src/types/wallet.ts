@@ -33,7 +33,7 @@ export interface Signer {
   xpub: string;
 }
 
-// Aligns with MultisigWallet in junction.py
+// Aligns with Wallet in junction.py
 export interface Wallet {
   name: string;
   m: number;

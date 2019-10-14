@@ -44,11 +44,11 @@ def get_wallet_names():
     return wallet_names
 
 def get_wallets():
-    from junction import MultisigWallet  # FIXME: circular imports
+    from junction import Wallet  # FIXME: circular imports
     wallets = []
     wallet_names = get_wallet_names()
     for wallet_name in wallet_names:
-        wallet = MultisigWallet.open(wallet_name, ensure_watchonly=False)
+        wallet = Wallet.open(wallet_name, ensure_watchonly=False)
         wallets.append(wallet)
     return wallets
 

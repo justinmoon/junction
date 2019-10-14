@@ -83,7 +83,7 @@ class Node:
         if user and password:
             self.user, self.password, self.cookie_auth = user, password, True
     
-class MultisigWallet:
+class Wallet:
 
     def __init__(self, *, name, m, n, signers, psbts, receiving_address_index, 
                  change_address_index, node, network, script_type, wallet_type):
@@ -134,7 +134,7 @@ class MultisigWallet:
         # FIXME: make sure that no RPC wallet with this name exists
         # Perhaps we should be connecting to a node, first
 
-        # MultisigWallet instance
+        # Wallet instance
         wallet = cls(name=name, m=m, n=n, signers=[], psbts=[], receiving_address_index=0,
                      change_address_index=0, node=node, network=network, script_type=script_type,
                      wallet_type=wallet_type)
@@ -194,11 +194,6 @@ class MultisigWallet:
         
     def to_dict(self, extras=False):
         '''Represent instance as a dictionary'''
-        psbts = []
-        for psbt in self.psbts:
-            psbt.tx.rehash()
-            serialized = psbt.serialize()
-            psbts.append(serialized)
         # sort signers lexigraphically by their xpub, this way any permutation of signers
         # with same keys will always generate the same wallet
         signers = [signer.to_dict() for signer in self.signers]
@@ -207,7 +202,6 @@ class MultisigWallet:
             "m": self.m,
             "n": self.n,
             "signers": signers,
-            "psbts": psbts,
             "receiving_address_index": self.receiving_address_index,
             "change_address_index": self.change_address_index,
             "node": self.node.to_dict(extras),
@@ -235,6 +229,7 @@ class MultisigWallet:
                     'confirmed': confirmed,
                     'unconfirmed': unconfirmed,
                 }
+                # FIXME: signing shouldn't require bitcoin rpc 
                 base['psbts'] = [self.decode_psbt(psbt) for psbt in self.psbts]
                 base['coins'] = self.coins()
                 base['history'] = self.history()

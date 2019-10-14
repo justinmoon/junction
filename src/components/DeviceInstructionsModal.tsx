@@ -30,7 +30,9 @@ class DeviceInstructionsModal extends React.Component<Props> {
     const onMainnet = activeWallet.network === Network.mainnet;
     return (
 			<Modal isOpen={open} toggle={() => toggleDeviceInstructionsModal()}>
-				<ModalHeader toggle={() => toggleDeviceInstructionsModal()}>Device Instructions</ModalHeader>
+				<ModalHeader toggle={() => toggleDeviceInstructionsModal()}>
+          Device Instructions
+        </ModalHeader>
 				<ModalBody>
           {showTrezor && 
             <div>

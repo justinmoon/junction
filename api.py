@@ -6,7 +6,7 @@ from flask_json_schema import JsonSchema, JsonValidationError
 from hwilib import commands, serializations
 from hwilib.devices import trezor, ledger, coldcard
 
-from junction import MultisigWallet, JunctionError, Node
+from junction import Wallet, JunctionError, Node
 from disk import get_wallets, ensure_datadir
 from utils import RPC, get_client_and_device, ClientGroup, get_device, get_nodes
 
@@ -51,7 +51,7 @@ def list_devices():
 def prompt_device():
     client_group.close()
     wallet_name = request.json['wallet_name']
-    wallet = MultisigWallet.open(wallet_name)
+    wallet = Wallet.open(wallet_name)
     client_group.prompt_pin(wallet.network)
     return jsonify({})  # FIXME: what to do here when there's nothing to return
 
@@ -123,7 +123,7 @@ def create_wallet():
                 network=request.json['network'])
     # check that node is reachable
     node.default_rpc.test()
-    wallet = MultisigWallet.create(**request.json, node=node)
+    wallet = Wallet.create(**request.json, node=node)
     return jsonify(wallet.to_dict(True))
 
 @api.route('/signers', methods=['POST'])
@@ -139,7 +139,7 @@ def add_signer():
     wallet_name = request.json['wallet_name']
     signer_name = request.json['signer_name']
     device_id = request.json['device_id']
-    wallet = MultisigWallet.open(wallet_name)
+    wallet = Wallet.open(wallet_name)
     with get_client_and_device(device_id, wallet.network) as (client, device):
         derivation_path = wallet.account_derivation_path()
         # Get XPUB and validate against wallet.network 
@@ -163,7 +163,7 @@ def address():
     # TODO: it would be better to generate addresses ahead of time and store them on the wallet
     # just not sure how to implement that
     wallet_name = request.json['wallet_name']
-    wallet = MultisigWallet.open(wallet_name)
+    wallet = Wallet.open(wallet_name)
     address = wallet.derive_receiving_address()
     return jsonify({
         'address': address,
@@ -191,7 +191,7 @@ def address():
 })
 def create_psbt():
     wallet_name = request.json['wallet_name']
-    wallet = MultisigWallet.open(wallet_name)
+    wallet = Wallet.open(wallet_name)
     api_outputs = request.json['outputs']
     outputs = []
     for output in api_outputs:
@@ -227,7 +227,7 @@ def abandon_psbt():
 })
 def sign_psbt():
     wallet_name = request.json['wallet_name']
-    wallet = MultisigWallet.open(wallet_name)
+    wallet = Wallet.open(wallet_name)
     fingerprint = request.json['device_id']
     index = request.json['index']
     old_psbt = wallet.psbts[index]
@@ -262,7 +262,7 @@ def list_nodes():
 })
 def update_node():
     wallet_name = request.json.pop('wallet_name')
-    wallet = MultisigWallet.open(wallet_name)
+    wallet = Wallet.open(wallet_name)
     node_params = request.json
 
     node = Node(**node_params, wallet_name=wallet.name, network=wallet.network)
@@ -280,7 +280,7 @@ def update_node():
 })
 def sync():
     wallet_name = request.json['wallet_name']
-    wallet = MultisigWallet.open(wallet_name)
+    wallet = Wallet.open(wallet_name)
     wallet.sync()
     return jsonify({})
 
@@ -305,7 +305,7 @@ def list_transactions():
 def broadcast():
     wallet_name = request.json['wallet_name']
     index = request.json['index']
-    wallet = MultisigWallet.open(wallet_name)
+    wallet = Wallet.open(wallet_name)
     txid = wallet.broadcast(index)
     return jsonify({
         'txid': txid,
@@ -324,7 +324,7 @@ def display_address():
     wallet_name = request.json['wallet_name']
     address = request.json['address']
     device_id = request.json['device_id']
-    wallet = MultisigWallet.open(wallet_name)
+    wallet = Wallet.open(wallet_name)
 
     device = get_device(device_id)
 
@@ -385,7 +385,7 @@ def display_address():
 def register_device():
     wallet_name = request.json['wallet_name']
     device_id = request.json['device_id']
-    wallet = MultisigWallet.open(wallet_name)
+    wallet = Wallet.open(wallet_name)
 
     device = get_device(device_id)
 
