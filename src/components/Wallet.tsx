@@ -96,6 +96,7 @@ class Wallet extends React.Component<Props, State> {
         }
         {activeWallet.balances.unconfirmed > 0 &&
           <div className="text-center">Unconfirmed Balance: {activeWallet.balances.unconfirmed} BTC</div>}
+        <div className="text-center">Network: {activeWallet.network}</div>
         {activeWallet.ready &&
           <div className="text-center">
             <LoadingButton loading={this.state.pending} onClick={() => this.generateAddress()}>Generate Address</LoadingButton>
