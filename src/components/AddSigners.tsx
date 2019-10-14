@@ -55,7 +55,7 @@ class AddSigners extends React.Component<Props,LocalState> {
     const { deviceBeingAdded, toggleDeviceInstructionsModal, toggleDeviceUnlockModal } = this.props;
     const loading = device === deviceBeingAdded;
     let rightComponent = null;
-    let nickname = this.state.nicknames[device.path]
+    let nickname = this.state.nicknames[device.path] || ''
 
     // TODO: passwords
     if (device.needs_pin_sent) {
