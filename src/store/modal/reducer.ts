@@ -15,6 +15,9 @@ export interface ModalState {
     address: string | null;
     open: boolean;
   };
+  connectRPC: {
+    open: boolean;
+  }
 }
 
 export const INITIAL_STATE: ModalState = {
@@ -28,6 +31,9 @@ export const INITIAL_STATE: ModalState = {
   displayAddress: {
     open: false,
     address: null,
+  },
+  connectRPC: {
+    open: false,
   },
 };
 

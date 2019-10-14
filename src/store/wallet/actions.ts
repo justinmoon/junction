@@ -4,6 +4,7 @@ import { Wallet, UnlockedDevice, Signer } from '../../types';
 import api from '../../api';
 import { selectActiveWallet } from './selectors';
 import { notNull } from '..';
+import { toggleConnectRPCModal } from '../modal'
 
 export function getWallets(): ThunkAction {
   return async (dispatch, getState) => {
@@ -73,6 +74,20 @@ export function signPSBT(device: UnlockedDevice, index: number): ThunkAction {
     }
   }
 }
+
+// export function changeWallet(wallet: Wallet): ThunkAction {
+//   // FIXME: doesn't need to be async ...
+//   return async (dispatch, getState) => {
+//     await dispatch({ type: T.CHANGE_WALLET, payload: wallet.name });
+//     const activeWallet = notNull(selectActiveWallet(getState()))
+//     const hasRpcError = !!activeWallet.node.rpc_error
+//     const notSynced = activeWallet.synced === false
+//     const showModal = hasRpcError || notSynced
+//     if (showModal) {
+//       dispatch(toggleConnectRPCModal())
+//     }
+//   }
+// }
 
 export function changeWallet(wallet: Wallet) {
   return {

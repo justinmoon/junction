@@ -238,6 +238,7 @@ class MultisigWallet:
                 base['psbts'] = [self.decode_psbt(psbt) for psbt in self.psbts]
                 base['coins'] = self.coins()
                 base['history'] = self.history()
+                base['synced'] = self.synced()
         return base
 
     ### Watch-only Bitcoin Core wallets
@@ -420,6 +421,17 @@ class MultisigWallet:
         address_info = self.node.wallet_rpc.getaddressinfo(address)
         return address_info.get('iswatchonly', False)
     
+    def synced(self):
+        '''Ballpark guess whether we're synced with Bitcoin Core'''
+        checks = []
+        if self.change_address_index != 0:
+            checks.append(self.watching_address(True, 0))
+            checks.append(self.watching_address(True, self.change_address_index-1))
+        if self.receiving_address_index != 0:
+            checks.append(self.watching_address(False, 0))
+            checks.append(self.watching_address(False, self.receiving_address_index-1))
+        return all(checks)
+
     def sync(self):
         '''Export every address that Bitcoin Core doesn't know about'''
         # Sync change addresses

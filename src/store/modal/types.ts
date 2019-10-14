@@ -5,8 +5,10 @@ export enum ModalActionTypes {
   TOGGLE = 'TOGGLE',
 }
 
+// FIXME: should I reference these in the reducer?
 export enum ModalNames {
   deviceInstructions = 'deviceInstructions',
   deviceUnlock = 'deviceUnlock',
   displayAddress = 'displayAddress',
+  connectRPC = 'connectRPC'
 }

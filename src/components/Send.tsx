@@ -145,7 +145,7 @@ class Create extends React.Component<Props, LocalState> {
             Add Output
           </Button>
           <LoadingButton loading={this.state.isSubmitting} color="primary" className="m-2">
-            Submit
+            Start Signing
           </LoadingButton>
         </div>
       </Form>

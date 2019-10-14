@@ -1,6 +1,5 @@
 import { AppState } from '..';
 import { Signer, isUnlockedDevice, Device, Wallet } from '../../types'
-import { selectDevices } from '../device';
 
 export function selectCandidateDevicesForActiveWallet(state: AppState) {
   // FIXME this check sucks
@@ -83,4 +82,16 @@ export function signaturesRemaining(wallet: Wallet, psbt: any) {
     ? Object.keys(psbt.inputs[0].partial_signatures).length
     : 0;
   return Math.max(wallet.m - partialSignatures, 0)
+}
+
+export function selectNodeProblem(state: AppState) {
+  const activeWallet = selectActiveWallet(state)
+  if (activeWallet) {
+    const rpcError = activeWallet.node.rpc_error
+    const hasRpcError = !!rpcError
+    const notSynced = activeWallet.synced === false
+    return hasRpcError || notSynced
+  } else {
+    return false
+  }
 }

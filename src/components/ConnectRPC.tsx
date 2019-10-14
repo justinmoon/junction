@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Modal, ModalHeader, ModalFooter, ModalBody, Form, Alert, FormGroup, Label, Input } from 'reactstrap';
 import { AppState } from '../store';
-import { toggleDeviceInstructionsModal } from '../store/modal'
+import { toggleDeviceInstructionsModal, toggleConnectRPCModal } from '../store/modal'
 import { connect } from 'react-redux';
 import { selectActiveWallet, getWallets } from '../store/wallet';
 import {  Wallet } from '../types';
@@ -10,11 +10,13 @@ import api from '../api';
 
 interface DispatchProps {
   toggleDeviceInstructionsModal: typeof toggleDeviceInstructionsModal;
+  toggleConnectRPCModal: typeof toggleConnectRPCModal;
   getWallets: typeof getWallets;
 }
 
 interface StateProps {
   activeWallet: Wallet | null;
+  open: boolean;
 }
 
 type Props = DispatchProps & StateProps
@@ -80,10 +82,10 @@ class DeviceInstructionsModal extends React.Component<Props> {
       }
       await this.props.getWallets()
       this.setState({ syncing: false })
+      this.props.toggleConnectRPCModal()
     }
   };
   
-
   static getDerivedStateFromProps(props: any, state: State) {
     if (props.activeWallet && !state.dirty) {
       const node = props.activeWallet.node
@@ -99,7 +101,7 @@ class DeviceInstructionsModal extends React.Component<Props> {
   }
 
   render() {
-    const { activeWallet } = this.props;
+    const { activeWallet, toggleConnectRPCModal, open } = this.props;
     if (!activeWallet) {
       return <div></div>
     }
@@ -107,10 +109,11 @@ class DeviceInstructionsModal extends React.Component<Props> {
     const hasRpcError = !!rpcError
     const authError = rpcError && rpcError.includes('credentials')
     const notSynced = activeWallet.synced === false
-    const showModal = hasRpcError || notSynced
     return (
-			<Modal isOpen={showModal}>
-				<ModalHeader>Node Connection Problem</ModalHeader>
+			<Modal isOpen={open}>
+				<ModalHeader toggle={() => toggleConnectRPCModal()}>
+          Node Connection Problem
+        </ModalHeader>
 				<ModalBody>
           {hasRpcError && <div>
             <Alert className="mb-1" color="danger">{this.state.error || rpcError}</Alert>
@@ -147,10 +150,11 @@ class DeviceInstructionsModal extends React.Component<Props> {
 export const mapStateToProps = (state: AppState) => {
 	return {
     activeWallet: selectActiveWallet(state),
+    open: state.modal.connectRPC.open
 	}
 }
   
 export default connect(
 	mapStateToProps,
-	{ toggleDeviceInstructionsModal, getWallets },
+	{ toggleDeviceInstructionsModal, toggleConnectRPCModal, getWallets },
 )(DeviceInstructionsModal);

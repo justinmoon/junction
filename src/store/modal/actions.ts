@@ -31,3 +31,7 @@ export function toggleDisplayAddressModal(address?: any) {
   const data = { address }
   return toggle(ModalNames.displayAddress, data)
 }
+
+export function toggleConnectRPCModal() {
+  return toggle(ModalNames.connectRPC)
+}

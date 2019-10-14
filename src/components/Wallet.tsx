@@ -5,20 +5,22 @@ import Signers from './Signers';
 import { Wallet as WalletType, Signer, WalletType as WalletTypeType } from '../types'
 import { AppState, notNull } from '../store';
 import { LoadingButton } from './Toolbox'
-import { getWallets, selectActiveWallet, addSigner, selectUnregisteredSigners } from '../store/wallet';
+import { getWallets, selectActiveWallet, addSigner, selectUnregisteredSigners, selectNodeProblem } from '../store/wallet';
 import api from '../api'
-import { toggleDisplayAddressModal } from '../store/modal';
+import { toggleDisplayAddressModal, toggleConnectRPCModal } from '../store/modal';
 import RegisterSigners from './RegisterSigners';
 
 interface StateProps {
   activeWallet: WalletType;
   unregisteredSigners: Signer[];
+  nodeProblem: boolean;
 }
 
 interface DispatchProps {
   getWallets: typeof getWallets;
   addSigner: typeof addSigner;
   toggleDisplayAddressModal: typeof toggleDisplayAddressModal;
+  toggleConnectRPCModal: typeof toggleConnectRPCModal;
 }
 
 interface State {
@@ -44,7 +46,7 @@ class Wallet extends React.Component<Props, State> {
   }
 
   render() {
-    const { activeWallet, unregisteredSigners } = this.props;
+    const { activeWallet, unregisteredSigners, nodeProblem, toggleConnectRPCModal } = this.props;
     const { signers } = activeWallet;
 
     let signersComponent = null;
@@ -78,9 +80,17 @@ class Wallet extends React.Component<Props, State> {
       )
     }
 
-    return (
-      <div>
-        <h2 className='text-center'>{ activeWallet.name } ({activeWallet.m}/{activeWallet.n})</h2>
+    let walletBody = null
+    if (nodeProblem) {
+      walletBody = (
+        <div className="text-center">
+          <LoadingButton color="danger" loading={this.state.pending} onClick={() => toggleConnectRPCModal()}>
+            Fix Issues With Your Node
+          </LoadingButton>
+        </div>
+      )
+    } else {
+      walletBody = (<div>
         {activeWallet.ready && 
           <div className="text-center">Confirmed Balance: {activeWallet.balances.confirmed} BTC</div>
         }
@@ -90,6 +100,13 @@ class Wallet extends React.Component<Props, State> {
           <div className="text-center">
             <LoadingButton loading={this.state.pending} onClick={() => this.generateAddress()}>Generate Address</LoadingButton>
           </div>}
+      </div>)
+    }
+
+    return (
+      <div>
+        <h2 className='text-center'>{ activeWallet.name } ({activeWallet.m}/{activeWallet.n})</h2>
+        {walletBody}
         {signersComponent}
         {addSigners}
         {activeWallet.wallet_type === WalletTypeType.multi && registerSigners}
@@ -102,10 +119,11 @@ const mapStateToProps = (state: AppState) => {
   return {
     activeWallet: notNull(selectActiveWallet(state)),
     unregisteredSigners: selectUnregisteredSigners(state),
+    nodeProblem: selectNodeProblem(state),
   }
 }
 
 export default connect(
   mapStateToProps,
-  { getWallets, toggleDisplayAddressModal },
+  { getWallets, toggleDisplayAddressModal, toggleConnectRPCModal },
 )(Wallet);
