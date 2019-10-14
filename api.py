@@ -7,7 +7,7 @@ from hwilib import commands, serializations
 from hwilib.devices import trezor, ledger, coldcard
 
 from junction import MultisigWallet, JunctionError, Node
-from disk import get_wallets, get_settings, update_settings, ensure_datadir
+from disk import get_wallets, ensure_datadir
 from utils import RPC, get_client_and_device, ClientGroup, get_device, get_nodes
 
 import custom_coldcard
@@ -164,7 +164,7 @@ def address():
     # just not sure how to implement that
     wallet_name = request.json['wallet_name']
     wallet = MultisigWallet.open(wallet_name)
-    address = wallet.address(change=False)
+    address = wallet.derive_receiving_address()
     return jsonify({
         'address': address,
     })
@@ -281,7 +281,7 @@ def update_node():
 def sync():
     wallet_name = request.json['wallet_name']
     wallet = MultisigWallet.open(wallet_name)
-    wallet.export_everything()
+    wallet.sync()
     return jsonify({})
 
 @api.route('/utxos', methods=['GET'])

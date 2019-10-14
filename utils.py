@@ -9,6 +9,8 @@ from flask import flash, current_app as app
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 from hwilib import commands
 from hwilib.devices import coldcard, digitalbitbox, ledger, trezor
+from btclib import bip32, base58
+import http
 
 logger = logging.getLogger(__name__)
 
@@ -114,21 +116,32 @@ def sat_to_btc(sat):
 
 class RPC:
 
-    def __init__(self, uri, timeout=10):
+    def __init__(self, uri, timeout=30):
         self.uri = uri
         self.timeout = timeout
+        self.rpc = AuthServiceProxy(self.uri, timeout=self.timeout)
+        self.retries = 3
 
     def __getattr__(self, name):
-        '''Create new proxy for every call to prevent timeouts'''
-        rpc = AuthServiceProxy(self.uri, timeout=self.timeout) 
-        return getattr(rpc, name)
+        '''Retry failed RPC calls 3 times'''
+        try:
+            response = getattr(self.rpc, name)
+            self.retries = 3
+            return response
+        except:
+            if self.retries > 0:
+                self.rpc = AuthServiceProxy(self.uri, timeout=self.timeout)
+                self.retries -= 1
+                return getattr(self, name)
+            else:
+                raise
 
     def test(self):
         '''raises JunctionErrors if RPC-connection doesn't work'''
         # Test RPC connection works
         try:
             self.getblockchaininfo()
-        except ConnectionRefusedError as e:
+        except (ConnectionRefusedError, http.client.CannotSendRequest) as e:
             raise JunctionError("ConnectionRefusedError: check https://bitcoin.stackexchange.com/questions/74337/testnet-bitcoin-connection-refused-111")
         except JSONRPCException as e:
             if "Unauthorized" in str(e):
@@ -268,3 +281,13 @@ def get_nodes():
             node.running = False
             pass
     return nodes
+
+### Bitcoin scripts & addresses
+
+def derive_child_sec_from_xpub(xpub, path):
+    child_xpub = bip32.derive(xpub, path)
+    child_xpub_bytes = base58.decode_check(child_xpub)
+    # assertion about length?
+    child_sec_bytes = child_xpub_bytes[-33:]
+    child_sec_hex = child_sec_bytes.hex()
+    return child_sec_hex

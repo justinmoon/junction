@@ -11,7 +11,9 @@ from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 
 def start_bitcoind(bitcoind_path):
     datadir = tempfile.mkdtemp()
-    bitcoind_proc = subprocess.Popen([bitcoind_path, '-regtest', '-datadir=' + datadir, '-noprinttoconsole'])
+    # Without fallback fee, sometimes bitcoin core couldn't do coin selection ...
+    bitcoind_proc = subprocess.Popen([bitcoind_path, '-regtest', '-datadir=' + datadir, '-noprinttoconsole', 
+        '-fallbackfee=0.0002'])
     def cleanup_bitcoind():
         bitcoind_proc.kill()
         shutil.rmtree(datadir)

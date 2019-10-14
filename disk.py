@@ -34,12 +34,6 @@ def ensure_datadir():
         # copy settings.json to datadir
         copyfile('settings.json.ex', settings_path)
 
-def get_settings():
-    return read_json_file('settings.json')
-
-def update_settings(settings):
-    return write_json_file(settings, 'settings.json')
-
 def get_wallet_names():
     wallet_names = []
     wallets_dir = os.path.join(DATADIR, 'wallets')

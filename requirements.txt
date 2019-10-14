@@ -1,13 +1,12 @@
-hwi
+# web
 flask
-python-bitcoinrpc
-
 flask_json_schema
 # with simplejson flask can serialize decimals
 simplejson
 flask-cors
 
 # wallets
+hwi
 ckcc-protocol
 trezor
 
@@ -18,3 +17,6 @@ pywebview[qt]
 pywebview[cef]
 pyinstaller.zip
 
+# bitcoin
+btclib
+python-bitcoinrpc

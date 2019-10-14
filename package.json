@@ -29,7 +29,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "linux": "yarn build && pyinstaller junction.spec",
+    "windows": "docker run -v \"$(pwd):/src/\" cdrx/pyinstaller-windows"
   },
   "eslintConfig": {
     "extends": "react-app"

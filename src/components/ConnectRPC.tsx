@@ -133,7 +133,7 @@ class DeviceInstructionsModal extends React.Component<Props> {
             </Form>            
           </div>}
           {!hasRpcError && notSynced && <div>
-            Your Bitcoin node is out-of-sync with Junction<br/>
+            Your Bitcoin node is out-of-sync with Junction
             <LoadingButton loading={this.state.syncing} onClick={this.handleSync} color="primary" size="lg" block>
                 Sync Node
             </LoadingButton>

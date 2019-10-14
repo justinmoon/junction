@@ -6,8 +6,8 @@ import os.path
 from pprint import pprint
 from hwilib.serializations import PSBT
 
-from utils import RPC, JSONRPCException, sat_to_btc, btc_to_sat, JunctionError, read_cookie
-from disk import write_json_file, read_json_file, get_settings, full_path
+from utils import RPC, JSONRPCException, sat_to_btc, btc_to_sat, JunctionError, read_cookie, derive_child_sec_from_xpub
+from disk import write_json_file, read_json_file, full_path
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -45,7 +45,7 @@ class Node:
         self.password = password
         self.wallet_name = wallet_name
         self.network = network
-
+ 
         # keep track of whether cookie auth was used, so we don't accidentally save temporary passwords
         # is self.user == "__cookie__" a sufficient check? Then we could kill this self.auth_cookie parameter
         self.cookie_auth = self.user == None and self.password == None    
@@ -85,8 +85,8 @@ class Node:
     
 class MultisigWallet:
 
-    def __init__(self, *, name, m, n, signers, psbts, receiving_address_index, receiving_export_index, 
-                 change_address_index, change_export_index, node, network, script_type, wallet_type):
+    def __init__(self, *, name, m, n, signers, psbts, receiving_address_index, 
+                 change_address_index, node, network, script_type, wallet_type):
         # Name of the wallet
         self.name = name
         # Signers required for bitcoin tx
@@ -99,12 +99,8 @@ class MultisigWallet:
         self.psbts = psbts
         # Depth in HD derivation
         self.receiving_address_index = receiving_address_index
-        # Highest exported address index
-        self.receiving_export_index = receiving_export_index
         # Depth in HD derivation
         self.change_address_index = change_address_index
-        # Highest exported address index
-        self.change_export_index = change_export_index
         # bitcoin node this wallet is attached to
         self.node = node
         # "mainnet", "testnet" or "regtest"
@@ -113,6 +109,8 @@ class MultisigWallet:
         self.script_type = script_type
         # "single" or "multi"
         self.wallet_type = wallet_type
+
+    ### Helper methods
 
     def ready(self):
         '''All signers present, ready to create PSBT'''
@@ -130,16 +128,16 @@ class MultisigWallet:
             raise JunctionError(f"\"m\" ({m}) must be no larger than \"n\" ({n})")
         if m < 1:
             raise JunctionError(f"\"m\" ({m}) must be larger than 0")
-        if n > 5:
-            raise JunctionError(f"\"n\" ({n}) cannot exceed 5")
+        if n > 20:
+            raise JunctionError(f"\"n\" ({n}) cannot exceed 20")
 
         # FIXME: make sure that no RPC wallet with this name exists
         # Perhaps we should be connecting to a node, first
 
         # MultisigWallet instance
-        wallet = cls(name=name, m=m, n=n, signers=[], psbts=[], receiving_address_index=0, receiving_export_index=0,
-                     change_address_index=0, change_export_index=0, node=node, network=network, 
-                     script_type=script_type, wallet_type=wallet_type)
+        wallet = cls(name=name, m=m, n=n, signers=[], psbts=[], receiving_address_index=0,
+                     change_address_index=0, node=node, network=network, script_type=script_type,
+                     wallet_type=wallet_type)
 
         # Never overwrite existing wallet files
         # FIXME: full_path probably shouldn't appear in this file?
@@ -179,6 +177,8 @@ class MultisigWallet:
         write_json_file(data, relative_path)
         logger.info(f"Saved wallet to {relative_path}")
 
+    ### Serialization
+
     @classmethod
     def from_dict(cls, d):
         '''Create class instance from dictionary'''
@@ -209,9 +209,7 @@ class MultisigWallet:
             "signers": signers,
             "psbts": psbts,
             "receiving_address_index": self.receiving_address_index,
-            "receiving_export_index": self.receiving_export_index,
             "change_address_index": self.change_address_index,
-            "change_export_index": self.change_export_index,
             "node": self.node.to_dict(extras),
             "network": self.network,
             "wallet_type": self.wallet_type,
@@ -240,8 +238,32 @@ class MultisigWallet:
                 base['psbts'] = [self.decode_psbt(psbt) for psbt in self.psbts]
                 base['coins'] = self.coins()
                 base['history'] = self.history()
-                base['synced'] = self.synced()
         return base
+
+    ### Watch-only Bitcoin Core wallets
+
+    def watchonly_name(self):
+        """Name of associated Bitcoin Core watch-only wallet"""
+        return f"{self.name}"
+
+    def ensure_watchonly(self):
+        # TODO: move to Node class
+        # Create watch-only Bitcoin Core wallet
+        watch_only_name = self.watchonly_name()
+        bitcoin_wallets = self.node.default_rpc.listwallets()
+        if watch_only_name not in bitcoin_wallets:
+            try:
+                self.node.default_rpc.loadwallet(watch_only_name)
+                logger.info(f"Loaded watch-only Bitcoin Core wallet \"{watch_only_name}\"")
+            except JSONRPCException as e:
+                try:
+                    # FIXME: if wallet is "ready" here, we also need an export ...
+                    self.node.default_rpc.createwallet(watch_only_name, True)
+                    logger.info(f"Created watch-only Bitcoin Core wallet \"{watch_only_name}\"")
+                except JSONRPCException as e:
+                    raise JunctionError("Couldn't establish watch-only Bitcoin Core wallet")
+
+    ### Signers
 
     def add_signer(self, *, name, fingerprint, xpub, type, derivation_path):
         '''Add a signer to multisig wallet'''
@@ -264,76 +286,15 @@ class MultisigWallet:
         self.signers = sorted(signers, key=lambda signer: signer.xpub)
         logger.info(f"Registered signer \"{name}\"")
 
-        # Export first chunk watch-only addresses to Bitcoin Core if we're done adding signers
-        if self.ready():
-            self.export_watchonly(change=True)
-            self.export_watchonly(change=False)
-
         self.save()
 
     def remove_signer(signer_name):
         '''Remove signer from multisig wallet'''
         raise NotImplementedError()
 
-    def descriptor(self, change):
-        '''Descriptor for shared multisig addresses'''
-        # TODO: signer.prefix would be better than `{signer.fingerprint}{signer.derivation_path[1:]}`
-        # this would combine fingerprint & derivation path into one field. nice ...
-        # then we could have signer.fingerprint() grab just the fingerprint ...
-        xpubs = [f'[{signer.fingerprint}{signer.derivation_path[1:]}]{signer.xpub}/{int(change)}/*' 
-                for signer in self.signers]
-        xpubs = ",".join(xpubs)
-        if self.script_type == 'native' and self.wallet_type == 'multi':
-            descriptor = f"wsh(multi({self.m},{xpubs}))"
-        elif self.script_type == 'native' and self.wallet_type == 'single':
-            descriptor = f"wpkh({xpubs})"
-        elif self.script_type == 'wrapped' and self.wallet_type == 'multi':
-            descriptor = f"sh(wsh(multi({self.m},{xpubs})))"
-        elif self.script_type == 'wrapped' and self.wallet_type == 'single':
-            descriptor = f"sh(wpkh({xpubs}))"
-        else:
-            raise Exception('Cannot construct descriptor')
-        # validates and appends checksum
-        r = self.node.wallet_rpc.getdescriptorinfo(descriptor)
-        return r['descriptor']
-
-    def address(self, change):
-        '''Derive next BIP67-compliant receiving address'''
-        address_index = self.change_address_index if change else self.receiving_address_index
-        export_index = self.change_export_index if change else self.receiving_export_index
-        if not self.ready():
-            raise JunctionError(f'{self.n} signers required, {len(self.signers)} registered')
-        if address_index > export_index:
-            self.export_watchonly(change=change)
-        descriptor = self.descriptor(change)
-        logger.info(f'Deriving address: descriptor={descriptor} index={address_index}')
-        address = self.node.wallet_rpc.deriveaddresses(descriptor, [address_index, address_index + 1])[0]
-        
-        # increment indices
-        if change:
-            self.change_address_index += 1
-        else:
-            self.receiving_address_index += 1
-        
-        # Make sure we got a watch-only address
-        ai = self.node.wallet_rpc.getaddressinfo(address)
-        assert ai['iswatchonly'] is True, 'Bitcoin Core gave us non-watch-only address'
-
-        # Hackily skip BIP67 (sorted multisig pubkeys) violations
-        # (ColdCard demands BIP67 compliance, descriptor language support not released yet)
-        if self.wallet_type == 'multi':
-            if self.script_type == 'wrapped':
-                if ai['embedded']['pubkeys'] != sorted(ai['embedded']['pubkeys']):
-                    return self.address(change)
-            else:
-                if ai['pubkeys'] != sorted(ai['pubkeys']):
-                    return self.address(change)
-            
-        self.save()
-        return address
+    ### Addresses
 
     def account_derivation_path(self):
-        # FIXME: testnet ...
         coin_type = int(self.network != 'mainnet')
         if self.script_type == 'native' and self.wallet_type == 'multi':
             return f"m/48'/{coin_type}'/0'/2'" 
@@ -346,94 +307,140 @@ class MultisigWallet:
         else:
             raise Exception('No derivation paths for this wallet type')
 
-    def ensure_watchonly(self):
-        # TODO: move to Node class
-        # Create watch-only Bitcoin Core wallet
-        watch_only_name = self.watchonly_name()
-        bitcoin_wallets = self.node.default_rpc.listwallets()
-        if watch_only_name not in bitcoin_wallets:
-            try:
-                self.node.default_rpc.loadwallet(watch_only_name)
-                logger.info(f"Loaded watch-only Bitcoin Core wallet \"{watch_only_name}\"")
-            except JSONRPCException as e:
-                try:
-                    # FIXME: if wallet is "ready" here, we also need an export ...
-                    self.node.default_rpc.createwallet(watch_only_name, True)
-                    logger.info(f"Created watch-only Bitcoin Core wallet \"{watch_only_name}\"")
-                except JSONRPCException as e:
-                    raise JunctionError("Couldn't establish watch-only Bitcoin Core wallet")
-
-    def watchonly_name(self):
-        """Name of associated Bitcoin Core watch-only wallet"""
-        return f"{self.name}"
-
-    def export_watchonly(self, *, change):
-        '''Export next chunk of addresses to Bitcoin Core watch-only wallet'''
-        # it would be really nice if we could sanity-check against getwalletinfo here ...
-        old_export_index = self.change_export_index if change else self.receiving_export_index
-        new_export_index = old_export_index + ADDRESS_CHUNK
-        descriptor = self.descriptor(change)
-        descriptor_range = [old_export_index, new_export_index]
-        logger.info(f"Exporting: descriptor={descriptor} range={descriptor_range}")
-        self.node.wallet_rpc.importmulti([{
-            "desc": descriptor,
-            # 24 hours just in case
-            "timestamp": 'now',
-            # FIXME: is this inclusive? if we we're overlapping 1 ever time ...
-            "range": descriptor_range,
-            "watchonly": True,
-            # Bitcoin Core cannot import P2SH/P2WSH: https://bitcoin.stackexchange.com/a/89118/85335
-            "keypool": False,
-            "internal": False,
-        }])
-        if change:
-            self.change_export_index = new_export_index
+    def descriptor(self, change, index):
+        # For multisig, order the xpubs lexigraphically by derived SEC pubkeys that will go in bitcoin script (BIP67)
+        if self.wallet_type == 'multi':
+            path = f"./{int(change)}/{index}"
+            secs_and_signers = [(derive_child_sec_from_xpub(signer.xpub, path), signer) 
+                                for signer in self.signers]
+            sorted_secs_and_signers = sorted(secs_and_signers, key=lambda item: item[0])
+            signers = [sec_and_signer[1] for sec_and_signer in sorted_secs_and_signers]
         else:
-            self.receiving_export_index = new_export_index
+            signers = self.signers
+
+        # Build the descriptor according to script type
+        parts_list = [f'[{signer.fingerprint}{signer.derivation_path[1:]}]{signer.xpub}/{int(change)}/{index}' 
+                for signer in signers]
+        parts_str = ",".join(parts_list)
+        if self.script_type == 'native' and self.wallet_type == 'multi':
+            descriptor = f"wsh(multi({self.m},{parts_str}))"
+        elif self.script_type == 'native' and self.wallet_type == 'single':
+            descriptor = f"wpkh({parts_str})"
+        elif self.script_type == 'wrapped' and self.wallet_type == 'multi':
+            descriptor = f"sh(wsh(multi({self.m},{parts_str})))"
+        elif self.script_type == 'wrapped' and self.wallet_type == 'single':
+            descriptor = f"sh(wpkh({parts_str}))"
+        else:
+            raise Exception('Cannot construct descriptor')
+        
+        # validates and appends checksum
+        # FIXME: do this here
+        r = self.node.wallet_rpc.getdescriptorinfo(descriptor)
+        return r['descriptor']
+
+    def derive_receiving_address(self):
+        '''Derive next change address, sync if we need to and save new address indices'''
+        # Define params for readability sake
+        change = False
+        address_index = self.receiving_address_index
+
+        # Get the address
+        address = self.derive_address(change, address_index)
+        
+        # Update state, save and return address
+        self.receiving_address_index += 1
         self.save()
-        logger.info("Finished watch-only export")
+        return address
 
-    def export_everything(self):
-        '''Export all addresses to Bitcoin Core watch-only wallet'''
-        # FIXME: the timestamps here aren't right ...
-        # Receiving addresses
-        receiving_descriptor = self.descriptor(False)
-        receiving_descriptor_range = [0, self.receiving_export_index]
-        logger.info(f"Exporting: descriptor={receiving_descriptor} range={receiving_descriptor_range}")
-        self.node.wallet_rpc.importmulti([{
-            "desc": receiving_descriptor,
-            # 24 hours just in case
-            "timestamp": 'now',
-            # FIXME: is this inclusive? if we we're overlapping 1 ever time ...
-            "range": receiving_descriptor_range,
-            "watchonly": True,
-            # Bitcoin Core cannot import P2SH/P2WSH: https://bitcoin.stackexchange.com/a/89118/85335
-            "keypool": False,
-            "internal": False,
-        }])
+    def derive_change_address(self):
+        '''Derive next change address, sync if we need to and save new address indices'''
+        # Define params for readability sake
+        change = True
+        address_index = self.change_address_index
 
-        # Change addresses
-        change_descriptor = self.descriptor(True)
-        change_descriptor_range = [0, self.change_export_index]
-        logger.info(f"Exporting: descriptor={change_descriptor} range={change_descriptor_range}")
-        self.node.wallet_rpc.importmulti([{
-            "desc": change_descriptor,
-            # 24 hours just in case
-            "timestamp": 'now',
-            # FIXME: is this inclusive? if we we're overlapping 1 ever time ...
-            "range": change_descriptor_range,
-            "watchonly": True,
-            # Bitcoin Core cannot import P2SH/P2WSH: https://bitcoin.stackexchange.com/a/89118/85335
-            "keypool": False,
-            "internal": False,
-        }])
-
+        # Get the address
+        address = self.derive_address(change, address_index)
+        
+        # Update state, save and return address
+        self.change_address_index += 1
         self.save()
-        logger.info("Finished watch-only export")
+        return address
+
+    def derive_address(self, change, index):
+        '''Helper for deriving address at specified change/index position'''
+        # Can't derive addresses if we don't have enough signers
+        if not self.ready():
+            raise JunctionError(f'{self.n} signers required, {len(self.signers)} registered')
+        
+        # Tell Bitcoin Core to watch this address
+        descriptor = self.watch_address(change, index)
+
+        # Get the address from Bitcoin Core
+        address = self.node.wallet_rpc.deriveaddresses(descriptor)[0]
+
+        # Make sure we got a watch-only address
+        address_info = self.node.wallet_rpc.getaddressinfo(address)
+        assert address_info['iswatchonly'] is True, 'Bitcoin Core gave us non-watch-only address'
+
+        # Make sure multisig pubkeys are sorted (FIXME: raise or recurse?)
+        if self.wallet_type == 'multi':
+            if self.script_type == 'wrapped':
+                pubkeys = address_info['embedded']['pubkeys']
+            else:
+                pubkeys = address_info['pubkeys']
+            assert sorted('pubkeys'), 'Derived address with unsorted pubkeys'
+            
+        return address
+
+    def watch_address(self, change, index):
+        '''Tell Bitcoin Core to watch address at change / index'''
+        descriptor = self.descriptor(change, index)
+        response = self.node.wallet_rpc.importmulti([{
+            "desc": descriptor,
+            # rescan from thie timestamp ('now' means no rescan)
+            "timestamp": 'now',
+            # Treat as a watch-only address
+            "watchonly": True,
+            # Don't import into keypool. Bitcoin Core can't yet import multisig addresses.
+            # Using same behavior for single & multisig for simplicity sake
+            "keypool": False,
+            # Is it change?
+            "internal": change,
+        }])
+        assert all([item['success'] for item in response]), 'Address export failed'
+
+        # slightly janky, but helps in derive_address
+        return descriptor
+
+    def watching_address(self, change, index):
+        '''Check if Bitcoin Core is already watching this address'''
+        # Grab descriptor, derive address, see if watch-only RPC tags it as "iswatchonly"
+        descriptor = self.descriptor(change, index)
+        address = self.node.default_rpc.deriveaddresses(descriptor)[0]
+        address_info = self.node.wallet_rpc.getaddressinfo(address)
+        return address_info.get('iswatchonly', False)
+    
+    def sync(self):
+        '''Export every address that Bitcoin Core doesn't know about'''
+        # Sync change addresses
+        change = True
+        for index in range(0, self.change_address_index):
+            watching = self.watching_address(change, index)
+            if not watching:
+                self.watch_address(change, index)
+
+        # Sync receiving addresses
+        change = False
+        for index in range(0, self.receiving_address_index):
+            watching = self.watching_address(change, index)
+            if not watching:
+                self.watch_address(change, index)
+
+    ### Transactions
 
     def create_psbt(self, outputs, subtract_fees=None):
         '''Create a new PSBT paying single recipient'''
-        change_address = self.address(True)
+        change_address = self.derive_change_address()
         raw_psbt = self.node.wallet_rpc.walletcreatefundedpsbt(
             # let Bitcoin Core choose inputs
             [],
@@ -484,6 +491,8 @@ class MultisigWallet:
         self.remove_psbt(index)
         return txid
     
+    ### Wallet history
+
     def balances(self):
         '''(unconfirmed, confirmed) balances tuple'''
         # try to use new getbalances rpc (available in bitcoin core master branch)
@@ -525,31 +534,3 @@ class MultisigWallet:
     def history(self):
         # TODO: paginate
         return self.node.wallet_rpc.listtransactions("*", 100, 0, True)
-    
-    def addresses(self):
-        pass
-
-    def synced(self):
-        """Watch-only Bitcoin Core wallet exists and is fully synced. Only call if there aren't RPC errors."""
-        # TODO: check a random index from every "chunk" 
-        
-        # Change addresses synced
-        address = self.node.wallet_rpc.deriveaddresses(
-            self.descriptor(True),
-            [self.change_export_index-1, self.change_export_index])[0]
-
-        address_info = self.node.wallet_rpc.getaddressinfo(address)
-        if not address_info['iswatchonly']:
-            return False
-        
-        # Receiving addresses synced
-        address = self.node.wallet_rpc.deriveaddresses(
-            self.descriptor(False),
-            [self.receiving_export_index-1, self.receiving_export_index])[0]
-
-        address_info = self.node.wallet_rpc.getaddressinfo(address)
-        if not address_info['iswatchonly']:
-            return False
-
-        # Everything is synced
-        return True
