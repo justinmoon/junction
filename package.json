@@ -30,7 +30,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "linux": "yarn build && pyinstaller junction.spec",
+    "linux": "pyinstaller junction.spec",
     "windows": "docker run -v \"$(pwd):/src/\" cdrx/pyinstaller-windows"
   },
   "eslintConfig": {
