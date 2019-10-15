@@ -65,7 +65,6 @@ def display_multisig_address(redeem_script_hex, derivation_paths, segwit):
         xfp_paths.append(str_to_int_path(xfp, p))
     
     dev = ColdcardDevice(sn=None)
-    print(min_signers, xfp_paths, script, addr_fmt)
     payload = CCProtocolPacker.show_p2sh_address(min_signers, xfp_paths, script, addr_fmt=addr_fmt)
     dev.send_recv(payload, timeout=None)
     dev.close()

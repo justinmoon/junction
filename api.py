@@ -9,6 +9,7 @@ from hwilib.devices import trezor, ledger, coldcard
 from junction import Wallet, JunctionError, Node
 from disk import get_wallets, ensure_datadir
 from utils import RPC, get_client_and_device, ClientGroup, get_device, get_nodes
+from constants import WalletTypes, ScriptTypes
 
 import custom_coldcard
 import custom_trezor
@@ -332,9 +333,9 @@ def display_address():
     descriptor = address_info.get('desc')
 
     # HWI doesn't cover multisig, so we have to cover separately
-    if wallet.wallet_type == 'multi':
+    if wallet.wallet_type == WalletTypes.MULTI:
         # Get redeem script
-        if wallet.script_type == 'native':
+        if wallet.script_type == ScriptTypes.NATIVE:
             redeem_script = address_info.get('hex')
         else:
             redeem_script = address_info.get('embedded', {}).get('hex')
