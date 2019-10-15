@@ -157,6 +157,4 @@ yarn-error.log*
 ### Junction ###
 ################
 
-wallets/
-settings.json
 test/bitcoin/
