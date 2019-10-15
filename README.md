@@ -21,6 +21,7 @@ npm install
 Run backend in terminal window with virtual environment active:
 
 ```
+cd server
 python server.py
 ```
 
