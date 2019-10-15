@@ -386,7 +386,7 @@ class Wallet:
 
         # Make sure multisig pubkeys are sorted (FIXME: raise or recurse?)
         if self.wallet_type == WalletTypes.MULTI:
-            if self.script_type == WalletTypes.WRAPPED:
+            if self.script_type == ScriptTypes.WRAPPED:
                 pubkeys = address_info['embedded']['pubkeys']
             else:
                 pubkeys = address_info['pubkeys']
