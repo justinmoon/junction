@@ -1,8 +1,7 @@
 # web
 flask
 flask_json_schema
-# with simplejson flask can serialize decimals
-simplejson
+simplejson  # so flask can serialize decimals
 flask-cors
 
 # wallets
@@ -15,7 +14,8 @@ cefpython3
 libusb1
 pywebview[qt]
 pywebview[cef]
-pyinstaller.zip
+pyqtwebengine
+# contrib/pyinstaller.zip
 
 # bitcoin
 btclib

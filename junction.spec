@@ -9,22 +9,23 @@ binaries = []
 if platform.system() == 'Windows':
     # path that hwi uses (build copies dll here, i just include it at base of repo)
     #binaries = [("c:/python3/libusb-1.0.dll", ".")]
-    binaries = [("libusb-1.0.dll", ".")]
+    binaries = [("contrib/libusb-1.0.dll", ".")]
 elif platform.system() == 'Linux':
     # ubuntu
-    #binaries = [("/lib/x86_64-linux-gnu/libusb-1.0.so.0", ".")]
+    binaries = [("/lib/x86_64-linux-gnu/libusb-1.0.so.0", ".")]
     # arch linux
-    binaries = [("/usr/lib/libusb-1.0.so.0", ".")]
+    # binaries = [("/usr/lib/libusb-1.0.so.0", ".")]
 elif platform.system() == 'Darwin':
     find_brew_libusb_proc = subprocess.Popen(['brew', '--prefix', 'libusb'], stdout=subprocess.PIPE)
     libusb_path = find_brew_libusb_proc.communicate()[0]
     binaries = [(libusb_path.rstrip().decode() + "/lib/libusb-1.0.dylib", ".")]
 
-a = Analysis(['desktop.py'],
+a = Analysis(['server/desktop.py'],
              binaries=binaries,
-             datas=[('build', 'build'))],
-             hiddenimports=[],
-             hookspath=['pyinstaller-hooks'],
+             datas=[('build', 'build')],
+             # it couldn't import QT without this
+             hiddenimports=['PyQt5.sip'],
+             hookspath=['contrib/pyinstaller-hooks'],
              runtime_hooks=[],
              excludes=[],
              win_no_prefer_redirects=False,
@@ -33,7 +34,7 @@ a = Analysis(['desktop.py'],
              noarchive=False)
 
 if platform.system() == 'Linux':
-    a.datas += Tree('HWI/hwilib/udev', prefix='HWI/hwilib/udev')
+    a.datas += Tree('contrib/HWI/hwilib/udev', prefix='contrib/HWI/hwilib/udev')
 
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
