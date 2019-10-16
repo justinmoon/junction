@@ -15,7 +15,9 @@ libusb1
 pywebview[qt]
 pywebview[cef]
 pyqtwebengine
-# contrib/pyinstaller.zip
+# zip of pyinstaller develop branch
+# we need this unreleased pr: https://github.com/pyinstaller/pyinstaller/pull/4312
+contrib/pyinstaller.zip
 
 # bitcoin
 btclib
