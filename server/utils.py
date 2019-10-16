@@ -140,7 +140,9 @@ class RPC:
         '''raises JunctionErrors if RPC-connection doesn't work'''
         # Test RPC connection works
         try:
-            self.getblockchaininfo()
+            # FIXME: want shorter timeout ...
+            rpc = AuthServiceProxy(self.uri, timeout=0.5)
+            rpc.getblockchaininfo()
         except (ConnectionRefusedError, http.client.CannotSendRequest) as e:
             raise JunctionError("ConnectionRefusedError: check https://bitcoin.stackexchange.com/questions/74337/testnet-bitcoin-connection-refused-111")
         except JSONRPCException as e:
