@@ -81,6 +81,30 @@ class Create extends React.Component<Props, State> {
     clearInterval(this.state.interval);
   }
 
+  private selectTestnet = (e: any) => {
+    this.setKey({'network': 'testnet', 'node': { ...this.state.form.node, port: '18332' }})
+
+  };
+
+  private selectMainnet = (e: any) => {
+    this.setKey({'network': 'mainnet', 'node': { ...this.state.form.node, port: '8332' }})
+  }
+
+  private selectSingleSig = (e: any) => {
+    this.setKey({'wallet_type': 'single', 'm': '1', 'n': '1'})  }
+
+  private selectMultiSig = (e: any) => {
+    this.setKey({'wallet_type': 'multi', 'm': '', 'n': ''})
+  }
+
+  private selectNativeSegwit = (e: any) => {
+    this.setKey({'script_type': 'native'})
+  }
+
+  private selectWrappedSegwit = (e: any) => {
+    this.setKey({'script_type': 'wrapped'})
+  }
+
   render() {
     const { bitcoinNodes } = this.props;
     const { form, isSubmitting } = this.state;
@@ -102,11 +126,13 @@ class Create extends React.Component<Props, State> {
                 <br/>
                 <Input addon type="radio" 
                   checked={form.wallet_type === 'single'}
-                  onChange={() => this.setKey({'wallet_type': 'single', 'm': '1', 'n': '1'})}/> Single-signature
+                  onChange={this.selectSingleSig}/>
+                <span onClick={this.selectSingleSig}> Single-Signature</span>
                 <br/>
                 <Input addon type="radio" 
                   checked={form.wallet_type === 'multi'}
-                  onChange={() => this.setKey({'wallet_type': 'multi'})}/> Multi-signature
+                  onChange={this.selectMultiSig}/>
+                <span onClick={this.selectMultiSig}> Multi-Signature</span>
               </FormGroup>
             </Col>
             <Col xs="4">
@@ -115,11 +141,13 @@ class Create extends React.Component<Props, State> {
                 <br/>
                 <Input addon type="radio" 
                   checked={form.script_type === 'native'}
-                  onChange={() => this.setKey({'script_type': 'native'})}/> Native Segwit
+                  onChange={this.selectNativeSegwit}/>
+                <span onClick={this.selectNativeSegwit}> Native Segwit</span>
                 <br/>
                 <Input addon type="radio" 
                   checked={form.script_type === 'wrapped'}
-                  onChange={() => this.setKey({'script_type': 'wrapped'})}/> Wrapped Segwit
+                  onChange={this.selectWrappedSegwit}/>
+                <span onClick={this.selectWrappedSegwit}> Wrapped Segwit</span>
               </FormGroup>
             </Col>
             <Col xs="4">
@@ -128,11 +156,13 @@ class Create extends React.Component<Props, State> {
                 <br/>
                 <Input name="mainnet" addon type="radio" 
                   checked={this.state.form.network == "mainnet"}
-                  onChange={() => this.setKey({'network': 'mainnet', 'node': { ...this.state.form.node, port: '8332' }})}/> Mainnet (real bitcoins)
+                  onChange={this.selectMainnet}/>
+                <span onClick={this.selectMainnet}> Mainnet (real bitcoins)</span>
                 <br/>
                 <Input name="testnet" addon type="radio"
                   checked={this.state.form.network == "testnet"}
-                  onChange={() => this.setKey({'network': 'testnet', 'node': { ...this.state.form.node, port: '18332' }})}/> Testnet (for testing)
+                  onChange={this.selectTestnet}/>
+                  <span onClick={this.selectTestnet}> Testnet (for testing)</span>
               </FormGroup>
             </Col>
           </Row>
@@ -161,19 +191,21 @@ class Create extends React.Component<Props, State> {
           <h4 className="text-center">Connect to Bitcoin Node</h4>
           <Row>
             <Col xs="6">
+             <FormGroup>
+              <Label><i>Nodes Detected Locally</i></Label>
               {bitcoinNodes.map((node: any, index: number) => {
                 if (node.network == this.state.form.network) {
                   return (
-                    <FormGroup>
-                      <Label><i>Nodes Detected Locally</i></Label>
+                    <div>
                       <br/>
                       <Input addon type="radio" 
                         checked={sameNode(node, this.state.form.node)}
                         onChange={() => this.chooseNode(node)}/> {node.host}:{node.port}
-                    </FormGroup>
+                    </div>
                   )
                 }
               })}
+              </FormGroup>
             </Col>
             <Col xs="6">
               <FormGroup>
