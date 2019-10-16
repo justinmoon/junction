@@ -7,6 +7,7 @@ import { getNodes } from '../store/node';
 import { LoadingButton } from './Toolbox'
 import api from '../api';
 import { AppState, notNull } from '../store';
+import { sleep } from '../util';
 
 interface DispatchProps {
   getWallets: typeof getWallets;
@@ -40,6 +41,7 @@ interface State {
   isSubmitting: boolean;
   error: Error | null;
   interval: any;
+  isScanning: boolean;
 }
 
 function sameNode(a: any, b: any) {
@@ -68,17 +70,28 @@ class Create extends React.Component<Props, State> {
     isSubmitting: false,
     error: null,
     interval: null,
+    isScanning: false,
   };
 
   componentWillMount() {
-    const interval = setInterval(() => {
-      this.props.getNodes()
-    }, 1000);
-    this.setState({ interval })
+    this.startScan()
+  }
+
+  async startScan() {
+    await this.setState({ isScanning: true })
+    while (this.state.isScanning) {
+      console.log(this.state.isScanning)
+      try {
+        await this.props.getNodes()
+      } catch (e) {
+        console.log('Failed to fetch nodes')
+      }
+      await sleep(3000);
+    }
   }
 
   componentWillUnmount() {
-    clearInterval(this.state.interval);
+    this.setState({ isScanning: false })
   }
 
   private selectTestnet = (e: any) => {
