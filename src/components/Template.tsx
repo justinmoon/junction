@@ -124,7 +124,7 @@ class Template extends React.Component<Props, State> {
     }
 
     return (
-      <div>
+      <div className="pb-3">
         <Navbar expand="md" color="light" light>
           <Container>
             <NavbarBrand tag={Link} to="/">
