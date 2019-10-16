@@ -14,6 +14,11 @@ server = Thread(
 )
 server.start()
 
-webview.create_window('Hello world', 'http://localhost:37128')
+webview.create_window(
+    'Junction',
+    'http://localhost:37128',
+    min_size=(600, 400),
+    text_select=True,
+)
 webview.start(debug=True)
 
