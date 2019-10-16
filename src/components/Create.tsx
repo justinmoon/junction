@@ -213,7 +213,8 @@ class Create extends React.Component<Props, State> {
                       <br/>
                       <Input addon type="radio" 
                         checked={sameNode(node, this.state.form.node)}
-                        onChange={() => this.chooseNode(node)}/> {node.host}:{node.port}
+                        onChange={() => this.chooseNode(node)}/>
+                        <span onClick={() => this.chooseNode(node)}> {node.host}:{node.port}</span>
                     </div>
                   )
                 }
