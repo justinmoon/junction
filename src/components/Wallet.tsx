@@ -73,8 +73,9 @@ class Wallet extends React.Component<Props, State> {
     let registerSigners = null;
     if (activeWallet.ready && unregisteredSigners.length > 0) {
       registerSigners = (
-        <div>
-          <h3 className='text-center'>Register Wallet On-Device</h3>
+        <div className='text-center'>
+          <h3>Register Wallet On-Device</h3>
+          <i>Do this once. Junction can't yet detect whether you've done it, so this prompt will remain visible ...</i>
           <RegisterSigners/>
         </div>
       )
