@@ -20,8 +20,9 @@ def serve_windows():
 
 def serve_unix():
     # TODO: uwsgi
-    server.run(debug=True, host='0.0.0.0', port=37128, threaded=False)
+    # server.run(host='0.0.0.0', port=37128, threaded=False)
+    server.run(host='0.0.0.0', port=37128, threaded=True)
 
 if __name__ == '__main__':
     # Run dev server
-    server.run(debug=True, host='0.0.0.0', port=37128, threaded=False)        
+    server.run(debut=True, host='0.0.0.0', port=37128, threaded=False)        

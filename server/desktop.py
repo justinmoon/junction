@@ -1,5 +1,6 @@
 import sys
 from threading import Thread
+from multiprocessing import Process
 from time import sleep
 
 import webview
@@ -31,8 +32,8 @@ if sys.platform == 'win32':
 else:
     target = serve_unix
 
-server = Thread(target=target)
-server.daemon = True
+server = Process(target=target)
+# server.daemon = True  # using processes now ...
 server.start()
 
 print('starting server')
@@ -45,8 +46,8 @@ print('server started')
 webview.create_window(
     'Junction',
     f'http://{HOST}:{PORT}',
-    # min_size=(600, 400),
-    # text_select=True,
+    min_size=(600, 400),
+    text_select=True,
 )
 # webview.start(debug=True)
 

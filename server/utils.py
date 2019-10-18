@@ -150,8 +150,6 @@ class RPC:
             rpc.getblockchaininfo()
         except (ConnectionRefusedError, http.client.CannotSendRequest) as e:
             raise JunctionError("ConnectionRefusedError: check https://bitcoin.stackexchange.com/questions/74337/testnet-bitcoin-connection-refused-111")
-        except socket.timeout:
-            raise JunctionError('Connection timed out')
         except JSONRPCException as e:
             if "Unauthorized" in str(e):
                 raise JunctionError("Please double-check your credentials!")

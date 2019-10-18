@@ -14,7 +14,7 @@ elif platform.system() == 'Linux':
     # ubuntu
     binaries = [("/lib/x86_64-linux-gnu/libusb-1.0.so.0", ".")]
     # arch linux
-    # binaries = [("/usr/lib/libusb-1.0.so.0", ".")]
+    #binaries = [("/usr/lib/libusb-1.0.so.0", ".")]
 elif platform.system() == 'Darwin':
     find_brew_libusb_proc = subprocess.Popen(['brew', '--prefix', 'libusb'], stdout=subprocess.PIPE)
     libusb_path = find_brew_libusb_proc.communicate()[0]
@@ -25,6 +25,7 @@ a = Analysis(['server/desktop.py'],
              datas=[('build', 'build')],
              # it couldn't import QT without this
              # hiddenimports=['PyQt5.sip'],
+             hiddenimports=[],
              hookspath=['contrib/pyinstaller-hooks'],
              runtime_hooks=[],
              excludes=[],

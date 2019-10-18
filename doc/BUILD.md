@@ -3,7 +3,8 @@ Clone HWI into contrib/ (FIXME, this is stupid)
 To build a linux binary:
 
 ```
-docker run -v "$(pwd):/src/" cdrx/pyinstaller-linux"
+docker build -t junction-linux .
+docker run -v "$(pwd):/src/" junction-linux"
 ```
 
 Note: this docker image is built from ubuntu version 12, so it will probably have an ancient glibc version -- a good thing because if built with new glibc versions sometimes older computers won't be able to run.
