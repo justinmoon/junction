@@ -1,4 +1,5 @@
 import json
+import threading
 import sys
 import logging
 from os import listdir
@@ -13,6 +14,7 @@ from btclib import bip32, base58
 import http
 
 logger = logging.getLogger(__name__)
+hwi_lock = threading.Lock()
 
 ### Exceptions
 
@@ -32,14 +34,17 @@ def handle_exception(exception):
 ### HWI
 
 def get_device_for_client(client):
-    devices = commands.enumerate()
+    with hwi_lock:
+        devices = commands.enumerate()
     for device in devices:
         if client.path == device.path:
             return client
 
 def get_device(device_id):
     matching_device = None
-    for device in commands.enumerate():
+    with hwi_lock:
+        devices = commands.enumerate()
+    for device in devices:
         if device.get('path') == device_id:
             matching_device = device
         elif device.get('fingerprint') == device_id:

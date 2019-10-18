@@ -8,7 +8,7 @@ from hwilib.devices import trezor, ledger, coldcard
 
 from junction import Wallet, JunctionError, Node
 from disk import get_wallets, ensure_datadir
-from utils import RPC, get_client_and_device, ClientGroup, get_device, get_nodes
+from utils import RPC, get_client_and_device, ClientGroup, get_device, get_nodes, hwi_lock
 from constants import WalletTypes, ScriptTypes
 
 import custom_coldcard
@@ -41,7 +41,8 @@ def before_request():
 
 @api.route('/devices', methods=['GET'])
 def list_devices():
-    return jsonify(commands.enumerate())
+    with hwi_lock:
+        return jsonify(commands.enumerate())
 
 @api.route('/prompt', methods=['POST'])
 @schema.validate({
@@ -359,17 +360,20 @@ def display_address():
                 else:
                     derivation_path = path
            
-            custom_trezor.display_multisig_address(redeem_script, derivation_path, wallet.network != 'mainnet', device, wallet.script_type)
+            with hwi_lock:
+                custom_trezor.display_multisig_address(redeem_script, derivation_path, wallet.network != 'mainnet', device, wallet.script_type)
         # Handle ColdCards
         elif device['type'] == 'coldcard':
-            custom_coldcard.display_multisig_address(redeem_script, derivation_paths, wallet.script_type == 'native')
+            with hwi_lock:
+                custom_coldcard.display_multisig_address(redeem_script, derivation_paths, wallet.script_type == 'native')
         # Reject everything else
         else:
             raise JunctionError(f'Devices of type "{device["type"]}" do not support multisig address display')
     # HWI covers single-sig
     else:
         with get_client_and_device(device_id, wallet.network) as (client, device):
-            commands.displayaddress(client, desc=descriptor)
+            with hwi_lock:
+                commands.displayaddress(client, desc=descriptor)
     
     return jsonify({
         'ok': True
@@ -397,7 +401,8 @@ def register_device():
     if device['type'] != 'coldcard':
         raise JunctionError(f'Devices of type {device["type"]} do not support multisig wallet registration')
 
-    custom_coldcard.enroll(wallet)
+    with hwi_lock:
+        custom_coldcard.enroll(wallet)
 
     # TODO: How to keep track of whether or not this multisig wallet is registered on the coldcard?
 

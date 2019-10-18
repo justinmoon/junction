@@ -30,7 +30,7 @@ server = Thread(
     kwargs={
         'host': HOST,
         'port': PORT,
-        'threaded': False,
+        'threaded': True,
     },
 )
 server.daemon = True
