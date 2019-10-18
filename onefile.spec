@@ -20,11 +20,11 @@ elif platform.system() == 'Darwin':
     libusb_path = find_brew_libusb_proc.communicate()[0]
     binaries = [(libusb_path.rstrip().decode() + "/lib/libusb-1.0.dylib", ".")]
 
-a = Analysis(['server/desktop.py'],
-             binaries=binaries,
+a = Analysis(['server\\desktop.py'],
+             pathex=['C:\\Users\\justin\\dev\\junction'],
+             binaries=[],
              datas=[('build', 'build')],
-             # it couldn't import QT without this
-             # hiddenimports=['PyQt5.sip'],
+             hiddenimports=[],
              hookspath=['contrib/pyinstaller-hooks'],
              runtime_hooks=[],
              excludes=[],
@@ -44,7 +44,7 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='junction',
+          name='desktop',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,

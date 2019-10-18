@@ -150,18 +150,20 @@ class RPC:
             rpc.getblockchaininfo()
         except (ConnectionRefusedError, http.client.CannotSendRequest) as e:
             raise JunctionError("ConnectionRefusedError: check https://bitcoin.stackexchange.com/questions/74337/testnet-bitcoin-connection-refused-111")
+        except socket.timeout:
+            raise JunctionError('Connection timed out')
         except JSONRPCException as e:
             if "Unauthorized" in str(e):
                 raise JunctionError("Please double-check your credentials!")
 
         # Check node version requirements are met
-        version = self.getnetworkinfo()['version']
+        version = rpc.getnetworkinfo()['version']
         if int(version) < 180000:
             raise JunctionError("Update your Bitcoin node to at least version 0.18")
 
         # Check wallet enabled
         try:
-            self.getwalletinfo()
+            rpc.getwalletinfo()
         except JSONRPCException as e:
             if "Method not found" in str(e):
                 raise JunctionError("Junction requires 'disablewallet=0' in your bitcoin.conf")

@@ -12,3 +12,8 @@ Note: this docker image is built from ubuntu version 12, so it will probably hav
 
 symlink `build` to `server/build` (FIXME)
 
+## Windows
+
+- trying to build in windows
+- docker doesn't owkr
+- trying with a fresh build.

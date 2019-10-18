@@ -3,6 +3,8 @@ flask
 flask_json_schema
 simplejson  # so flask can serialize decimals
 flask-cors
+uwsgi     # serve on linux
+waitress  # serve on windows
 
 # wallets
 hwi

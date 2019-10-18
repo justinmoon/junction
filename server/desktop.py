@@ -4,7 +4,7 @@ from time import sleep
 
 import webview
 
-from server import server
+from server import serve_windows, serve_unix
 
 def url_ok(url, port):
     # Use httplib on Python 2
@@ -25,14 +25,13 @@ def url_ok(url, port):
 HOST = '127.0.0.1'
 PORT = 37128
 
-server = Thread(
-    target=server.run, 
-    kwargs={
-        'host': HOST,
-        'port': PORT,
-        'threaded': True,
-    },
-)
+if sys.platform == 'win32':
+    print('RUNNING WINDOWS')
+    target = serve_windows
+else:
+    target = serve_unix
+
+server = Thread(target=target)
 server.daemon = True
 server.start()
 
@@ -51,9 +50,9 @@ webview.create_window(
 )
 # webview.start(debug=True)
 
-if sys.platform == 'win32':
-    print('starting cef')
-    webview.start(http_server=True, gui='cef')
-else:
-    webview.start(http_server=True, gui='qt')
+# if sys.platform == 'win32':
+#     print('starting cef')
+#     webview.start(http_server=True, gui='cef')
+# else:
+#     webview.start(http_server=True, gui='qt')
 webview.start(http_server=True)
