@@ -14,13 +14,7 @@ schema.init_app(server)
 def index():
     return render_template('index.html')
 
-def serve_windows():
-    from waitress import serve
-    serve(server, host='0.0.0.0', port=37128)
-
-def serve_unix():
-    # TODO: uwsgi
-    # server.run(host='0.0.0.0', port=37128, threaded=False)
+def serve():
     server.run(host='0.0.0.0', port=37128, threaded=True)
 
 if __name__ == '__main__':

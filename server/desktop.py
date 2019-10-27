@@ -1,21 +1,30 @@
-import sys
-from threading import Thread
 from multiprocessing import Process
 from time import sleep
 
 import webview
 
-from server import serve_windows, serve_unix
+from server import serve
 
-def url_ok(url, port):
-    # Use httplib on Python 2
-    try:
-        from http.client import HTTPConnection
-    except ImportError:
-        from httplib import HTTPConnection
+from http.client import HTTPConnection
 
+# Constants
+HOST = 'localhost'
+PORT = 37128
+URL  = f'http://{HOST}:{PORT}'
+# Server
+server = Process(target=serve)
+# Frontend
+webview.create_window(
+    'Junction',
+    f'http://{HOST}:{PORT}',
+    min_size=(600, 400),
+    text_select=True,
+)
+
+def server_running():
+    '''Helper to see if server is running'''
     try:
-        conn = HTTPConnection(url, port)
+        conn = HTTPConnection(HOST, PORT)
         conn.request('GET', '/')
         r = conn.getresponse()
         return r.status == 200
@@ -23,37 +32,13 @@ def url_ok(url, port):
         print('Server not started')
         return False
 
-HOST = '127.0.0.1'
-PORT = 37128
-
-if sys.platform == 'win32':
-    print('RUNNING WINDOWS')
-    target = serve_windows
-else:
-    target = serve_unix
-
-server = Process(target=target)
-# server.daemon = True  # using processes now ...
-server.start()
-
-print('starting server')
-
-while not url_ok(HOST, PORT):
-    sleep(.1)
-
-print('server started')
-
-webview.create_window(
-    'Junction',
-    f'http://{HOST}:{PORT}',
-    min_size=(600, 400),
-    text_select=True,
-)
-# webview.start(debug=True)
-
-# if sys.platform == 'win32':
-#     print('starting cef')
-#     webview.start(http_server=True, gui='cef')
-# else:
-#     webview.start(http_server=True, gui='qt')
-webview.start(http_server=True)
+if __name__ == '__main__':
+    # Run server process
+    server.start()
+    # Wait for server to start
+    print('Starting server')
+    while not server_running():
+        sleep(1)
+    print('Server started')
+    # Run frontend
+    webview.start(http_server=True)
