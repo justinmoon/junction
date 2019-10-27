@@ -53,7 +53,7 @@ class AddSigners extends React.Component<Props,LocalState> {
 
   renderAddDevice(device: Device) {
     const { deviceBeingAdded, toggleDeviceInstructionsModal, toggleDeviceUnlockModal } = this.props;
-    const loading = device === deviceBeingAdded;
+    const loading = pending && device === deviceBeingAdded;
     let rightComponent = null;
     let nickname = this.state.nicknames[device.path] || ''
 
@@ -121,6 +121,7 @@ export const mapStateToProps = (state: AppState) => {
     modal: state.modal,
     devices: selectCandidateDevicesForActiveWallet(state),
     deviceBeingAdded: state.wallet.addSigner.device,
+    pending: state.wallet.addSigner.pending,
     error: state.wallet.addSigner.error,
   }
 }

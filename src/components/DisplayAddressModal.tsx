@@ -57,7 +57,7 @@ class DisplayAddressModal extends React.Component<Props> {
     let rightComponent = null;
     const device = deviceAvailable(signer, devices)
     const loading = this.state.displayAddressDevice && this.state.displayAddressDevice == device;
-    if (activeWallet.wallet_type === 'multi' && (signer.type !== 'trezor' && signer.type !== 'coldcard')) {
+    if (activeWallet.n > 1 && (signer.type !== 'trezor' && signer.type !== 'coldcard')) {
       rightComponent =<div>Not supported by {signer.type} devices</div>
     } else if (device) {
       rightComponent = <LoadingButton loading={loading} onClick={() => this.displayAddress(address, device, signer, activeWallet)}>Display</LoadingButton>

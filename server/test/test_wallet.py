@@ -64,7 +64,6 @@ def make_wallet_file(testcase):
         'change_address_index': 0,
         'network': 'testnet',
         'script_type': 'native',
-        'wallet_type': 'multi',
         'node': {
             'host': '127.0.0.1',
             'port': 18443,
@@ -86,7 +85,6 @@ def make_wallet(testcase):
         node=node,
         network=node.network,
         script_type='native',
-        wallet_type='multi',
     )
     for signer in signers:
         wallet.add_signer(**signer)
@@ -128,7 +126,6 @@ class WalletTests(unittest.TestCase):
                 node=node,
                 network=node.network,
                 script_type='native',
-                wallet_type='multi',
             )
         # n must be positive
         with self.assertRaises(JunctionError):
@@ -139,7 +136,6 @@ class WalletTests(unittest.TestCase):
                 node=node,
                 network=node.network,
                 script_type='native',
-                wallet_type='multi',
             )
         # m capped at 5
         with self.assertRaises(JunctionError):
@@ -150,13 +146,12 @@ class WalletTests(unittest.TestCase):
                 node=node,
                 network=node.network,
                 script_type='native',
-                wallet_type='multi',
             )
 
     def test_add_signers(self):
         node = make_node(self)
         wallet = Wallet.create(name=self._testMethodName, m=2, n=3, node=node,
-            script_type='native', wallet_type='multi', network='regtest')
+            script_type='native', network='regtest')
 
         # Wallet file created
         self.assertIn(f'{wallet.name}.json', os.listdir(self.wallet_dir))

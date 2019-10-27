@@ -6,11 +6,6 @@ export enum Network {
   regtest = 'regtest',
 }
 
-export enum WalletType {
-  single = 'single',
-  multi = 'multi',
-}
-
 export enum ScriptType {
   native = 'native',
   wrapped = 'wrapped',
@@ -45,7 +40,6 @@ export interface Wallet {
   history: any;
   coins: any;
   node: Node;
-  wallet_type: WalletType;
   script_type: ScriptType;
   network: string;
   synced: boolean;

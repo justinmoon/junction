@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import AddSigners from './AddSigners';
 import Signers from './Signers';
-import { Wallet as WalletType, Signer, WalletType as WalletTypeType } from '../types'
+import { Wallet as WalletType, Signer } from '../types'
 import { AppState, notNull } from '../store';
 import { LoadingButton } from './Toolbox'
 import { getWallets, selectActiveWallet, addSigner, selectUnregisteredSigners, selectNodeProblem } from '../store/wallet';
@@ -111,7 +111,7 @@ class Wallet extends React.Component<Props, State> {
         {walletBody}
         {signersComponent}
         {addSigners}
-        {activeWallet.wallet_type === WalletTypeType.multi && registerSigners}
+        {activeWallet.n > 1 && registerSigners}
         </div>
     )
   }

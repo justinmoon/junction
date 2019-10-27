@@ -312,14 +312,16 @@ class Create extends React.Component<Props, State> {
 
   private handleSubmit = async (ev: React.FormEvent<HTMLFormElement>) => {
     ev.preventDefault();
+    let payload = {
+      ...this.state.form,
+      m: parseInt(this.state.form.m, 10),
+      n: parseInt(this.state.form.n, 10),
+    }
+    delete payload.wallet_type
     try {
       this.setState({ isSubmitting: true });
       
-      const wallet = await api.createWallet({
-        ...this.state.form,
-        m: parseInt(this.state.form.m, 10),
-        n: parseInt(this.state.form.n, 10),
-      });
+      const wallet = await api.createWallet(payload);
       await this.props.getWallets();
       this.props.changeWallet(wallet);
       this.props.history.push('/');

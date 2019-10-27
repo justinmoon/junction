@@ -27,8 +27,8 @@ type Props = StateProps & DispatchProps;
 class RegisterSigners extends React.Component<Props> {
 
   async registerSigner(signer: Signer) {
-    await this.props.registerSigner(signer)
     alert("Confirm multisig wallet on your Device")
+    await this.props.registerSigner(signer)
   }
   renderAddSigner(signer: Signer) {
     const { registerSigner, signerBeingRegistered, toggleDeviceInstructionsModal, devices } = this.props;

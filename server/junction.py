@@ -8,7 +8,7 @@ from hwilib.serializations import PSBT
 
 from utils import RPC, JSONRPCException, sat_to_btc, btc_to_sat, JunctionError, read_cookie, derive_child_sec_from_xpub
 from disk import write_json_file, read_json_file, full_path
-from constants import Networks, ScriptTypes, WalletTypes
+from constants import Networks, ScriptTypes
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -87,7 +87,7 @@ class Node:
 class Wallet:
 
     def __init__(self, *, name, m, n, signers, psbts, receiving_address_index, 
-                 change_address_index, node, network, script_type, wallet_type):
+                 change_address_index, node, network, script_type):
         # Name of the wallet
         self.name = name
         # Signers required for bitcoin tx
@@ -108,8 +108,6 @@ class Wallet:
         self.network = network
         # "wrapped" or "native"
         self.script_type = script_type
-        # "single" or "multi"
-        self.wallet_type = wallet_type
 
     ### Helper methods
 
@@ -117,12 +115,18 @@ class Wallet:
         '''All signers present, ready to create PSBT'''
         return len(self.signers) == self.n
 
+    def is_multisig(self):
+        return self.n > 1
+    
+    def is_singlesig(self):
+        return self.n == 1
+
     def wallet_file_path(self):
         '''Relative path to wallet file within datadir'''
         return f'wallets/{self.name}.json'
 
     @classmethod
-    def create(cls, *, name, m, n, node, network, script_type, wallet_type):
+    def create(cls, *, name, m, n, node, network, script_type):
         '''Creates class instance, wallet file, and watch-only Bitcoin Core wallet'''
         # Sanity checks
         if m > n:
@@ -137,8 +141,7 @@ class Wallet:
 
         # Wallet instance
         wallet = cls(name=name, m=m, n=n, signers=[], psbts=[], receiving_address_index=0,
-                     change_address_index=0, node=node, network=network, script_type=script_type,
-                     wallet_type=wallet_type)
+                     change_address_index=0, node=node, network=network, script_type=script_type)
 
         # Never overwrite existing wallet files
         # FIXME: full_path probably shouldn't appear in this file?
@@ -212,7 +215,6 @@ class Wallet:
             "change_address_index": self.change_address_index,
             "node": self.node.to_dict(extras),
             "network": self.network,
-            "wallet_type": self.wallet_type,
             "script_type": self.script_type,
         }
         # FIXME: this sucks, but we need a way to serialize for API
@@ -298,20 +300,20 @@ class Wallet:
 
     def account_derivation_path(self):
         coin_type = int(self.network != 'mainnet')
-        if self.script_type == ScriptTypes.NATIVE and self.wallet_type == WalletTypes.MULTI:
+        if self.script_type == ScriptTypes.NATIVE and self.is_multisig():
             return f"m/48'/{coin_type}'/0'/2'" 
-        elif self.script_type == ScriptTypes.NATIVE and self.wallet_type == WalletTypes.SINGLE:
+        elif self.script_type == ScriptTypes.NATIVE and self.is_singlesig():
             return f"m/48'/{coin_type}'/0'"
-        elif self.script_type == ScriptTypes.WRAPPED and self.wallet_type == WalletTypes.MULTI:
+        elif self.script_type == ScriptTypes.WRAPPED and self.is_multisig():
             return f"m/48'/{coin_type}'/0'/1'"
-        elif self.script_type == ScriptTypes.WRAPPED and self.wallet_type == WalletTypes.SINGLE:
+        elif self.script_type == ScriptTypes.WRAPPED and self.is_singlesig():
             return f"m/49'/{coin_type}'/0'"
         else:
             raise Exception('No derivation paths for this wallet type')
 
     def descriptor(self, change, index):
         # For multisig, order the xpubs lexigraphically by derived SEC pubkeys that will go in bitcoin script (BIP67)
-        if self.wallet_type == WalletTypes.MULTI:
+        if self.is_multisig():
             path = f"./{int(change)}/{index}"
             secs_and_signers = [(derive_child_sec_from_xpub(signer.xpub, path), signer) 
                                 for signer in self.signers]
@@ -324,13 +326,13 @@ class Wallet:
         parts_list = [f'[{signer.fingerprint}{signer.derivation_path[1:]}]{signer.xpub}/{int(change)}/{index}' 
                 for signer in signers]
         parts_str = ",".join(parts_list)
-        if self.script_type == ScriptTypes.NATIVE and self.wallet_type == WalletTypes.MULTI:
+        if self.script_type == ScriptTypes.NATIVE and self.is_multisig():
             descriptor = f"wsh(multi({self.m},{parts_str}))"
-        elif self.script_type == ScriptTypes.NATIVE and self.wallet_type == WalletTypes.SINGLE:
+        elif self.script_type == ScriptTypes.NATIVE and self.is_singlesig():
             descriptor = f"wpkh({parts_str})"
-        elif self.script_type == ScriptTypes.WRAPPED and self.wallet_type == WalletTypes.MULTI:
+        elif self.script_type == ScriptTypes.WRAPPED and self.is_multisig():
             descriptor = f"sh(wsh(multi({self.m},{parts_str})))"
-        elif self.script_type == ScriptTypes.WRAPPED and self.wallet_type == WalletTypes.SINGLE:
+        elif self.script_type == ScriptTypes.WRAPPED and self.is_singlesig():
             descriptor = f"sh(wpkh({parts_str}))"
         else:
             raise Exception('Cannot construct descriptor')
@@ -385,7 +387,7 @@ class Wallet:
         assert address_info['iswatchonly'] is True, 'Bitcoin Core gave us non-watch-only address'
 
         # Make sure multisig pubkeys are sorted (FIXME: raise or recurse?)
-        if self.wallet_type == WalletTypes.MULTI:
+        if self.is_multisig():
             if self.script_type == ScriptTypes.WRAPPED:
                 pubkeys = address_info['embedded']['pubkeys']
             else:

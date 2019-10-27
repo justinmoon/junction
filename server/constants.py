@@ -6,7 +6,3 @@ class Networks:
 class ScriptTypes:
     WRAPPED = 'wrapped'
     NATIVE = 'native'
-
-class WalletTypes:
-    MULTI = 'multi'
-    SINGLE = 'single'
