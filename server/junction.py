@@ -13,7 +13,7 @@ from constants import Networks, ScriptTypes
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-ADDRESS_CHUNK = 100
+ADDRESS_GAP = 20
 
 class HardwareSigner:
 
@@ -285,10 +285,14 @@ class Wallet:
         signer = HardwareSigner(name=name, fingerprint=fingerprint, xpub=xpub,
                 type=type, derivation_path=derivation_path)
         
-        # sort lexigraphically by xpubs
+        # Sort lexigraphically by xpubs
         signers = self.signers + [signer]
         self.signers = sorted(signers, key=lambda signer: signer.xpub)
         logger.info(f"Registered signer \"{name}\"")
+
+        # Sync to address gap if we're done adding signers
+        if self.ready():
+            self.sync()
 
         self.save()
 
@@ -338,7 +342,7 @@ class Wallet:
             raise Exception('Cannot construct descriptor')
         
         # validates and appends checksum
-        # FIXME: do this here
+        # FIXME: do this manually?
         r = self.node.wallet_rpc.getdescriptorinfo(descriptor)
         return r['descriptor']
 
@@ -346,13 +350,15 @@ class Wallet:
         '''Derive next change address, sync if we need to and save new address indices'''
         # Define params for readability sake
         change = False
-        address_index = self.receiving_address_index
 
-        # Get the address
-        address = self.derive_address(change, address_index)
-        
-        # Update state, save and return address
+        # Get the address, update index
+        address = self.derive_address(change, self.receiving_address_index)
         self.receiving_address_index += 1
+        
+        # Maintain the gap of addresses Bitcoin Core is watching
+        self.watch_address(change, self.receiving_address_index + ADDRESS_GAP)
+
+        # Save and return
         self.save()
         return address
 
@@ -360,13 +366,15 @@ class Wallet:
         '''Derive next change address, sync if we need to and save new address indices'''
         # Define params for readability sake
         change = True
-        address_index = self.change_address_index
 
-        # Get the address
-        address = self.derive_address(change, address_index)
-        
-        # Update state, save and return address
+        # Get the address, update index
+        address = self.derive_address(change, self.change_address_index)
         self.change_address_index += 1
+        
+        # Maintain the gap of addresses Bitcoin Core is watching
+        self.watch_address(change, self.change_address_index + ADDRESS_GAP)
+
+        # Save and return
         self.save()
         return address
 
@@ -375,18 +383,16 @@ class Wallet:
         # Can't derive addresses if we don't have enough signers
         if not self.ready():
             raise JunctionError(f'{self.n} signers required, {len(self.signers)} registered')
-        
-        # Tell Bitcoin Core to watch this address
-        descriptor = self.watch_address(change, index)
 
         # Get the address from Bitcoin Core
+        descriptor = self.descriptor(change, index)
         address = self.node.wallet_rpc.deriveaddresses(descriptor)[0]
 
         # Make sure we got a watch-only address
         address_info = self.node.wallet_rpc.getaddressinfo(address)
         assert address_info['iswatchonly'] is True, 'Bitcoin Core gave us non-watch-only address'
 
-        # Make sure multisig pubkeys are sorted (FIXME: raise or recurse?)
+        # Make sure multisig pubkeys are sorted
         if self.is_multisig():
             if self.script_type == ScriptTypes.WRAPPED:
                 pubkeys = address_info['embedded']['pubkeys']
@@ -437,16 +443,16 @@ class Wallet:
 
     def sync(self):
         '''Export every address that Bitcoin Core doesn't know about'''
-        # Sync change addresses
+        # Sync change addresses up to gap
         change = True
-        for index in range(0, self.change_address_index):
+        for index in range(0, self.change_address_index + ADDRESS_GAP + 1):
             watching = self.watching_address(change, index)
             if not watching:
                 self.watch_address(change, index)
 
-        # Sync receiving addresses
+        # Sync receiving addresses up to gap
         change = False
-        for index in range(0, self.receiving_address_index):
+        for index in range(0, self.receiving_address_index + ADDRESS_GAP + 1):
             watching = self.watching_address(change, index)
             if not watching:
                 self.watch_address(change, index)

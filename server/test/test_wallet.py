@@ -3,7 +3,7 @@ import tempfile
 import os
 import logging
 from decimal import Decimal
-from junction import Wallet, JunctionError, Node
+from junction import Wallet, JunctionError, Node, ADDRESS_GAP
 
 from .utils import start_bitcoind
 
@@ -113,6 +113,36 @@ class WalletTests(unittest.TestCase):
         #     'wallet_name': 'foobar',
         # }
         disk.ensure_datadir()
+
+    def watching_address(self, wallet, change, index):
+        descriptor = wallet.descriptor(change, index)
+        address = wallet.node.wallet_rpc.deriveaddresses(descriptor)[0]
+        address_info = wallet.node.wallet_rpc.getaddressinfo(address)
+        self.assertTrue(address_info.get('iswatchonly'))
+
+    def test_gap(self):
+        '''Junction should always export 20 addresses ahead of current indices'''
+        wallet = make_wallet(self)
+
+        start_index = 0
+        stop_index = ADDRESS_GAP
+
+        # Bitcoin Core is watching first ADDRESS_GAP addresses
+        for index in range(start_index, stop_index + 1):
+            for change in (True, False):
+                self.watching_address(wallet, change, index)
+        
+        # derive receiving and check that gap preserved
+        with self.assertRaises(Exception):
+            self.watching_address(wallet, False, ADDRESS_GAP + 1)
+        receiving_address = wallet.derive_receiving_address()
+        self.watching_address(wallet, False, ADDRESS_GAP + 1)
+
+        # derive change and check that gap preserved
+        with self.assertRaises(Exception):
+            self.watching_address(wallet, True, ADDRESS_GAP + 1)
+        receiving_address = wallet.derive_change_address()
+        self.watching_address(wallet, True, ADDRESS_GAP + 1)
 
     def test_create_wallet_wrong_parameters(self):
         wallet_name = self._testMethodName
