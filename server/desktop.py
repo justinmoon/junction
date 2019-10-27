@@ -33,6 +33,8 @@ def server_running():
         return False
 
 if __name__ == '__main__':
+    # Required for pyinstaller + multiprocessing: https://stackoverflow.com/a/32677108/2542016
+    multiprocessing.freeze_support()
     # Run server process
     server.start()
     # Wait for server to start
