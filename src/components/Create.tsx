@@ -30,7 +30,6 @@ interface State {
     n: string;
     network: string;
     wallet_type: string;
-    script_type: string;
     node: {
       user: string;
       password: string;
@@ -59,7 +58,6 @@ class Create extends React.Component<Props, State> {
       n: '',
       network: '',
       wallet_type: '',
-      script_type: '',
       node: {
         user: '',
         password: '',
@@ -110,14 +108,6 @@ class Create extends React.Component<Props, State> {
     this.setKey({'wallet_type': 'multi', 'm': '', 'n': ''})
   }
 
-  private selectNativeSegwit = (e: any) => {
-    this.setKey({'script_type': 'native'})
-  }
-
-  private selectWrappedSegwit = (e: any) => {
-    this.setKey({'script_type': 'wrapped'})
-  }
-
   render() {
     const { bitcoinNodes } = this.props;
     const { form, isSubmitting } = this.state;
@@ -133,7 +123,7 @@ class Create extends React.Component<Props, State> {
             onChange={this.handleChange}
           />
           <Row className="pt-3">
-            <Col xs="4">
+            <Col xs="6">
               <FormGroup>
                 <Label>Wallet Type</Label>
                 <br/>
@@ -148,22 +138,7 @@ class Create extends React.Component<Props, State> {
                 <span onClick={this.selectMultiSig}> Multi-Signature</span>
               </FormGroup>
             </Col>
-            <Col xs="4">
-              <FormGroup>
-                <Label>Script Type</Label>
-                <br/>
-                <Input addon type="radio" 
-                  checked={form.script_type === 'native'}
-                  onChange={this.selectNativeSegwit}/>
-                <span onClick={this.selectNativeSegwit}> Native Segwit</span>
-                <br/>
-                <Input addon type="radio" 
-                  checked={form.script_type === 'wrapped'}
-                  onChange={this.selectWrappedSegwit}/>
-                <span onClick={this.selectWrappedSegwit}> Wrapped Segwit</span>
-              </FormGroup>
-            </Col>
-            <Col xs="4">
+            <Col xs="6">
               <FormGroup>
                 <Label>Choose Network</Label>
                 <br/>

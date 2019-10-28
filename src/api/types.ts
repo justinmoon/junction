@@ -62,6 +62,7 @@ export interface BroadcastTransactionArguments {
 
 export interface GenerateAddressArguments {
   wallet_name: string;
+  script_type: string;
 }
 
 export interface SyncArguments {

@@ -9,6 +9,7 @@ import { getWallets, selectActiveWallet, addSigner, selectUnregisteredSigners, s
 import api from '../api'
 import { toggleDisplayAddressModal, toggleConnectRPCModal } from '../store/modal';
 import RegisterSigners from './RegisterSigners';
+import { Button } from 'reactstrap';
 
 interface StateProps {
   activeWallet: WalletType;
@@ -24,26 +25,40 @@ interface DispatchProps {
 }
 
 interface State {
-  pending: boolean;
+  nativePending: boolean;
+  wrappedPending: boolean;
 }
 
 type Props = StateProps & DispatchProps;
 
 class Wallet extends React.Component<Props, State> {
   state: State = {
-    pending: false,
+    nativePending: false,
+    wrappedPending: false,
   }
 
-  async generateAddress() {
-    this.setState({ pending: true })
+  async generateAddress(script_type: string) {
+    // FIXME
+    if (script_type === 'native') {
+      this.setState({ nativePending: true })    
+    } else {
+      this.setState({ wrappedPending: true })
+    }
     try {
-      const response = await api.generateAddress({ wallet_name: this.props.activeWallet.name })
+      const response = await api.generateAddress({ 
+        wallet_name: this.props.activeWallet.name,
+        script_type,
+      })
       this.props.toggleDisplayAddressModal(response.address)
     } catch(error) {
       console.log(error)
     }
-    this.setState({ pending: false })
-  }
+    // FIXME
+    if (script_type === 'native') {
+      this.setState({ nativePending: false })    
+    } else {
+      this.setState({ wrappedPending: false })
+    }  }
 
   render() {
     const { activeWallet, unregisteredSigners, nodeProblem, toggleConnectRPCModal } = this.props;
@@ -85,9 +100,9 @@ class Wallet extends React.Component<Props, State> {
     if (nodeProblem) {
       walletBody = (
         <div className="text-center">
-          <LoadingButton color="danger" loading={this.state.pending} onClick={() => toggleConnectRPCModal()}>
+          <Button color="danger" onClick={() => toggleConnectRPCModal()}>
             Fix Issues With Your Node
-          </LoadingButton>
+          </Button>
         </div>
       )
     } else {
@@ -100,7 +115,12 @@ class Wallet extends React.Component<Props, State> {
         <div className="text-center">Network: {activeWallet.network}</div>
         {activeWallet.ready &&
           <div className="text-center">
-            <LoadingButton loading={this.state.pending} onClick={() => this.generateAddress()}>Generate Address</LoadingButton>
+            <LoadingButton className='mx-2' loading={this.state.nativePending} onClick={() => this.generateAddress('native')}>
+              Bech32 Address
+            </LoadingButton>
+            <LoadingButton className='mx-2' loading={this.state.wrappedPending} onClick={() => this.generateAddress('wrapped')}>
+              Legacy Address
+            </LoadingButton>
           </div>}
       </div>)
     }

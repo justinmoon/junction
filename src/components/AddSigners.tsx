@@ -19,6 +19,7 @@ interface StateProps {
   modal: AppState['modal'];
   devices: AppState['device']['devices']['data'];
   deviceBeingAdded: Device | null;
+  pending: boolean;
 }
 
 type Props = StateProps & DispatchProps;
@@ -52,7 +53,7 @@ class AddSigners extends React.Component<Props,LocalState> {
   };
 
   renderAddDevice(device: Device) {
-    const { deviceBeingAdded, toggleDeviceInstructionsModal, toggleDeviceUnlockModal } = this.props;
+    const { pending, deviceBeingAdded, toggleDeviceInstructionsModal, toggleDeviceUnlockModal } = this.props;
     const loading = pending && device === deviceBeingAdded;
     let rightComponent = null;
     let nickname = this.state.nicknames[device.path] || ''

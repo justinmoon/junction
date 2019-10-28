@@ -1,11 +1,10 @@
 import React from 'react';
 import { Button, Modal, ModalHeader, ModalFooter, ModalBody, Table } from 'reactstrap';
-import { AppState, notNull } from '../store';
+import { AppState } from '../store';
 import { toggleDisplayAddressModal, toggleDeviceInstructionsModal, toggleDeviceUnlockModal } from '../store/modal'
 import { connect } from 'react-redux';
-import { Device, isUnlockedDevice, UnlockedDevice, Signer, Wallet } from '../types';
+import { Device, UnlockedDevice, Signer, Wallet } from '../types';
 import api from '../api'
-import { selectDevices } from '../store/device';
 import { LoadingButton } from './Toolbox';
 import { selectActiveWallet, deviceAvailable } from '../store/wallet';
 
@@ -88,9 +87,8 @@ class DisplayAddressModal extends React.Component<Props> {
 
     return (
 			<Modal isOpen={open} toggle={() => toggleDisplayAddressModal()} size="lg"  style={{maxWidth: '1000px', width: '80%'}}>
-				<ModalHeader toggle={() => toggleDisplayAddressModal()}>Display Address</ModalHeader>
+				<ModalHeader toggle={() => toggleDisplayAddressModal()}>{ address }</ModalHeader>
 				<ModalBody>
-          <div>{address}</div>
           <h6>Display on Device</h6>
           <Table borderless>
             <tbody>

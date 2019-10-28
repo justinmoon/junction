@@ -18,10 +18,10 @@ Format: {format}
 """
 multisig_key = "\n{fingerprint}: {xpub}"
 
-def generate_multisig_file(wallet):
+def generate_multisig_file(wallet, script_type):
     name = wallet.name[:20]  # 20 character max
 
-    format = 'P2WSH' if wallet.script_type == 'native' else 'P2WSH-P2SH'
+    format = 'P2WSH' if script_type == 'native' else 'P2WSH-P2SH'
 
     contents = multisig_header.format(name=name, m=wallet.m, n=wallet.n, 
             path=wallet.account_derivation_path(), format=format)
@@ -31,7 +31,7 @@ def generate_multisig_file(wallet):
 
     return BytesIO(contents.encode())
 
-def enroll(wallet):
+def enroll(wallet, script_type):
     multisig_file = generate_multisig_file(wallet)
 
     force_serial = None

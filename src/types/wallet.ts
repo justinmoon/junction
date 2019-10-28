@@ -40,7 +40,6 @@ export interface Wallet {
   history: any;
   coins: any;
   node: Node;
-  script_type: ScriptType;
   network: string;
   synced: boolean;
 }

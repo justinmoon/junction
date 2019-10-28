@@ -142,16 +142,29 @@ def add_signer():
     signer_name = request.json['signer_name']
     device_id = request.json['device_id']
     wallet = Wallet.open(wallet_name)
+
     with get_client_and_device(device_id, wallet.network) as (client, device):
-        derivation_path = wallet.account_derivation_path()
-        # Get XPUB and validate against wallet.network 
-        xpub = client.get_pubkey_at_path(derivation_path)['xpub']
-        if 'xpub' == xpub[:4] and wallet.network != 'mainnet':
+        # native segwit: get XPUB and validate against wallet.network
+        native_path = wallet.account_derivation_path(ScriptTypes.NATIVE)
+        native_xpub = client.get_pubkey_at_path(native_path)['xpub']
+        if 'xpub' == native_xpub[:4] and wallet.network != 'mainnet':
             raise JunctionError('Invalid xpub. Make sure your device is set to the correct chain.')
-        if 'tpub' == xpub[:4] and wallet.network == 'mainnet':
+        if 'tpub' == native_xpub[:4] and wallet.network == 'mainnet':
             raise JunctionError('Invalid xpub. Make sure your device is set to the correct chain.')
-        client.close()
-        wallet.add_signer(name=signer_name, fingerprint=device['fingerprint'], type=device['type'], xpub=xpub, derivation_path=derivation_path)
+        
+        # wrapped segwit: get XPUB and validate against wallet.network
+        wrapped_path = wallet.account_derivation_path(ScriptTypes.WRAPPED)
+        wrapped_xpub = client.get_pubkey_at_path(wrapped_path)['xpub']
+        if 'xpub' == wrapped_xpub[:4] and wallet.network != 'mainnet':
+            raise JunctionError('Invalid xpub. Make sure your device is set to the correct chain.')
+        if 'tpub' == wrapped_xpub[:4] and wallet.network == 'mainnet':
+            raise JunctionError('Invalid xpub. Make sure your device is set to the correct chain.')
+        
+        # add the signer
+        wallet.add_signer(
+            name=signer_name, fingerprint=device['fingerprint'], type=device['type'], 
+            native_xpub=native_xpub, native_path=native_path,
+            wrapped_xpub=wrapped_xpub, wrapped_path=wrapped_path)
     return jsonify(wallet.to_dict())
 
 @api.route('/address', methods=['POST'])
@@ -159,14 +172,21 @@ def add_signer():
     'required': ['wallet_name'],
     'properties': {
         'wallet_name': { 'type': 'string' },
+        'script_type': { 'type': 'string' },
     },
 })
 def address():
     # TODO: it would be better to generate addresses ahead of time and store them on the wallet
     # just not sure how to implement that
     wallet_name = request.json['wallet_name']
+    script_type = request.json['script_type']
     wallet = Wallet.open(wallet_name)
-    address = wallet.derive_receiving_address()
+    if script_type == ScriptTypes.NATIVE:
+        address = wallet.derive_native_receiving_address()
+    elif script_type == ScriptTypes.WRAPPED:
+        address = wallet.derive_wrapped_receiving_address()
+    else:
+        raise ValueError(f'"{script_type}" is not a valid script_type option')
     return jsonify({
         'address': address,
     })
@@ -335,8 +355,10 @@ def display_address():
 
     # HWI doesn't cover multisig, so we have to cover separately
     if wallet.is_multisig():
+        native_segwit = descriptor.startswith('wsh')
+        script_type = 'native' if native_segwit else 'wrapped'
         # Get redeem script
-        if wallet.script_type == ScriptTypes.NATIVE:
+        if native_segwit:
             redeem_script = address_info.get('hex')
         else:
             redeem_script = address_info.get('embedded', {}).get('hex')
@@ -361,11 +383,12 @@ def display_address():
                     derivation_path = path
            
             with hwi_lock:
-                custom_trezor.display_multisig_address(redeem_script, derivation_path, wallet.network != 'mainnet', device, wallet.script_type)
+                custom_trezor.display_multisig_address(redeem_script, derivation_path,
+                        wallet.network != 'mainnet', device, script_type)
         # Handle ColdCards
         elif device['type'] == 'coldcard':
             with hwi_lock:
-                custom_coldcard.display_multisig_address(redeem_script, derivation_paths, wallet.script_type == 'native')
+                custom_coldcard.display_multisig_address(redeem_script, derivation_paths, native_segwit)
         # Reject everything else
         else:
             raise JunctionError(f'Devices of type "{device["type"]}" do not support multisig address display')
@@ -402,7 +425,8 @@ def register_device():
         raise JunctionError(f'Devices of type {device["type"]} do not support multisig wallet registration')
 
     with hwi_lock:
-        custom_coldcard.enroll(wallet)
+        custom_coldcard.enroll(wallet, ScriptTypes.NATIVE)
+        custom_coldcard.enroll(wallet, ScriptTypes.WRAPPED)
 
     # TODO: How to keep track of whether or not this multisig wallet is registered on the coldcard?
 

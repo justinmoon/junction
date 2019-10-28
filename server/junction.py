@@ -17,20 +17,24 @@ ADDRESS_GAP = 20
 
 class HardwareSigner:
 
-    def __init__(self, *, name, xpub, fingerprint, type, derivation_path):
+    def __init__(self, *, name, fingerprint, type, wrapped_xpub, native_path, native_xpub, wrapped_path):
         self.name = name
-        self.xpub = xpub
         self.fingerprint = fingerprint
         self.type = type
-        self.derivation_path = derivation_path
+        self.native_xpub = native_xpub
+        self.native_path = native_path
+        self.wrapped_xpub = wrapped_xpub
+        self.wrapped_path = wrapped_path
 
     def to_dict(self):
         return {
             'name': self.name,
-            'xpub': self.xpub,
             'fingerprint': self.fingerprint,
             'type': self.type,
-            'derivation_path': self.derivation_path,
+            'native_xpub': self.native_xpub,
+            'native_path': self.native_path,
+            'wrapped_xpub': self.wrapped_xpub,
+            'wrapped_path': self.wrapped_path,
         }
 
     @classmethod
@@ -84,10 +88,21 @@ class Node:
         if user and password:
             self.user, self.password, self.cookie_auth = user, password, True
     
+
+DEFAULT_INDICES = {
+    'native': { 
+        'change': 0,
+        'receive': 0,
+    },
+    'wrapped': {
+        'change': 0,
+        'receive': 0,
+    },
+}
+
 class Wallet:
 
-    def __init__(self, *, name, m, n, signers, psbts, receiving_address_index, 
-                 change_address_index, node, network, script_type):
+    def __init__(self, *, name, m, n, signers, psbts, node, network, indices):
         # Name of the wallet
         self.name = name
         # Signers required for bitcoin tx
@@ -98,16 +113,12 @@ class Wallet:
         self.signers = signers
         # Hex string
         self.psbts = psbts
-        # Depth in HD derivation
-        self.receiving_address_index = receiving_address_index
-        # Depth in HD derivation
-        self.change_address_index = change_address_index
         # bitcoin node this wallet is attached to
         self.node = node
         # "mainnet", "testnet" or "regtest"
         self.network = network
-        # "wrapped" or "native"
-        self.script_type = script_type
+        # Dictionary of receiving and change indices for native and wrapped segwit address
+        self.indices = indices
 
     ### Helper methods
 
@@ -126,7 +137,7 @@ class Wallet:
         return f'wallets/{self.name}.json'
 
     @classmethod
-    def create(cls, *, name, m, n, node, network, script_type):
+    def create(cls, *, name, m, n, node, network,):
         '''Creates class instance, wallet file, and watch-only Bitcoin Core wallet'''
         # Sanity checks
         if m > n:
@@ -140,8 +151,7 @@ class Wallet:
         # Perhaps we should be connecting to a node, first
 
         # Wallet instance
-        wallet = cls(name=name, m=m, n=n, signers=[], psbts=[], receiving_address_index=0,
-                     change_address_index=0, node=node, network=network, script_type=script_type)
+        wallet = cls(name=name, m=m, n=n, signers=[], psbts=[], node=node, network=network, indices=DEFAULT_INDICES)
 
         # Never overwrite existing wallet files
         # FIXME: full_path probably shouldn't appear in this file?
@@ -211,11 +221,9 @@ class Wallet:
             "n": self.n,
             "signers": signers,
             "psbts": psbts,
-            "receiving_address_index": self.receiving_address_index,
-            "change_address_index": self.change_address_index,
+            "indices": self.indices,
             "node": self.node.to_dict(extras),
             "network": self.network,
-            "script_type": self.script_type,
         }
         # FIXME: this sucks, but we need a way to serialize for API
         if extras:
@@ -269,7 +277,7 @@ class Wallet:
 
     ### Signers
 
-    def add_signer(self, *, name, fingerprint, xpub, type, derivation_path):
+    def add_signer(self, *, name, fingerprint, native_xpub, native_path, wrapped_xpub, wrapped_path, type):
         '''Add a signer to multisig wallet'''
         if self.ready():
             raise JunctionError(f'Already have {len(self.signers)} of {self.n} required signers')
@@ -282,13 +290,10 @@ class Wallet:
         if fingerprint in [signer.fingerprint for signer in self.signers]:
             raise JunctionError(f'Fingerprint "{fingerprint}" already used')
 
-        signer = HardwareSigner(name=name, fingerprint=fingerprint, xpub=xpub,
-                type=type, derivation_path=derivation_path)
-        
-        # Sort lexigraphically by xpubs
-        signers = self.signers + [signer]
-        self.signers = sorted(signers, key=lambda signer: signer.xpub)
-        logger.info(f"Registered signer \"{name}\"")
+        # Create and add signer
+        signer = HardwareSigner(name=name, fingerprint=fingerprint, native_xpub=native_xpub, native_path=native_path,
+                wrapped_xpub=wrapped_xpub, wrapped_path=wrapped_path, type=type)
+        self.signers.append(signer)
 
         # Sync to address gap if we're done adding signers
         if self.ready():
@@ -302,24 +307,28 @@ class Wallet:
 
     ### Addresses
 
-    def account_derivation_path(self):
-        coin_type = int(self.network != 'mainnet')
-        if self.script_type == ScriptTypes.NATIVE and self.is_multisig():
+    def account_derivation_path(self, script_type):
+        coin_type = int(self.network != Networks.MAINNET)
+        if script_type == ScriptTypes.NATIVE and self.is_multisig():
             return f"m/48'/{coin_type}'/0'/2'" 
-        elif self.script_type == ScriptTypes.NATIVE and self.is_singlesig():
+        elif script_type == ScriptTypes.NATIVE and self.is_singlesig():
             return f"m/48'/{coin_type}'/0'"
-        elif self.script_type == ScriptTypes.WRAPPED and self.is_multisig():
+        elif script_type == ScriptTypes.WRAPPED and self.is_multisig():
             return f"m/48'/{coin_type}'/0'/1'"
-        elif self.script_type == ScriptTypes.WRAPPED and self.is_singlesig():
+        elif script_type == ScriptTypes.WRAPPED and self.is_singlesig():
             return f"m/49'/{coin_type}'/0'"
         else:
             raise Exception('No derivation paths for this wallet type')
 
-    def descriptor(self, change, index):
+    def descriptor(self, script_type, change, index):
+        # To look up attributes on Signers instances according to script type
+        xpub_attr = f'{script_type}_xpub'
+        path_attr = f'{script_type}_path'
+
         # For multisig, order the xpubs lexigraphically by derived SEC pubkeys that will go in bitcoin script (BIP67)
         if self.is_multisig():
             path = f"./{int(change)}/{index}"
-            secs_and_signers = [(derive_child_sec_from_xpub(signer.xpub, path), signer) 
+            secs_and_signers = [(derive_child_sec_from_xpub(getattr(signer, xpub_attr), path), signer) 
                                 for signer in self.signers]
             sorted_secs_and_signers = sorted(secs_and_signers, key=lambda item: item[0])
             signers = [sec_and_signer[1] for sec_and_signer in sorted_secs_and_signers]
@@ -327,16 +336,16 @@ class Wallet:
             signers = self.signers
 
         # Build the descriptor according to script type
-        parts_list = [f'[{signer.fingerprint}{signer.derivation_path[1:]}]{signer.xpub}/{int(change)}/{index}' 
+        parts_list = [f'[{signer.fingerprint}{getattr(signer, path_attr)[1:]}]{getattr(signer, xpub_attr)}/{int(change)}/{index}' 
                 for signer in signers]
         parts_str = ",".join(parts_list)
-        if self.script_type == ScriptTypes.NATIVE and self.is_multisig():
+        if script_type == ScriptTypes.NATIVE and self.is_multisig():
             descriptor = f"wsh(multi({self.m},{parts_str}))"
-        elif self.script_type == ScriptTypes.NATIVE and self.is_singlesig():
+        elif script_type == ScriptTypes.NATIVE and self.is_singlesig():
             descriptor = f"wpkh({parts_str})"
-        elif self.script_type == ScriptTypes.WRAPPED and self.is_multisig():
+        elif script_type == ScriptTypes.WRAPPED and self.is_multisig():
             descriptor = f"sh(wsh(multi({self.m},{parts_str})))"
-        elif self.script_type == ScriptTypes.WRAPPED and self.is_singlesig():
+        elif script_type == ScriptTypes.WRAPPED and self.is_singlesig():
             descriptor = f"sh(wpkh({parts_str}))"
         else:
             raise Exception('Cannot construct descriptor')
@@ -346,46 +355,40 @@ class Wallet:
         r = self.node.wallet_rpc.getdescriptorinfo(descriptor)
         return r['descriptor']
 
-    def derive_receiving_address(self):
-        '''Derive next change address, sync if we need to and save new address indices'''
-        # Define params for readability sake
-        change = False
+    def derive_native_receiving_address(self):
+        return self.derive_address(ScriptTypes.NATIVE, False)
+    
+    def derive_native_change_address(self):
+        return self.derive_address(ScriptTypes.NATIVE, True)
+    
+    def derive_wrapped_receiving_address(self):
+        return self.derive_address(ScriptTypes.WRAPPED, False)
 
+    def derive_wrapped_change_address(self):
+        return self.derive_address(ScriptTypes.WRAPPED, True)
+
+    def derive_address(self, script_type, change):
         # Get the address, update index
-        address = self.derive_address(change, self.receiving_address_index)
-        self.receiving_address_index += 1
+        change_key = 'change' if change else 'receive'
+        index = self.indices[script_type][change_key]
+        address = self._derive_address(script_type, change, index)
+        self.indices[script_type][change_key] += 1
         
         # Maintain the gap of addresses Bitcoin Core is watching
-        self.watch_address(change, self.receiving_address_index + ADDRESS_GAP)
+        self.watch_address(script_type, change, self.indices[script_type][change_key] + ADDRESS_GAP)
 
         # Save and return
         self.save()
         return address
 
-    def derive_change_address(self):
-        '''Derive next change address, sync if we need to and save new address indices'''
-        # Define params for readability sake
-        change = True
-
-        # Get the address, update index
-        address = self.derive_address(change, self.change_address_index)
-        self.change_address_index += 1
-        
-        # Maintain the gap of addresses Bitcoin Core is watching
-        self.watch_address(change, self.change_address_index + ADDRESS_GAP)
-
-        # Save and return
-        self.save()
-        return address
-
-    def derive_address(self, change, index):
-        '''Helper for deriving address at specified change/index position'''
+    def _derive_address(self, script_type, change, index):
+        '''Fetch and falidate address at change/index'''
         # Can't derive addresses if we don't have enough signers
         if not self.ready():
             raise JunctionError(f'{self.n} signers required, {len(self.signers)} registered')
 
         # Get the address from Bitcoin Core
-        descriptor = self.descriptor(change, index)
+        descriptor = self.descriptor(script_type, change, index)
         address = self.node.wallet_rpc.deriveaddresses(descriptor)[0]
 
         # Make sure we got a watch-only address
@@ -394,7 +397,7 @@ class Wallet:
 
         # Make sure multisig pubkeys are sorted
         if self.is_multisig():
-            if self.script_type == ScriptTypes.WRAPPED:
+            if script_type == ScriptTypes.WRAPPED:
                 pubkeys = address_info['embedded']['pubkeys']
             else:
                 pubkeys = address_info['pubkeys']
@@ -402,9 +405,9 @@ class Wallet:
             
         return address
 
-    def watch_address(self, change, index):
+    def watch_address(self, script_type, change, index):
         '''Tell Bitcoin Core to watch address at change / index'''
-        descriptor = self.descriptor(change, index)
+        descriptor = self.descriptor(script_type, change, index)
         response = self.node.wallet_rpc.importmulti([{
             "desc": descriptor,
             # rescan from thie timestamp ('now' means no rescan)
@@ -422,46 +425,43 @@ class Wallet:
         # slightly janky, but helps in derive_address
         return descriptor
 
-    def watching_address(self, change, index):
+    def watching_address(self, script_type, change, index):
         '''Check if Bitcoin Core is already watching this address'''
         # Grab descriptor, derive address, see if watch-only RPC tags it as "iswatchonly"
-        descriptor = self.descriptor(change, index)
+        descriptor = self.descriptor(script_type, change, index)
         address = self.node.default_rpc.deriveaddresses(descriptor)[0]
         address_info = self.node.wallet_rpc.getaddressinfo(address)
         return address_info.get('iswatchonly', False)
     
     def synced(self):
         '''Ballpark guess whether we're synced with Bitcoin Core'''
+        if not self.ready():
+            return True  # HACK
         checks = []
-        if self.change_address_index != 0:
-            checks.append(self.watching_address(True, 0))
-            checks.append(self.watching_address(True, self.change_address_index-1))
-        if self.receiving_address_index != 0:
-            checks.append(self.watching_address(False, 0))
-            checks.append(self.watching_address(False, self.receiving_address_index-1))
+        for script_type in (ScriptTypes.NATIVE, ScriptTypes.WRAPPED):
+            for change in (True, False):
+                checks.append(self.watching_address(script_type, change, 0))
+                change_str = 'change' if change else 'receive'
+                index = max(0, self.indices[script_type][change_str])
+                checks.append(self.watching_address(script_type, change, index))
         return all(checks)
 
     def sync(self):
         '''Export every address that Bitcoin Core doesn't know about'''
-        # Sync change addresses up to gap
-        change = True
-        for index in range(0, self.change_address_index + ADDRESS_GAP + 1):
-            watching = self.watching_address(change, index)
-            if not watching:
-                self.watch_address(change, index)
-
-        # Sync receiving addresses up to gap
-        change = False
-        for index in range(0, self.receiving_address_index + ADDRESS_GAP + 1):
-            watching = self.watching_address(change, index)
-            if not watching:
-                self.watch_address(change, index)
+        for script_type in (ScriptTypes.NATIVE, ScriptTypes.WRAPPED):
+            for (change_bool, change_str) in [(True, 'change'), (False, 'receive')]:
+                final_index = self.indices[script_type][change_str] + ADDRESS_GAP + 1
+                for index in range(0, final_index):
+                    watching = self.watching_address(script_type, change_bool, index)
+                    if not watching:
+                        self.watch_address(script_type, change_bool, index)
 
     ### Transactions
 
     def create_psbt(self, outputs, subtract_fees=None):
         '''Create a new PSBT paying single recipient'''
-        change_address = self.derive_change_address()
+        # TODO: be smarter about what type of change address we use
+        change_address = self.derive_native_change_address()
         raw_psbt = self.node.wallet_rpc.walletcreatefundedpsbt(
             # let Bitcoin Core choose inputs
             [],

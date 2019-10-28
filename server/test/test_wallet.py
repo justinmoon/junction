@@ -3,7 +3,8 @@ import tempfile
 import os
 import logging
 from decimal import Decimal
-from junction import Wallet, JunctionError, Node, ADDRESS_GAP
+from junction import Wallet, JunctionError, Node, ADDRESS_GAP, DEFAULT_INDICES
+from constants import ScriptTypes
 
 from .utils import start_bitcoind
 
@@ -22,22 +23,28 @@ signers = [
         'name': 'mytrezor',
         'type': 'trezor',
         'fingerprint': 'ecbc6bc1',
-        'xpub': 'tpubDDsVS9pwqzLB92RZ6uTiixhDLPcoL1JESsYUCGootaTYu4JVh1aCu5t9oY3RRC1ic2dAbt7AqsE8uXLeq1p2DC5SP27ntmx4dUUPnvWhNhW',
-        'derivation_path': derivation_path,
+        'native_xpub': 'tpubDDsVS9pwqzLB92RZ6uTiixhDLPcoL1JESsYUCGootaTYu4JVh1aCu5t9oY3RRC1ic2dAbt7AqsE8uXLeq1p2DC5SP27ntmx4dUUPnvWhNhW',
+        'native_path': derivation_path,
+        'wrapped_xpub': 'tpubDFG7v6cSJXRnDn5kFMyXdzUjNWLbZQzyf5ix8aEFFPw5G8nVkoiok4Qxj6sJsHn6DBG3sC7b67u5YgrrASp1o4e2pnauYA49W2QMRsAZDgq',
+        'wrapped_path': derivation_path,
     },
     {
         'name': 'myledger',
         'type': 'ledger',
         'fingerprint': '6bb3d403',
-        'xpub': 'tpubDCpR7Xjiho9KdidtHf3gJ1ZRbzu64HAiYTG9vR6JE5jJrPZbqJYBVXT33rFboKG8PBh4rJudjpBjFjD4ADwdwKUdMYZGJr2bBvLNBZLPMyF',
-        'derivation_path': derivation_path,
+        'native_xpub': 'tpubDCpR7Xjiho9KdidtHf3gJ1ZRbzu64HAiYTG9vR6JE5jJrPZbqJYBVXT33rFboKG8PBh4rJudjpBjFjD4ADwdwKUdMYZGJr2bBvLNBZLPMyF',
+        'native_path': derivation_path,
+        'wrapped_xpub': 'tpubDDvE8LQ7qU8ZgiWriijrsuckiMAfUvuL6UdCCPsLcEKcp7RaMPWV7Wu15u8ZLnGWJVm2siJ3DY5FpLyKt8Jm72jihvF5EZ19RE9Z7uGpRDg',
+        'wrapped_path': derivation_path,
     },
     {
         'name': 'mycoldcard',
         'type': 'coldcard',
         'fingerprint': '5b98d98d',
-        'xpub': 'tpubDDSFSPwTa8AnvogHXTsJ29745CDLrSmn9Jsi5LN9ks1T6szBk7xmkNAjZ1gXfQHdfuD1rae939z93rXE7he3QkLxNmaLh1XuvyzZoTAAWYm',
-        'derivation_path': derivation_path,
+        'native_xpub': 'tpubDDSFSPwTa8AnvogHXTsJ29745CDLrSmn9Jsi5LN9ks1T6szBk7xmkNAjZ1gXfQHdfuD1rae939z93rXE7he3QkLxNmaLh1XuvyzZoTAAWYm',
+        'native_path': derivation_path,
+        'wrapped_xpub': 'tpubDEep9DjCWy4P2KGcqKPphc9dnJAyZRF4nTySoEYZVZ4tpJTLyELm92VzEJrCj636ZHPtd8M8tf454VwbpyQceQzNh7ZJLHJiy36adkKKAPk',
+        'wrapped_path': derivation_path,
     },
 ]
 
@@ -60,10 +67,8 @@ def make_wallet_file(testcase):
         'n': 3,
         'signers': signers,
         'psbts': [],
-        'receiving_address_index': 0,
-        'change_address_index': 0,
+        'indices': DEFAULT_INDICES,
         'network': 'testnet',
-        'script_type': 'native',
         'node': {
             'host': '127.0.0.1',
             'port': 18443,
@@ -84,7 +89,6 @@ def make_wallet(testcase):
         n=3,
         node=node,
         network=node.network,
-        script_type='native',
     )
     for signer in signers:
         wallet.add_signer(**signer)
@@ -114,8 +118,8 @@ class WalletTests(unittest.TestCase):
         # }
         disk.ensure_datadir()
 
-    def watching_address(self, wallet, change, index):
-        descriptor = wallet.descriptor(change, index)
+    def watching_address(self, wallet, script_type, change, index):
+        descriptor = wallet.descriptor(script_type, change, index)
         address = wallet.node.wallet_rpc.deriveaddresses(descriptor)[0]
         address_info = wallet.node.wallet_rpc.getaddressinfo(address)
         self.assertTrue(address_info.get('iswatchonly'))
@@ -126,23 +130,37 @@ class WalletTests(unittest.TestCase):
 
         start_index = 0
         stop_index = ADDRESS_GAP
+        assert len(wallet.signers) == 3
 
         # Bitcoin Core is watching first ADDRESS_GAP addresses
         for index in range(start_index, stop_index + 1):
             for change in (True, False):
-                self.watching_address(wallet, change, index)
+                for script_type in (ScriptTypes.WRAPPED, ScriptTypes.NATIVE):
+                    self.watching_address(wallet, script_type, change, index)
         
-        # derive receiving and check that gap preserved
+        # derive native segwit receiving address and check that gap preserved
         with self.assertRaises(Exception):
-            self.watching_address(wallet, False, ADDRESS_GAP + 1)
-        receiving_address = wallet.derive_receiving_address()
-        self.watching_address(wallet, False, ADDRESS_GAP + 1)
+            self.watching_address(wallet, ScriptTypes.NATIVE, False, ADDRESS_GAP + 1)        
+        receiving_address = wallet.derive_native_receiving_address()
+        self.watching_address(wallet, ScriptTypes.NATIVE, False, ADDRESS_GAP + 1)
 
-        # derive change and check that gap preserved
+        # derive native segwit change address and check that gap preserved
         with self.assertRaises(Exception):
-            self.watching_address(wallet, True, ADDRESS_GAP + 1)
-        receiving_address = wallet.derive_change_address()
-        self.watching_address(wallet, True, ADDRESS_GAP + 1)
+            self.watching_address(wallet, ScriptTypes.NATIVE, True, ADDRESS_GAP + 1)        
+        change_address = wallet.derive_native_change_address()
+        self.watching_address(wallet, ScriptTypes.NATIVE, True, ADDRESS_GAP + 1)
+
+        # derive wrapped segwit receiving address and check that gap preserved
+        with self.assertRaises(Exception):
+            self.watching_address(wallet, ScriptTypes.WRAPPED, False, ADDRESS_GAP + 1)        
+        receiving_address = wallet.derive_wrapped_receiving_address()
+        self.watching_address(wallet, ScriptTypes.WRAPPED, False, ADDRESS_GAP + 1)
+
+        # derive wrapped segwit change address and check that gap preserved
+        with self.assertRaises(Exception):
+            self.watching_address(wallet, ScriptTypes.WRAPPED, True, ADDRESS_GAP + 1)        
+        change_address = wallet.derive_wrapped_change_address()
+        self.watching_address(wallet, ScriptTypes.WRAPPED, True, ADDRESS_GAP + 1)
 
     def test_create_wallet_wrong_parameters(self):
         wallet_name = self._testMethodName
@@ -155,7 +173,6 @@ class WalletTests(unittest.TestCase):
                 n=2,
                 node=node,
                 network=node.network,
-                script_type='native',
             )
         # n must be positive
         with self.assertRaises(JunctionError):
@@ -165,7 +182,6 @@ class WalletTests(unittest.TestCase):
                 n=1,
                 node=node,
                 network=node.network,
-                script_type='native',
             )
         # m capped at 5
         with self.assertRaises(JunctionError):
@@ -175,13 +191,11 @@ class WalletTests(unittest.TestCase):
                 n=21,
                 node=node,
                 network=node.network,
-                script_type='native',
             )
 
     def test_add_signers(self):
         node = make_node(self)
-        wallet = Wallet.create(name=self._testMethodName, m=2, n=3, node=node,
-            script_type='native', network='regtest')
+        wallet = Wallet.create(name=self._testMethodName, m=2, n=3, node=node, network='regtest')
 
         # Wallet file created
         self.assertIn(f'{wallet.name}.json', os.listdir(self.wallet_dir))
@@ -208,7 +222,8 @@ class WalletTests(unittest.TestCase):
         
         # Can't add signers once wallet "ready"
         with self.assertRaises(JunctionError):
-            wallet.add_signer(name='x', fingerprint='x', xpub='x', type='x', derivation_path='x')
+            wallet.add_signer(name='x', fingerprint='x', native_xpub='x', native_path='x', 
+                wrapped_xpub='x', wrapped_path='x', type='x')
 
     def test_create_wallet_already_exists(self):
         wallet_name = self._testMethodName
@@ -260,18 +275,18 @@ class WalletTests(unittest.TestCase):
         wallet = make_wallet(self)
 
         # Address indices initialize correctly
-        self.assertEqual(wallet.receiving_address_index, 0)
-        self.assertEqual(wallet.change_address_index, 0)
+        self.assertEqual(wallet.indices[ScriptTypes.NATIVE]['receive'], 0)
+        self.assertEqual(wallet.indices[ScriptTypes.NATIVE]['change'], 0)
         
         # Can derive addresses
-        receiving_address = wallet.derive_receiving_address()
+        receiving_address = wallet.derive_native_receiving_address()
         self.assertIsNotNone(receiving_address)
-        change_address = wallet.derive_change_address()
+        change_address = wallet.derive_native_change_address()
         self.assertIsNotNone(change_address)
 
         # Address indices update correctly
-        self.assertEqual(wallet.receiving_address_index, 1)
-        self.assertEqual(wallet.change_address_index, 1)
+        self.assertEqual(wallet.indices[ScriptTypes.NATIVE]['receive'], 1)
+        self.assertEqual(wallet.indices[ScriptTypes.NATIVE]['change'], 1)
 
         # Look up addresses in Bitcoin Core
         receiving_address_info = wallet.node.wallet_rpc.getaddressinfo(receiving_address)
@@ -300,11 +315,12 @@ class WalletTests(unittest.TestCase):
     def test_sync(self):
         # Make wallet and bump address indices to 100
         wallet = make_wallet(self)
-        wallet.change_address_index = wallet.receiving_address_index = 100
+        script_type = ScriptTypes.NATIVE
+        wallet.indices[script_type]['change'] = wallet.indices[script_type]['receive'] = 100
 
-        # Get first 100 change and receiving addresses
-        change_addresses = [wallet.node.wallet_rpc.deriveaddresses(wallet.descriptor(True, i))[0] for i in range(100)]
-        receiving_addresses = [wallet.node.wallet_rpc.deriveaddresses(wallet.descriptor(False, i))[0] for i in range(100)]
+        # Get first change and receiving addresses from 21 to 100
+        change_addresses = [wallet.node.wallet_rpc.deriveaddresses(wallet.descriptor(script_type, True, i))[0] for i in range(21, 100)]
+        receiving_addresses = [wallet.node.wallet_rpc.deriveaddresses(wallet.descriptor(script_type, False, i))[0] for i in range(21, 100)]
 
         # Assert they aren't being watched
         for address in change_addresses + receiving_addresses:
@@ -314,7 +330,7 @@ class WalletTests(unittest.TestCase):
         # Sync addresses with Bitcoin Core 
         wallet.sync()
 
-        # Assert they aren't being watched
+        # Assert they are being watched
         for index, address in enumerate(change_addresses + receiving_addresses):
             watching = wallet.node.wallet_rpc.getaddressinfo(address).get('iswatchonly')
             self.assertTrue(watching) 
@@ -324,10 +340,11 @@ class WalletTests(unittest.TestCase):
         # check that receiver and change addresses are correct
         # check that bitcoin core funds the psbt
         wallet = make_wallet(self)
-        
+        script_type = ScriptTypes.WRAPPED
+
         # fund our wallet
         self.rpc.generatetoaddress(1000, self.rpc.getnewaddress())
-        self.rpc.sendtoaddress(wallet.derive_receiving_address(), 1)
+        self.rpc.sendtoaddress(wallet.derive_wrapped_receiving_address(), 1)
         self.rpc.generatetoaddress(1, self.rpc.getnewaddress())
 
         # create psbt
@@ -345,7 +362,8 @@ class WalletTests(unittest.TestCase):
         self.assertIn(outgoing_address, output_addresses)        
         
         # the remaining output address (change) belongs to wallet
-        change_address = wallet.derive_address(True, wallet.change_address_index-1)
+        # (hacky because change is hard-coded as native segwit)
+        change_address = wallet._derive_address(ScriptTypes.NATIVE, True, wallet.indices[ScriptTypes.NATIVE]['change']-1)
         self.assertIn(change_address, output_addresses)
 
     def test_signing_complete(self):
@@ -358,7 +376,7 @@ class WalletTests(unittest.TestCase):
         num_addresses = 100
         wallet = make_wallet(self)
         change = False
-        xpubs = [f'[{signer.fingerprint}{signer.derivation_path[1:]}]{signer.xpub}/{int(change)}/*' 
+        xpubs = [f'[{signer.fingerprint}{signer.native_path[1:]}]{signer.native_xpub}/{int(change)}/*' 
                 for signer in wallet.signers]
         xpubs = ",".join(xpubs)
         descriptor = f"wsh(sortedmulti({wallet.m},{xpubs}))"
@@ -369,7 +387,7 @@ class WalletTests(unittest.TestCase):
         # Derive first N receiving addresses with junction
         junction_addresses = []
         for i in range(num_addresses):
-            address = wallet.derive_receiving_address()
+            address = wallet.derive_native_receiving_address()
             junction_addresses.append(address)
         self.assertEqual(num_addresses, len(junction_addresses))
 
